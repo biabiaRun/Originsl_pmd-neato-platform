@@ -1,0 +1,158 @@
+\documentclass[11pt,oneside]{article}
+\usepackage[a4paper,top=1.5cm,bottom=2.5cm,left=2cm,right=2.5cm]{geometry}
+\usepackage{makeidx}
+\usepackage{natbib}
+\usepackage{graphicx}
+\usepackage{multicol}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{ifthen}
+\usepackage[table]{xcolor}
+\usepackage{textcomp}
+\usepackage{alltt}
+\usepackage{booktabs}
+\usepackage{ifpdf}
+\ifpdf
+\usepackage[pdftex,
+            pagebackref=true,
+            colorlinks=true,
+            linkcolor=black,
+			plainpages=false,
+            unicode
+           ]{hyperref}
+\else
+\usepackage[ps2pdf,
+            pagebackref=true,
+            colorlinks=true,
+            linkcolor=black,
+			plainpages=false,
+            unicode
+           ]{hyperref}
+\usepackage{pspicture}
+\fi
+\usepackage[utf8]{inputenc}
+\usepackage{mathptmx}
+\usepackage{helvet}
+\usepackage{sectsty}
+\usepackage{amssymb}
+\usepackage{longtable,booktabs}
+\usepackage{datetime}
+\usepackage[titles]{tocloft}
+\usepackage{pmd}
+\usepackage{epstopdf}
+\usepackage[T1]{fontenc}
+\usepackage{xcolor}
+
+\def\tightlist{}
+
+\usepackage[pagecontinue=true]{pageslts}
+
+\makeindex
+\setcounter{tocdepth}{2}
+%\renewcommand{\footrulewidth}{0pt}
+\renewcommand{\familydefault}{\sfdefault}
+\hfuzz=15pt
+\setlength{\emergencystretch}{15pt}
+\hbadness=750
+\tolerance=750
+
+\changefont{phv}{xl}{n}
+\renewcommand{\familydefault}{\sfdefault}
+
+\begin{document}
+\sloppy
+\hyphenpenalty=10000
+\exhyphenpenalty=10000
+\pagenumbering{arabic}
+\hypersetup{citecolor=black}
+%\begin{titlepage}
+\pagestyle{plain}
+\thispagestyle{firststyle}
+
+\lstset{
+    language=C++,
+    frameround=tttt,
+    frame=single,
+    basicstyle=\ttfamily,
+    numbers=none,
+    breaklines=true,
+    keywordstyle=\color[rgb]{0.13,0.29,0.53}\bfseries,
+    stringstyle=\color[rgb]{0.31,0.60,0.02},
+    commentstyle=\color[rgb]{0.56,0.35,0.01}\itshape,
+    numberstyle=\footnotesize,
+    stepnumber=1,
+    numbersep=5pt,
+    backgroundcolor=\color[RGB]{248,248,248},
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2,
+    captionpos=b,
+    breakatwhitespace=true,
+    breakautoindent=true,
+    escapeinside={\%*}{*)},
+    linewidth=\textwidth,
+    basewidth=0.5em,
+}
+
+\vspace{1.4cm}
+\begin{center}
+{\includegraphics[width=14.65cm]{@ROYALE_PANDOC_IMG_PATH@/logo_grey.pdf}}
+\end{center}
+
+% \vspace{0.01cm}
+\begin{flushleft}
+\begin{Minipage}{\textwidth}
+\color{white}
+\vspace{0.4cm}
+\noindent
+{\Huge @ROYALE_PANDOC_TITLE@}\\\\
+\vspace{0.5cm}
+{\huge @ROYALE_PANDOC_SUBTITLE@}\\\\\\\\
+\vspace{1cm}
+{\small Version @ROYALE_PANDOC_VERSION@}\\
+\end{Minipage}
+\end{flushleft}
+
+%\end{titlepage}
+% impressum and disclaimer
+\newpage
+
+\vspace*{\fill}
+\small{
+Technical information subject to change without notice.\\
+This document may also be changed without notice.\\
+@ROYALE_PANDOC_VERSION@ \\
+Created:  \indent \today\\
+% Changed: \indent \today\\
+\textcopyright \textbf{pmd}technologies gmbh\\
+All texts, pictures and other contents published in this instruction manual are subject to the copyright\\
+of \textbf{pmd}, Siegen unless otherwise noticed. No part of this publication may be reproduced or\\
+transmitted in any form or by any means, electronic or mechanical, including photocopy, recording, or\\
+any information storage and retrieval system, without permission in writing from the publisher \textbf{pmd}.}\\\\\\
+
+\cleardoublepage
+
+%\renewcommand\contentsname{Table of Contents}
+\phantomsection
+\setcounter{page}{3}
+%\addcontentsline{toc}{section}{Table of Contents}
+\tableofcontents
+%\tableofcontents
+%\newpage
+%\renewcommand\listfigurename{List of Figures}
+%\listoffigures
+%\newpage
+%\renewcommand\listtablename{List of Tables}
+%\listoftables
+%\newpage
+%\clearemptydoublepage
+
+\cleardoublepage
+
+$body$
+
+\cleardoublepage
+\printindex
+\end{document}

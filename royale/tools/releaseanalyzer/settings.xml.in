@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Settings>
+  <Platform PlatformName="WINDOWS-64Bit">
+    <Package>../release/libroyale-@CPACK_PACKAGE_VERSION@-WINDOWS-64Bit.exe</Package>
+    <Unpackpath>../release/libroyale-@CPACK_PACKAGE_VERSION@-WINDOWS-64Bit</Unpackpath>
+    <Checkpath>../release/libroyale-@CPACK_PACKAGE_VERSION@-WINDOWS-64Bit</Checkpath>
+    <SevenZipPath>C:/Program Files/7-Zip/7z.exe</SevenZipPath>
+    <Ignorepathandsubs>
+      <Path>doc</Path>
+    </Ignorepathandsubs>
+    <Validationfile>../expectationfiles/expectedStructureWINDOWS64.txt</Validationfile>
+    <Differencefile>differenceWINDOWS64.txt</Differencefile>
+    <Debug>1</Debug>
+    <CompileSamples>1</CompileSamples>
+    <CompileBDD>1</CompileBDD>
+    <RunBDD>1</RunBDD>
+	<FullAutomatic>1</FullAutomatic>
+  </Platform>
+  <Platform PlatformName="WINDOWS-32Bit">
+    <Package>../release/libroyale-@CPACK_PACKAGE_VERSION@-WINDOWS-32Bit.exe</Package>
+    <Unpackpath>../release/libroyale-@CPACK_PACKAGE_VERSION@-WINDOWS-32Bit</Unpackpath>
+    <Checkpath>../release/libroyale-@CPACK_PACKAGE_VERSION@-WINDOWS-32Bit</Checkpath>
+    <SevenZipPath>C:/Program Files/7-Zip/7z.exe</SevenZipPath>
+    <Ignorepathandsubs>
+      <Path>doc</Path>
+    </Ignorepathandsubs>
+    <Validationfile>../expectationfiles/expectedStructureWINDOWS32.txt</Validationfile>
+    <Differencefile>differenceWINDOWS32.txt</Differencefile>
+    <Debug>1</Debug>
+    <CompileSamples>1</CompileSamples>
+    <CompileBDD>1</CompileBDD>
+    <RunBDD>1</RunBDD>
+	<FullAutomatic>1</FullAutomatic>
+  </Platform>
+  <Platform PlatformName="LINUX-64Bit">
+    <Package>../release/libroyale-@CPACK_PACKAGE_VERSION@-LINUX-64Bit.zip</Package>
+    <Unpackpath>../release/libroyale-@CPACK_PACKAGE_VERSION@-LINUX-64Bit</Unpackpath>
+    <Checkpath>../release/libroyale-@CPACK_PACKAGE_VERSION@-LINUX-64Bit/libroyale-@CPACK_PACKAGE_VERSION@-LINUX-64Bit</Checkpath>
+    <SevenZipPath/>
+    <Ignorepathandsubs>
+      <Path>doc</Path>
+    </Ignorepathandsubs>
+    <Validationfile>../expectationfiles/expectedStructureLINUX64.txt</Validationfile>
+    <Differencefile>differenceLINUX64.txt</Differencefile>
+    <Debug>1</Debug>
+    <CompileSamples>1</CompileSamples>
+    <CompileBDD>1</CompileBDD>
+    <RunBDD>1</RunBDD>
+	<FullAutomatic>1</FullAutomatic>
+  </Platform>
+  <Platform PlatformName="LINUX-32Bit">
+    <Package>../release/libroyale-@CPACK_PACKAGE_VERSION@-LINUX-32Bit.zip</Package>
+    <Unpackpath>../release/libroyale-@CPACK_PACKAGE_VERSION@-LINUX-32Bit</Unpackpath>
+    <Checkpath>../release/libroyale-@CPACK_PACKAGE_VERSION@-LINUX-32Bit/libroyale-@CPACK_PACKAGE_VERSION@-LINUX-32Bit</Checkpath>
+    <SevenZipPath/>
+    <Ignorepathandsubs>
+      <Path>doc</Path>
+    </Ignorepathandsubs>
+    <Validationfile>../expectationfiles/expectedStructureLINUX32.txt</Validationfile>
+    <Differencefile>differenceLINUX32.txt</Differencefile>
+    <Debug>1</Debug>
+    <CompileSamples>1</CompileSamples>
+    <CompileBDD>1</CompileBDD>
+    <RunBDD>1</RunBDD>
+	<FullAutomatic>1</FullAutomatic>
+  </Platform>
+  <Platform PlatformName="APPLE-64Bit">
+    <Package>../release/libroyale-@CPACK_PACKAGE_VERSION@-APPLE-64Bit.zip</Package>
+    <Unpackpath>../release/libroyale-@CPACK_PACKAGE_VERSION@-APPLE-64Bit</Unpackpath>
+    <Checkpath>../release/libroyale-@CPACK_PACKAGE_VERSION@-APPLE-64Bit/libroyale-@CPACK_PACKAGE_VERSION@-APPLE-64Bit</Checkpath>
+    <SevenZipPath/>
+    <Ignorepathandsubs>
+      <Path>doc</Path>
+    </Ignorepathandsubs>
+    <Validationfile>../expectationfiles/expectedStructureAPPLE64.txt</Validationfile>
+    <Differencefile>differenceAPPLE4.txt</Differencefile>
+    <Debug>1</Debug>
+    <CompileSamples>1</CompileSamples>
+    <CompileBDD>1</CompileBDD>
+    <RunBDD>1</RunBDD>
+	<FullAutomatic>1</FullAutomatic>
+  </Platform>
+  <Platform PlatformName="ANDROID-32Bit">
+    <Package>../release/libroyale-@CPACK_PACKAGE_VERSION@-ANDROID-32Bit.zip</Package>
+    <Unpackpath>../release/libroyale-@CPACK_PACKAGE_VERSION@-ANDROID-32Bit</Unpackpath>
+    <Checkpath>../release/libroyale-@CPACK_PACKAGE_VERSION@-ANDROID-32Bit/libroyale-@CPACK_PACKAGE_VERSION@-ANDROID-32Bit</Checkpath>
+    <SevenZipPath/>
+    <Ignorepathandsubs>
+      <Path>doc</Path>
+    </Ignorepathandsubs>
+    <Validationfile>../expectationfiles/expectedStructureANDROID32.txt</Validationfile>
+    <Differencefile>differenceANDROID32.txt</Differencefile>
+    <Debug>1</Debug>
+    <CompileSamples>1</CompileSamples>
+    <CompileBDD>1</CompileBDD>
+    <RunBDD>1</RunBDD>
+	<FullAutomatic>1</FullAutomatic>
+  </Platform>
+</Settings>

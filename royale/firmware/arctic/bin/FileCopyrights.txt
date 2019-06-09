@@ -1,0 +1,15 @@
+Copyright (C) 2018 Infineon Technologies
+
+All of the prebuilt .img files contain code Copyright (C) Cypress
+Semiconductor, and code Copyright (C) Infineon Technologies.
+
+The ThreadX operating system from Express Logic is used as the
+embedded RTOS in these devices, Copyright (C) Express Logic Inc.
+
+These .img files may only be used as agreed in the software
+license agreement under which you received them.
+
+THIS CODE AND INFORMATION ARE PROVIDED "AS IS" WITHOUT WARRANTY OF ANY
+KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
+PARTICULAR PURPOSE.

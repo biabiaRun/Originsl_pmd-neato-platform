@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">RoyaleAndroidSample</string>
+    <string name="start">Start</string>
+    <string name="royale_image_description">the data received from royale</string>
+</resources>

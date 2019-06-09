@@ -1,0 +1,72 @@
+@echo off
+
+REM Copyright (C) 2018 pmdtechnologies ag
+
+REM THIS CODE AND INFORMATION ARE PROVIDED "AS IS" WITHOUT WARRANTY OF ANY
+REM KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+REM IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
+REM PARTICULAR PURPOSE.
+call :signstamp "${royaledir}\drivers\cypress_camboard_pico\bin\win10\x64\cyusb3.cat" || goto ERROR
+call :signstamp "${royaledir}\drivers\cypress_camboard_pico\bin\win10\x86\cyusb3.cat" || goto ERROR
+call :signstamp "${royaledir}\drivers\cypress_camboard_pico\bin\win7\x64\cyusb3.cat" || goto ERROR
+call :signstamp "${royaledir}\drivers\cypress_camboard_pico\bin\win7\x86\cyusb3.cat" || goto ERROR
+call :signstamp "${royaledir}\drivers\cypress_camboard_pico\bin\win8\x64\cyusb3.cat" || goto ERROR
+call :signstamp "${royaledir}\drivers\cypress_camboard_pico\bin\win8\x86\cyusb3.cat" || goto ERROR
+
+echo "SignDriver.bat ended with errorcode 0
+exit /b 0
+
+:ERROR
+REM return an error code...
+set ERRORCODE=%errorlevel%
+echo "SignDriver.bat ended with errorcode %ERRORCODE%
+exit /b %ERRORCODE%
+
+REM Function sign and timestamp a file
+:signstamp
+setlocal
+set "FILETOSIGN=%~1"
+${signtoolpath} sign /ac "${royaledir}\cmake\sign\GlobalSign Root CA.crt" /fd sha256 /n "pmdtechnologies ag" "%FILETOSIGN%" || goto SIGNERROR
+${signtoolpath} sign /as  /ac "${royaledir}\cmake\sign\GlobalSign Root CA.crt" /fd sha512 /n "pmdtechnologies ag" "%FILETOSIGN%" || goto SIGNERROR
+
+set timestamp_server=http://rfc3161timestamp.globalsign.com/advanced
+
+REM wait 2 seconds...
+%SYSTEMROOT%\System32\PING.EXE -n 2 127.0.0.1 > nul
+
+call :timestamp "/td sha256" "%FILETOSIGN%" || goto SIGNERROR
+call :timestamp "/tp 1 /td sha512" "%FILETOSIGN%" || goto SIGNERROR
+
+REM return a successful code...
+endlocal
+exit /b 0
+
+:SIGNERROR
+REM return an error code...
+set ERRORCODE=%errorlevel%
+endlocal
+exit /b %ERRORCODE%
+
+
+
+REM Function timestamp
+:timestamp
+setlocal
+set PARAMETERS=%~1
+set "FILETOSTAMP=%~2"
+for /L %%a in (1,1,10) do (
+
+    REM wait 2 seconds...
+    %SYSTEMROOT%\System32\PING.EXE -n 2 127.0.0.1 > nul
+    
+    REM try to timestamp the file...
+    ${signtoolpath} timestamp /tr %timestamp_server% %PARAMETERS% "%FILETOSTAMP%"
+
+    if errorlevel 0 if not errorlevel 1 (
+      endlocal
+      exit /b 0
+    )
+)
+REM An error occured
+endlocal
+exit /b 1

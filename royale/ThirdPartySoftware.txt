@@ -1,0 +1,95 @@
+Royale Third Party Software
+===========================
+
+The source code of the open source software used in Royale is available 
+upon request. Please contact info@pmdtec.com.
+Certain versions of Royale contain the following third party software:
+
+Catch
+-----
+Licensed under the Boost Software License.
+License file located in: contrib/catch/LICENSE_1_0.txt
+
+
+Spectre
+-----------------
+Licensed under the Spectre license.
+License file located in: spectre/spectre_license.txt
+
+
+Google Test
+-----------
+Licensed under a 3-clause BSD-style license.
+License file located in: contrib/gtest/googletest/LICENSE
+
+
+Google Mock
+-----------
+Licensed under a 3-clause BSD-style license.
+License file located in: contrib/gtest/googlemock/LICENSE
+
+
+Unity (a test framework for C)
+------------------------------
+Licensed under the MIT License.
+License file located in: contrib/Unity/license.txt
+
+
+Qt Android CMake
+----------------
+Licensed under a 3-clause BSD-style license.
+License file located in: contrib/qt-android-cmake-master/license.txt
+
+
+libusb
+------
+Licensed under the LGPL 2.1 license.
+License file located in: doc/licenses/lgpl-2.1.txt
+
+
+libziputils/libarchive
+----------------------
+Licensed under a 2-clause BSD-style license.
+License file located in: contrib/libziputils/libarchive/COPYING
+
+
+libziputils/bzlib
+-----------------
+Licensed under a 4-clause BSD-style license.
+License file located in: contrib/libziputils/bzlib/LICENSE
+
+
+CyAPI
+-----
+Licensed under the CYPRESS SOFTWARE LICENSE AGREEMENT.
+License file located in: contrib/CypressFX3/CyAPI/license.txt
+
+
+freeglut
+--------
+Licensed under an X-style license.
+License file located in: contrib/freeglut-3.0.0-rc2/COPYING
+
+
+gradle-wrapper
+--------------
+Licensed under the Apache 2.0 license.
+License file located in: doc/licenses/gradle-wrapper_license.txt
+
+
+Kiss FFT
+--------
+Licensed under a BSD-style license.
+License file located in: doc/licenses/kissfft_license.txt
+
+
+NSIS
+-------------------
+Licensed under the zlib/libpng license
+License file located in: doc/licenses/zlib_libpng_license.txt
+
+
+PackedArray
+-------------------
+Licensed under the DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE, Version 2
+License file located in: doc/licenses/packedarray_license.txt

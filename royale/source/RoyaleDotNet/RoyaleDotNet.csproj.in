@@ -1,0 +1,133 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">@DOTNETPLATFORM@</Platform>
+    <ProjectGuid>{BAB4618A-9A99-4E31-9483-72D53C6DF1BD}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>@CMAKE_CURRENT_BIN_DIR@\Properties</AppDesignerFolder>
+    <RootNamespace>RoyaleDotNet</RootNamespace>
+    <AssemblyName>RoyaleDotNet</AssemblyName>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|Win32' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>@CMAKE_BINARY_DIR@\Debug</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <NoWarn>1607,1587,1591</NoWarn>
+    <DocumentationFile>@CMAKE_BINARY_DIR@\Debug\RoyaleDotNet.XML</DocumentationFile>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|Win32' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>@CMAKE_BINARY_DIR@\Release</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <NoWarn>1607,1587,1591</NoWarn>
+    <DocumentationFile>@CMAKE_BINARY_DIR@\Release\RoyaleDotNet.XML</DocumentationFile>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x64' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <Optimize>false</Optimize>
+    <OutputPath>@CMAKE_BINARY_DIR@\Debug</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <WarningLevel>4</WarningLevel>
+    <NoWarn>1607,1587,1591</NoWarn>
+    <DocumentationFile>@CMAKE_BINARY_DIR@\Debug\RoyaleDotNet.XML</DocumentationFile>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x64' ">
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <Optimize>true</Optimize>
+    <OutputPath>@CMAKE_BINARY_DIR@\Release</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <WarningLevel>4</WarningLevel>
+    <NoWarn>1607,1587,1591</NoWarn>
+    <DocumentationFile>@CMAKE_BINARY_DIR@\Release\RoyaleDotNet.XML</DocumentationFile>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>@CMAKE_BINARY_DIR@\Debug</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <NoWarn>1607,1587,1591</NoWarn>
+    <DocumentationFile>@CMAKE_BINARY_DIR@\Debug\RoyaleDotNet.XML</DocumentationFile>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>@CMAKE_BINARY_DIR@\Release</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <NoWarn>1607,1587,1591</NoWarn>
+    <DocumentationFile>@CMAKE_BINARY_DIR@\Release\RoyaleDotNet.XML</DocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\CallbackData.cs" />
+    <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\CameraDevice.cs" />
+    <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\CameraManager.cs" />
+    <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\DepthData.cs" />
+    <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\DepthDataListener.cs" />
+    <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\DepthImage.cs" />
+    <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\DepthImageListener.cs" />
+    <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\Event.cs" />
+    <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\EventListener.cs" />
+    <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\ExposureLimits.cs" />
+    <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\ExposureListener.cs" />
+    <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\ExposureListener2.cs" />
+    <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\ExposureMode.cs" />
+    <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\ExtendedData.cs" />
+    <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\ExtendedDataListener.cs" />
+    <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\IntermediateData.cs" />
+    <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\IRImage.cs" />
+    <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\IRImageListener.cs" />
+    <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\LensParameters.cs" />
+    <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\ModulationSequence.cs" />
+    <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\ProcessingFlag.cs" />
+    <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\RawData.cs" />
+    <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\RecordStoppedListener.cs" />
+    <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\Royale.cs" />
+    <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\RoyaleDotNET.cs" />
+    <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\SparsePointCloud.cs" />
+    <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\SparsePointCloudListener.cs" />
+    <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\Status.cs" />
+    <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\StreamId.cs" />
+    <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\TriggerMode.cs" />
+    <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\Variant.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it.
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

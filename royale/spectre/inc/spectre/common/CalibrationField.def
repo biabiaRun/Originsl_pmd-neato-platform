@@ -1,0 +1,23 @@
+/****************************************************************************\
+ * Copyright (C) 2017 pmdtechnologies ag
+ *
+ * THIS CODE AND INFORMATION ARE PROVIDED "AS IS" WITHOUT WARRANTY OF ANY
+ * KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
+ * PARTICULAR PURPOSE.
+ *
+\****************************************************************************/
+
+// Defines all public fields in the calibration
+// This file is used by libcalibration / libspectre to create
+// matching enums in their respective namespaces.
+//
+// Usage:
+// NAME_OF_ENUM_KEY, C type
+#define SPECTRE_CALIBRATION_FIELDS(X)                                   \
+    /*! Lensparameters (float) in the order fx,fy,cx,cy,k1,k2,p1,p2,{k3,...,k5} */      X(LENSPARAMETERS, float)         \
+    /*! Imager serial (char) */        X(SERIAL, char)                  \
+    /*! Sensor serial (uint32_t) */    X(SENSOR_SERIAL, char)           \
+    /*! Calibration ROI (uint32_t) */  X(CALIBRATION_ROI, uint32_t)     \
+    /*! Product code (uint8_t) */      X(PRODUCT_CODE, uint8_t)         \
+    /*! Lens center (uint16_t) */      X(LENS_CENTER, uint16_t)

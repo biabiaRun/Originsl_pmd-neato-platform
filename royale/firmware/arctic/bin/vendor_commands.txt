@@ -1,0 +1,178 @@
+Protocol documentation and changelog
+====================================
+
+UVC extension commands
+----------------------
+
+The UVC extension has 5 controls:
+
+Property 1, 8 byte: Write setup packet, read STALL_INDICATOR
+Property 2, 64 byte: data phase transfer
+Property 3, 512 byte: data phase transfer
+Property 4, 4k byte: data phase transfer
+Property 5, variable length: data phase transfer according to setup packet (if supported by the host implementation)
+
+The size of the data phase is limited by EP0 buffer size of 4096, which is the upper limit for property 5.
+For the fixed-length properties, the data must be zero-padded to the fixed size, the firmware will ignore the extra padding by using the size in the setup packet.
+
+Error detection:
+    In 0.7 and later:
+    Read and Write commands need different mechanisms for signalling errors, because the USB transaction ends when the data is transferred.
+    Read commands indicate an error by sending a USB stall.
+    Write commands must be followed by a read of the setup property, and tested for the STALL_INDICATOR (bit 0 of byte 0).
+    For both read and write, if an error is indicated then the detailed info can be read via vendor command 0x20.
+
+    In 0.6, read commands are the same, but write commands can only be checked by reading vendor command 0x20.
+
+bmReqType:
+    0xC1: read commands - Direction: Device to Host (IN), Type: Vendor, Recipient: Interface
+    0x41: write commands - Direction: Host to Device (OUT), Type: Vendor, Recipient: Interface
+
+bRequest:
+    0x00: i2c0, no register addressing - wValue: I2C address, wLength: byte count
+    0x01: i2c8, 8bit register addressing - wValue: I2C address, wIndex: Register address, wLength: byte count
+    0x02: i2c16, 16bit register addressing - wValue: I2C address, wIndex: Register address, wLength: byte count
+    0x03: i2c imager, 16bit register addressing - wIndex: Register address, wLength: byte count
+    0x04: spi flash access (page-wise for write, sector-wise for read (only if applicable)) - wValue: Byte address HIGH 1 Byte, wIndex: Byte address LOW 2 Byte, wLength: byte count
+    0x05: write: spi erase - wValue: Byte address HIGH 1 Byte, wIndex: Byte address LOW, wLength: 0
+        / read: WIP bit (write in progress) - wLength: 1
+    0x06: spi, generic access - wValue: (Command << 8) & Byte address HIGH 1 Byte, wIndex: Byte address LOW 2 Byte, wLength: byte count
+    0x07: write: set control pin - wValue: 0 for low, 1 for high, wIndex: 0x00 for RESET pin, 0x01 for STANDBY pin, wLength: 0
+        / read: EXPERIMENTALLY implemented in v0.14.1, first write wValue=2 to the pin (once), then read with wLength=1
+    0x08: spi device select - wValue is 0 to use the SPI block's SSN, 1 to use configured GPIO
+        / read: not implemented
+
+    0x10: write: set Imager I2C address - wValue: 7bit I2C address, wLength: 0
+        / read:  current Imager I2C address - wLength: 1
+    0x11: write: set CX3 mipi config line width (NOT YET IMPLEMENTED, tbd when default frame size working)
+    0x12: write: spi write without releasing the chip select line, wLength: byte count
+        / read:  read data from spi and release chip select afterwards, wLength: byte count
+    0x14: generic spi write and release chip select line afterwards, wLength: byte count
+    0x15: write: i2c bus speed, in bits per second.  32-bit value, with the high 16 bits in wValue and the low bits in wIndex
+        / read: not supported
+
+    0x18: write: reset device
+                wValue selects the reset type (not all firmware versions will support all reset types):
+                0x00 use any supported implementation (will be one of the ones below)
+                0x10 bus and peripheral reset only, does not disconnect the USB
+                0x20 FX3 hard reset, if firmware is only in RAM then this will return to the WestBridge bootloader
+                0x21 FX3 warm reset, will restart RAM firmware
+                The interaction with either BOOT_COMPLETE_FLAG_GPIO is implementation-defined.
+    0x19: peripheral disable and highz: wValue: 2 to turn off the SPI and set all its IOs to HighZ, 3 to re-enable it
+                Allows a different device to be the SPI bus master.  All other SPI functions will return errors.
+                The values 2 and 3 and chosen with the intention that this may add support for other IO blocks.
+
+    0x20: write: no-op (in v0.6 explicitly cleared the error status, since v0.7 any operation does that)
+        / read:  Details of any error during the previous request.
+                 bytes 0x00-0x03 enumerated status 0: no error, 1: error (see next two lines), other value: reserved
+                 bytes 0x04-0x07 CyU3PReturnStatus_t
+                 bytes 0x08-0x12 context-specific error code (CyU3PI2cError_t, CyU3PSpiError_t), or VENDOR_ERROR_NO_STATUS
+
+    0x21: read: return the firmware version number and related information.  This is always 64 bytes (so can be read with the fixed-size properties)
+                bytes 0x00-0x07 version number, as major.minor.patch  Major and minor are 16-bit, patch is 32-bit.
+                bytes 0x08-0x0e reserved and zero (planned future uses are build id, Git commit-id, and extension of the 0x0f field)
+                byte  0x0f      bit 0 VARIABLE_LENGTH flag, will be set if variable-length requests are supported
+                byte  0x0f      bit 1 BOOT_INCOMPLETE flag, only expected in development firmware or broken hardware
+                byte  0x0f      bits 7-2 are reserved and zero
+                byte  0x10      usb speed, supported since v0.11.3, was reserved and zero in older firmware
+                byte  0x11      usb data format (12 or 16 bpp), supported since v0.13.1, was reserved and zero in older firmware
+                bytes 0x12-0x3f reserved and zero
+                If the host requests more than 64 bytes, the remainder will be treated as reserved and zero'd.
+
+
+Firmware versions and protocol changes
+--------------------------------------
+
+In this list, versions that didn't have command 0x21 (read the version number) are all 0.0.x.
+
+    0.0.2611 is the last SVN revision
+    0.0.6285315 (Git revision) is the one on the first 15 CX3 C2 prototypes.
+        Recognisable by the bug that properties 2. 3 and 4 aren't supported (the USB mask says 1, 5, 6. 7, 8)
+    0.1
+        First version with support for command 0x21, reading the version number.
+        Error handling fixed (previous versions often missed the USB STALL statement).
+        First release with support for command 0x20, error count, primary and secondary error codes.
+        Development version, never released.
+    0.5
+        Development-only series leading to v0.6
+        Bug: reports VENDOR_ERROR_NO_STATUS as the secondary status for failed I2C writes.
+    0.6
+        Released with Royale 1.5.0
+        The host can read the error status, including secondary status
+    0.7
+        Development-only series leading to v0.8.1
+    0.8.1
+        Revised error handling, particularly during write operations
+        CX3 uses RAW12 instead of RAW16 for captured data
+        Automatically stop the illumination and reset the imager when disconnected
+        The variable-length property's length is never reported as zero (caused problems with Windows' USB2 stack)
+    0.9.1
+        Add the SPI device select function (v0.8 could already do SPI to the boot device)
+        Customer-specific customisation framework
+    0.10.1
+        Generic SPI access
+        Set the I2C bus speed
+    0.11.1
+        Add VENDOR_CMD_DEVICE_RESET
+    0.11.2
+        LibUvc compatibility fix, correctly reset the USB bulk data channel in response to SET_INTERFACE calls
+    0.11.3
+        Version number and related information includes the USB connection speed
+    0.11.4
+        Bugfix: When a write command failed, it sometimes stalled the status-read that followed
+    0.12.0
+        Internal test version for Skylla board.
+    0.12.1 (Skylla, VID: 0x1C28, PID: 0xC013)
+        This version is made for Skylla board. (1 data lane for MIPI, new VID and PID)
+    0.12.1 (LiteMore, VID: 0x1C28, PID: 0xC014)
+        This version is made for LiteMore board. (2 data lane for MIPI, new VID and PID)
+    0.12.2
+        Add support for BOOT_COMPLETE_FLAG_GPIO (set high after the firmware is loaded)
+        Add support for disabling the SPI (buggy, in this version all SPI access is blocked)
+    0.12.3
+        Fix bug in support for disabling the SPI
+    0.13.1
+        Replace global variables, this fixes a race condition on (non-CX3) FX3 devices.
+        Version number and related information includes the USB data transfer format (12 or 16 bits per pixel)
+        Remove the Colorformat from the CX3 images' UVC descriptor
+    0.13.2
+        Unreleased internal testing version
+    0.13.3
+        Unreleased internal testing version
+    0.13.4
+        Rename BOOT_COMPLETE_FLAG_GPIO to BOOT_COMPLETE_FLAG_GPIO_HIGH
+        Add support for BOOT_COMPLETE_FLAG_GPIO_LOW
+        Add support for BOOT_EARLY_FLAG_GPIO_HIGH and _LOW
+    0.13.5
+        Add support for hard resets (VENDOR_CMD_DEVICE_RESET with RESET_TYPE_API_HARD)
+    0.13.6
+        The hard reset also sets the imager's reset GPIO before resetting
+    0.14.1
+        Fixed-length controls now support using a control larger than the setup packet's data size
+        Added the BOOT_INCOMPLETE flag to assist firmware development, if set all behavior is undefined
+        CX3 devices can use a GPIO for the imager reset, in addition to the CX3's XRES pin
+        There is experimental (behavior may change in later releases) support for reading GPIOs
+    0.15.1
+        Support building both UVC and Amundsen (non-UVC protocol) images
+    0.15.2
+        Fix a race condition if the host sends a SET_INTERFACE as soon as the USB interface is up
+    0.16.1
+        Amundsen devices can start streaming via a COMMIT_CONTROL request, in addition to SET_INTERFACE
+        Add LPM U1/U2 exit latencies to the SuperSpeed descriptor
+        All devices identify themselves as bus powered, not self-powered
+        When connected at SuperSpeed, all devices declare a max power consumption of 896mA
+        The Amundsen Animator now has the same features enabled as the UVC Animator
+    0.16.2
+        Internal version
+        CX3 images allow burst lengths of up to 16 (previously it was limited to 12)
+        The manufacturer identifier in the USB descriptor can now be configured
+    0.17.1
+        Internal version
+        Update CX3 code based on version 1.3.4 of the Cypress SDK
+        Enable using Thumb instructions to keep the images under 128Kbytes
+        Remove FX3-specific code, in preparation to convert the CX3-specific code to common code
+    0.17.2
+        Add link power management for USB 2.0
+        Fix a bug which could give garbage data in response to a UVC video probe request
+        Add new devices Equinox, F1, M1 and X1
+        Remove UVC images for devices that now normally use Amundsen

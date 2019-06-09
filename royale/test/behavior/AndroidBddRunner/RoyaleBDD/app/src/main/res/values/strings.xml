@@ -1,0 +1,5 @@
+<resources>
+<string name="app_name">Royale BDD</string>
+<string name="action_settings">Settings</string>
+<string name="info_text">BDD tests running, refer to your console for status updates</string>
+</resources>

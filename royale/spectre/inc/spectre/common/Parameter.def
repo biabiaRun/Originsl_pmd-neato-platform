@@ -1,0 +1,92 @@
+/// -*-c++-*-
+/****************************************************************************\
+ * Copyright (C) 2017 pmdtechnologies ag
+ *
+ * THIS CODE AND INFORMATION ARE PROVIDED "AS IS" WITHOUT WARRANTY OF ANY
+ * KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
+ * PARTICULAR PURPOSE.
+ *
+\****************************************************************************/
+
+// This macro defines all types used for Spectre parameters
+// Based on this macro the ParameterVariant, ParameterFunctorVariant, and ParameterType are generated.
+//
+// Each entry consists of
+// type, name in enum
+#define SPECTRE_PARAMETER_TYPES(X)                           \
+    X(float, FLOAT)                                          \
+    X(uint32_t, UINT32)                                      \
+    X(bool, BOOL)                                            \
+    X(int32_t, INT32)                                        \
+    X(uint8_t, UINT8)
+
+// This macro defines all substructs of the SpectreParameter structure
+// Based on this macro the substructs, and there membership in SpectreParametere are generated
+//
+// Each entry consists of
+// name of substruct, member name in SpectreParameter
+#define SPECTRE_PARAMETER_SUBSTRUCTS(X,...)                             \
+    X(SpectreParameterFlyingPixel, flyingPixel, __VA_ARGS__)            \
+    X(SpectreParameterInput, inputConfig, __VA_ARGS__)                  \
+    X(SpectreParameterConfiguration, config, __VA_ARGS__)               \
+    X(SpectreParameterSaturationThreshold, saturationThreshold, __VA_ARGS__) \
+    X(SpectreParameterMPI, mpi, __VA_ARGS__) \
+    X(SpectreParameterSmoothingFilter, smoothingFilter, __VA_ARGS__)
+
+// This macro defines all parameters known to Spectre which have a representation in the processing backend
+// Based on this macro the ParameterKey enum, the default parameter map, and the processing SpectreParameter struct
+// and its children are generated.
+//
+// Each entry consists of:
+// ENUM_KEY, "shortName", defaultValue, name, "long description", lower bound, upper bound, C type
+//
+// The type of the parameter in the API is deduced from defaultValue. It must be a type present in the ParameterVariant class,
+// defined by the SPECTRE_PARAMETER_TYPES macro. Lower, and upper bounds are required to have the same type as defaultValue.
+// Additionally, lower bound must be <= upper bound, and lower bound <= defaultValue <= upper bound.
+// If IGN is specified for CTYPES no automatic generation in the processing backend takes place. Instead the user is required
+// to add the parameter manually to the processingParameter.hpp
+//
+// During X - macro invocation the variadic arguments passed to SPECTRE_PARAMETERS are forwarded as last arguments to
+// the passed X macro.
+//
+// NOTE: This macro is parsed during the doxygen generation with a regular expression. If you change its layout please make
+// sure that the documentation is still generated properly.
+#define SPECTRE_PARAMETERS(X,...)                                          \
+    X(AMPLITUDE_THRESHOLD, "amplitudeThreshold", 0.5f, SpectreParameter, amplitudeThreshold, "Upper limit values for amplitude value flags", 0.00015f, 4095.0f, float, __VA_ARGS__) \
+    X(CONSISTENCY_TOLERANCE, "consistencyTolerance", 1.2f, SpectreParameter, consistencyTolerance, "Consistency limit for asymmetry validation", 0.2f, 4.0f, float, __VA_ARGS__) \
+    X(NOISE_THRESHOLD, "noiseThreshold", 0.07f, SpectreParameter, noiseThreshold, "Upper threshold for final distance noise", 0.005f, 0.5f, float, __VA_ARGS__) \
+    X(ADAPTIVE_NOISE_FILTER_TYPE, "adaptiveNoiseFilterType", static_cast<int32_t>(1), SpectreParameter, adaptiveNoiseFilterType, "Kernel type of the adaptive noise filter", static_cast<int32_t>(1), static_cast<int32_t>(2), int32_t, __VA_ARGS__) \
+    X(AUTO_EXPOSURE_SET_VALUE, "autoExposureSetValue", 1000.0f, SpectreParameter, autoExposureSetValue, "Reference value for the auto exposure estimate", 1.0f, 4095.0f, float, __VA_ARGS__) \
+    X(FLYING_PIXEL_F0, "flyingPixelF0", 0.018f, SpectreParameterFlyingPixel, f0, "Scaling Factor for lower depth value normalization", 0.01f, 0.04f, float, __VA_ARGS__) \
+    X(FLYING_PIXEL_F1, "flyingPixelF1", 0.14f, SpectreParameterFlyingPixel, f1, "Scaling Factor for upper depth value normalization", 0.1f, 1.0f, float, __VA_ARGS__) \
+    X(FLYING_PIXEL_FAR_DIST, "flyingPixelFarDist", 4.5f, SpectreParameterFlyingPixel, farDist, "Upper Normalized threshold value for flying pixel detection", 2.0f, 14.0f, float, __VA_ARGS__) \
+    X(FLYING_PIXEL_NEAR_DIST, "flyingPixelNearDist", 1.0f, SpectreParameterFlyingPixel, nearDist, "Lower Normalized threshold value for flying pixel detection", 0.0f, 2.0f, float, __VA_ARGS__) \
+    X(MPI_AMPLITUDE_THRESHOLD, "mpiAmplitudeThreshold", 0.3f, SpectreParameterMPI, amplitudeThreshold, "Threshold for MPI flags triggered by amplitude discrepancy", 0.03f, 0.5f, float, __VA_ARGS__) \
+    X(MPI_DISTANCE_THRESHOLD, "mpiDistanceThreshold", 0.1f, SpectreParameterMPI, distanceThreshold, "Threshold for MPI flags triggered by distance discrepancy", 0.02f, 0.2f, float, __VA_ARGS__) \
+    X(MPI_NOISE_DISTANCE, "mpiNoiseDistance", 3.0f, SpectreParameterMPI, noiseDistance, "Threshold for MPI flags triggered by noise", 0.5f, 5.0f, float, __VA_ARGS__) \
+    X(LOWER_SATURATION_THRESHOLD, "saturationThresholdLower", static_cast<uint32_t>(400), SpectreParameterSaturationThreshold, lower, "Lower limit for valid raw data values", static_cast<uint32_t>(0), static_cast<uint32_t>(600), uint32_t, __VA_ARGS__) \
+    X(UPPER_SATURATION_THRESHOLD, "saturationThresholdUpper", static_cast<uint32_t>(3750), SpectreParameterSaturationThreshold, upper, "Upper limit for valid raw data values", static_cast<uint32_t>(3500), static_cast<uint32_t>(4095), uint32_t, __VA_ARGS__) \
+    X(USE_ADAPTIVE_NOISE_FILTER, "useAdaptiveNoiseFilter", true, SpectreParameterConfiguration, useAdaptiveNoiseFilter, "Activate spatial filter reducing the distance noise", false, true, uint8_t, __VA_ARGS__) \
+    X(USE_AUTO_EXPOSURE, "useAutoExposure", true, SpectreParameterConfiguration, useAutoExposure, "Activate dynamic control of the exposure time", false, true, uint8_t, __VA_ARGS__) \
+    X(USE_REMOVE_FLYING_PIXEL, "useRemoveFlyingPixel", true, SpectreParameterConfiguration, useRemoveFlyingPixel, "Activate FlyingPixel flag", false, true, uint8_t, __VA_ARGS__) \
+    X(USE_MPI_FLAG_AVERAGE, "useMPIFlagAverage", true, SpectreParameterConfiguration, useMPIFlagAverage, "Activate spatial averaging MPI value before thresholding", false, true, uint8_t, __VA_ARGS__) \
+    X(USE_MPI_FLAG_AMPLITUDE, "useMPIFlagAmplitude", true, SpectreParameterConfiguration, useMPIFlagAmplitude, "Activates MPI-amplitude flag", false, true, uint8_t, __VA_ARGS__) \
+    X(USE_MPI_FLAG_DISTANCE, "useMPIFlagDistance", true, SpectreParameterConfiguration, useMPIFlagDistance, "Activates MPI-distance flag", false, true, uint8_t, __VA_ARGS__) \
+    X(USE_VALIDATE_IMAGE, "useValidateImage", true, SpectreParameterConfiguration, useValidateImage, "Activates output image validation", false, true, uint8_t, __VA_ARGS__) \
+    X(USE_SPARSE_POINT_CLOUD, "useSparsePointCloud", false, SpectreParameterConfiguration, useSparsePointCloud, "Activates the output of sparse point cloud", false, true, uint8_t, __VA_ARGS__) \
+    X(USE_REMOVE_STRAY_LIGHT, "useRemoveStrayLight", false, SpectreParameterConfiguration, useRemoveStrayLight, "Activates the stray light correction", false, true, uint8_t, __VA_ARGS__) \
+    X(STRAYLIGHT_APPROXIMATION_ACCURACY, "strayLightApproxAccu", static_cast<uint32_t>(4), SpectreParameter, strayLightApproxAccu, "Determines how accurate the straylight should be modeled for removal", static_cast<uint32_t>(1), static_cast<uint32_t>(4), uint8_t, __VA_ARGS__) \
+    X(NUM_FREQUENCIES, "numFreqs", static_cast<uint32_t>(2), SpectreParameterInput, numFreqs, "Number of modulated measurements used", static_cast<uint32_t>(0), static_cast<uint32_t>(2), uint32_t, __VA_ARGS__) \
+    X(USE_FILTER_2FREQ, "useFilter2Freq", true, SpectreParameterConfiguration, useFilter2Freq, "Activates 2 frequency filtering", false, true, uint8_t, __VA_ARGS__) \
+    X(GLOBAL_BINNING, "globalBinning",static_cast<uint32_t>(1), SpectreParameter, globalBinning, "Activates global binning",static_cast<uint32_t>(1),static_cast<uint32_t>(9), uint_fast8_t, __VA_ARGS__) \
+    X(USE_FLAG_SBI, "useFlagSBI", false, SpectreParameterConfiguration, useFlagSBI, "Flags pixels where the SBI activation trheshold has been reached", false, true, uint8_t, __VA_ARGS__) \
+    X(USE_SMOOTHING_FILTER, "useSmoothingFilter", false, SpectreParameterConfiguration, useSmoothingFilter, "Activates the smoothing filter", false, true, uint8_t, __VA_ARGS__) \
+    X(SMOOTHING_ALPHA, "smoothingAlpha", 0.3f, SpectreParameterSmoothingFilter, alpha, "Intensity of the smoothing filter.", 0.f, 1.0f, float, __VA_ARGS__) \
+    X(SMOOTHING_FILTER_TYPE, "smoothingFilterType", static_cast<uint32_t>(0), SpectreParameterSmoothingFilter, type, "Smoothing filter type", static_cast<uint32_t>(0), static_cast<uint32_t>(1), uint8_t, __VA_ARGS__) \
+    X(USE_FILL_HOLES, "useFillHoles", false, SpectreParameterConfiguration, useFillHoles, "Tries to fill holes / remove single pixels", false, true, uint8_t, __VA_ARGS__) \
+    X(FREQUENCY_1, "freq1", static_cast<uint32_t>(80320000), SpectreParameterInput, freqs[0], "First frequency value", static_cast<uint32_t>(1), std::numeric_limits<uint32_t>::max(), IGN, __VA_ARGS__) \
+    X(FREQUENCY_2, "freq2", static_cast<uint32_t>(60240000), SpectreParameterInput, freqs[1], "Second frequency value", static_cast<uint32_t>(1), std::numeric_limits<uint32_t>::max(), IGN, __VA_ARGS__) \
+    X(PREF_NUM_THREADS, "prefNumThreads",static_cast<uint32_t>(2), SpectreParameter, prefNumThreads, "Preferred number of threads", static_cast<uint32_t>(1), static_cast<uint32_t>(3), uint32_t, __VA_ARGS__) \
+    X(LOWER_EXPOSURE_LIMIT, "exposureLimitLower", static_cast<uint32_t>(1), SpectreParameterInput, exposureLimits[0], "Lowest exposure value which will be proposed by the auto exposure algorithm", static_cast<uint32_t>(1), static_cast<uint32_t>(std::numeric_limits<uint32_t>::max()), IGN, __VA_ARGS__) \
+    X(UPPER_EXPOSURE_LIMIT, "exposureLimitUpper", static_cast<uint32_t>(2), SpectreParameterInput, exposureLimits[1], "Highest exposure value which will be proposed by the auto exposure algorithm", static_cast<uint32_t>(1), static_cast<uint32_t>(std::numeric_limits<uint32_t>::max()), IGN, __VA_ARGS__)

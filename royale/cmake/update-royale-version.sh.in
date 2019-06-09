@@ -1,0 +1,76 @@
+#****************************************************************************
+# Copyright (C) 2018 pmdtechnologies ag & Infineon Technologies
+#
+# THIS CODE AND INFORMATION ARE PROVIDED "AS IS" WITHOUT WARRANTY OF ANY
+# KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
+# PARTICULAR PURPOSE.
+#
+#****************************************************************************
+
+#!/bin/bash
+
+echo "Running update-royale-version.sh"
+# For installations that don't properly set PATH:
+export PATH=/usr/bin:/bin
+
+# Variables from cmake:
+ROYALE_SOURCE_DIR="@ROYALE_SOURCE_DIR@"
+CMAKE_BINARY_DIR="@CMAKE_CURRENT_BINARY_DIR@"
+GIT="@GIT_EXECUTABLE@"
+
+# Check if we're running on cygwin.
+# (not testing cygpath, because MINGW (i.e. git bash) also has it,
+# but it delivers the wrong results there.)
+if [ -f "/bin/cygcheck.exe" ]
+then
+    # For cygwin, we need to convert some paths
+    # from DOS to cygwin (unix) notation
+    GIT=$(cygpath -u "${GIT}")
+    ROYALE_SOURCE_DIR=$(cygpath -u "${ROYALE_SOURCE_DIR}")
+    CMAKE_BINARY_DIR=$(cygpath -u "${CMAKE_BINARY_DIR}")
+fi
+
+# Check if we're running on WSL/Windows.
+if [ -f "/bin/wslpath" ]
+then
+    # For WSL, we need to convert some paths
+    # from DOS to WSL notation
+    GIT=$(wslpath -u "${GIT}")
+    ROYALE_SOURCE_DIR=$(wslpath -u "${ROYALE_SOURCE_DIR}")
+    CMAKE_BINARY_DIR=$(wslpath -u "${CMAKE_BINARY_DIR}")
+fi
+
+export GIT ROYALE_SOURCE_DIR CMAKE_BINARY_DIR
+
+# Git describe will output an error message to stderr, but nothing to stdout, if it can't find a Git
+# repo ROYALE_SOURCE_DIR.  In that case, GITHASH will simply be left as an empty string.
+if [ -z "$GIT" ]
+then
+    GITHASH=""
+else
+    GITHASH=$(cd "${ROYALE_SOURCE_DIR}" && "${GIT}" describe --always --dirty --match='' 2>/dev/null)
+fi    
+
+cat >royale-version.h.tmp <<EOF
+/****************************************************************************\\
+* Copyright (C) 2017 Infineon Technologies
+*
+* THIS CODE AND INFORMATION ARE PROVIDED "AS IS" WITHOUT WARRANTY OF ANY
+* KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+* IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
+* PARTICULAR PURPOSE.
+*
+\\****************************************************************************/
+
+#pragma once
+
+#define ROYALE_VERSION_MAJOR @ROYALE_VERSION_MAJOR@
+#define ROYALE_VERSION_MINOR @ROYALE_VERSION_MINOR@
+#define ROYALE_VERSION_PATCH @ROYALE_VERSION_PATCH@
+#define ROYALE_VERSION_BUILD @ROYALE_VERSION_BUILD@
+#define ROYALE_VERSION_CUSTOMER_SUFFIX "@ROYALE_CUSTOMER_SUFFIX@"
+#define ROYALE_VERSION_SCM "${GITHASH}"
+EOF
+
+. "${ROYALE_SOURCE_DIR}/scripts/move-if-change.sh" royale-version.h.tmp royale-version.h

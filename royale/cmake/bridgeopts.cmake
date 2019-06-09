@@ -1,0 +1,119 @@
+#****************************************************************************
+# Copyright (C) 2018 pmdtechnologies ag & Infineon Technologies
+#
+# THIS CODE AND INFORMATION ARE PROVIDED "AS IS" WITHOUT WARRANTY OF ANY
+# KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
+# PARTICULAR PURPOSE.
+#
+#****************************************************************************
+
+SET ( ROYALE_BRIDGE_IGNORE_CYAPI_MISSING_ERROR OFF CACHE BOOL "If the CyAPI library is not found this will not trigger an error" )
+
+# Set sensible defaults for the bridge implementations.
+# User is allowed to change these (no SET(.... FORCE))
+IF (ROYALE_PLAYBACK_ONLY)
+    # If we build the playback only version disable all the bridges
+    SET ( ROYALE_BRIDGE_AMUNDSEN_IMPLEMENTATION  "NONE"      CACHE STRING "Amundsen (UVC without the Frame Server) bridge implementation" )
+    SET ( ROYALE_BRIDGE_ENCLUSTRA_IMPLEMENTATION "NONE"      CACHE STRING "Enclustra bridge implementation" )
+    SET ( ROYALE_BRIDGE_UVC_IMPLEMENTATION       "NONE"      CACHE STRING "UVC bridge implementation" )
+ELSE()
+    IF (WIN32)
+        # CyAPI comes from the Cypress FX3 SDK, CyAPI 1.2.3 is included in SDK 1.3.4
+        find_package (CyAPI 1.2.3)
+        IF (CyAPI_FOUND)
+            SET ( ROYALE_BRIDGE_AMUNDSEN_IMPLEMENTATION  "CYAPI"  CACHE STRING "Amundsen (UVC without the Frame Server) bridge implementation" )
+            SET ( ROYALE_BRIDGE_ENCLUSTRA_IMPLEMENTATION "CYAPI"  CACHE STRING "Enclustra bridge implementation" )
+        ELSE()
+            IF (ROYALE_BRIDGE_IGNORE_CYAPI_MISSING_ERROR)
+                SET ( ROYALE_BRIDGE_AMUNDSEN_IMPLEMENTATION  "NONE"   CACHE STRING "Amundsen USB support disabled (requires the FX3 SDK)" )
+                SET ( ROYALE_BRIDGE_ENCLUSTRA_IMPLEMENTATION "NONE"   CACHE STRING "Enclustra USB support disabled (requires the FX3 SDK)" )
+                MESSAGE ( "No CyAPI library found. Amundsen and Enclustra USB support will be disabled." )
+            ELSE()
+                MESSAGE ( FATAL_ERROR "No CyAPI was found. If it is intended to use Royale without the CyAPI library please set ROYALE_BRIDGE_IGNORE_CYAPI_MISSING_ERROR to ON" )
+            ENDIF()
+        ENDIF()
+        SET ( ROYALE_BRIDGE_UVC_IMPLEMENTATION       "DIRECTSHOW" CACHE STRING "UVC bridge implementation" )
+    ELSE()
+        SET ( ROYALE_BRIDGE_AMUNDSEN_IMPLEMENTATION  "LIBUSB"     CACHE STRING "Amundsen (UVC-like) bridge implementation" )
+        SET ( ROYALE_BRIDGE_ENCLUSTRA_IMPLEMENTATION "LIBUSB"     CACHE STRING "Enclustra bridge implementation" )
+        SET ( ROYALE_BRIDGE_UVC_IMPLEMENTATION       "AMUNDSEN"   CACHE STRING "UVC bridge implementation" )
+    ENDIF()
+ENDIF()
+
+# List of allowed values for the bridge implementation,
+# so cmake-gui can make nice drop-down lists for these.
+set_property(CACHE  ROYALE_BRIDGE_AMUNDSEN_IMPLEMENTATION  PROPERTY STRINGS "NONE;LIBUSB;CYAPI" )
+set_property(CACHE  ROYALE_BRIDGE_ENCLUSTRA_IMPLEMENTATION PROPERTY STRINGS "NONE;LIBUSB;CYAPI" )
+set_property(CACHE  ROYALE_BRIDGE_UVC_IMPLEMENTATION       PROPERTY STRINGS "NONE;DIRECTSHOW;AMUNDSEN;V4L" )
+
+# Configure stuff depending on the above
+# (we keep most of this in the cache so it's available globally and to help debugging)
+
+SET( ROYALE_BRIDGE_AMUNDSEN         OFF CACHE INTERNAL "" )
+SET( ROYALE_BRIDGE_AMUNDSEN_CYAPI   OFF CACHE INTERNAL "" )
+SET( ROYALE_BRIDGE_AMUNDSEN_LIBUSB  OFF CACHE INTERNAL "" )
+SET( ROYALE_BRIDGE_ENCLUSTRA        OFF CACHE INTERNAL "" )
+SET( ROYALE_BRIDGE_ENCLUSTRA_CYAPI  OFF CACHE INTERNAL "" )
+SET( ROYALE_BRIDGE_ENCLUSTRA_LIBUSB OFF CACHE INTERNAL "" )
+SET( ROYALE_BRIDGE_UVC              OFF CACHE INTERNAL "" )
+SET( ROYALE_BRIDGE_UVC_AMUNDSEN     OFF CACHE INTERNAL "" )
+SET( ROYALE_BRIDGE_UVC_DIRECTSHOW   OFF CACHE INTERNAL "" )
+SET( ROYALE_BRIDGE_UVC_V4L          OFF CACHE INTERNAL "" )
+SET( ROYALE_BRIDGE_EXTENSION_ARCTIC  OFF CACHE INTERNAL "UVC vendor extension 'Arctic'" )
+SET( ROYALE_USE_CYAPI               OFF CACHE INTERNAL "" )
+SET( ROYALE_USE_LIBUSB              OFF CACHE INTERNAL "" )
+SET( ROYALE_USE_V4L                 OFF CACHE INTERNAL "Use Video For Linux" )
+SET( ROYALE_USE_DIRECTSHOW          OFF CACHE INTERNAL "" )
+
+IF (ROYALE_PLAYBACK_ONLY)
+    RETURN()
+ENDIF()    
+
+IF ( "${ROYALE_BRIDGE_AMUNDSEN_IMPLEMENTATION}" STREQUAL "CYAPI" )
+   SET( ROYALE_BRIDGE_AMUNDSEN         ON CACHE INTERNAL "" )
+   SET( ROYALE_BRIDGE_AMUNDSEN_CYAPI   ON CACHE INTERNAL "" )
+   SET( ROYALE_USE_CYAPI               ON CACHE INTERNAL "" )
+ELSEIF ( "${ROYALE_BRIDGE_AMUNDSEN_IMPLEMENTATION}" STREQUAL "LIBUSB" )
+   SET( ROYALE_BRIDGE_AMUNDSEN         ON CACHE INTERNAL "" )
+   SET( ROYALE_BRIDGE_AMUNDSEN_LIBUSB  ON CACHE INTERNAL "" )
+   SET( ROYALE_USE_LIBUSB              ON CACHE INTERNAL "" )
+ENDIF()
+
+IF ( "${ROYALE_BRIDGE_ENCLUSTRA_IMPLEMENTATION}" STREQUAL "CYAPI" )
+   SET( ROYALE_BRIDGE_ENCLUSTRA        ON CACHE INTERNAL "" )
+   SET( ROYALE_BRIDGE_ENCLUSTRA_CYAPI  ON CACHE INTERNAL "" )
+   SET( ROYALE_USE_CYAPI               ON CACHE INTERNAL "" )
+ELSEIF ( "${ROYALE_BRIDGE_ENCLUSTRA_IMPLEMENTATION}" STREQUAL "LIBUSB" )
+   SET( ROYALE_BRIDGE_ENCLUSTRA        ON CACHE INTERNAL "" )
+   SET( ROYALE_BRIDGE_ENCLUSTRA_LIBUSB ON CACHE INTERNAL "" )
+   SET( ROYALE_USE_LIBUSB              ON CACHE INTERNAL "" )
+ENDIF()
+
+IF ( "${ROYALE_BRIDGE_UVC_IMPLEMENTATION}" STREQUAL "DIRECTSHOW" )
+   SET( ROYALE_BRIDGE_UVC_DIRECTSHOW   ON CACHE INTERNAL "" )
+   SET( ROYALE_BRIDGE_UVC              ON CACHE INTERNAL "" )
+   SET( ROYALE_USE_DIRECTSHOW          ON CACHE INTERNAL "" )
+ELSEIF ( "${ROYALE_BRIDGE_UVC_IMPLEMENTATION}" STREQUAL "LIBUVC" )
+   MESSAGE (FATAL_ERROR "LibUVC is no longer used, please set ROYALE_BRIDGE_UVC_IMPLEMENTATION to AMUNDSEN instead")
+ELSEIF ( "${ROYALE_BRIDGE_UVC_IMPLEMENTATION}" STREQUAL "AMUNDSEN" )
+   IF ( WIN32 )
+      MESSAGE (FATAL_ERROR "On Windows, BridgeAmundsen can only talk to Amundsen devices, not UVC ones.  Please set ROYALE_BRIDGE_UVC_IMPLEMENTATION to NONE or DIRECTSHOW instead")
+   ENDIF()
+   SET( ROYALE_BRIDGE_UVC              ON CACHE INTERNAL "" )
+   SET( ROYALE_BRIDGE_UVC_AMUNDSEN     ON CACHE INTERNAL "" )
+   SET( ROYALE_USE_LIBUSB              ON CACHE INTERNAL "" )
+ELSEIF ( "${ROYALE_BRIDGE_UVC_IMPLEMENTATION}" STREQUAL "V4L" )
+   SET( ROYALE_BRIDGE_UVC              ON CACHE INTERNAL "" )
+   SET( ROYALE_BRIDGE_UVC_V4L          ON CACHE INTERNAL "" )
+   SET( ROYALE_USE_V4L                 ON CACHE INTERNAL "" )
+ENDIF()
+
+IF (${ROYALE_BRIDGE_AMUNDSEN} OR ${ROYALE_BRIDGE_UVC})
+   SET( ROYALE_BRIDGE_EXTENSION_ARCTIC  ON CACHE INTERNAL "UVC vendor extension 'Arctic'" )
+ENDIF()
+
+IF (${ROYALE_USE_CYAPI})
+    # CyAPI comes from the Cypress FX3 SDK, CyAPI 1.2.3 is included in SDK 1.3.4
+    find_package (CyAPI 1.2.3 REQUIRED)
+ENDIF()

@@ -1,0 +1,6 @@
+﻿public static class AccessCodes
+{
+    public const string ROYALE_ACCESS_CODE_LEVEL2 = "${ROYALE_ACCESS_CODE_LEVEL2}";
+    public const string ROYALE_ACCESS_CODE_LEVEL3 = "${ROYALE_ACCESS_CODE_LEVEL3}";
+    public const string ROYALE_ACCESS_CODE_LEVEL4 = "${ROYALE_ACCESS_CODE_LEVEL4}";
+}

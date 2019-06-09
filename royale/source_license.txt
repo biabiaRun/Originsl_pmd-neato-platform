@@ -1,0 +1,3 @@
+Access to this source code is granted subject to the conditions of the software license agreement, 
+which is in effect. Please be advised that if you have no SLA with pmd, you have no rights of any 
+kind for this source code and the IP contained therein.

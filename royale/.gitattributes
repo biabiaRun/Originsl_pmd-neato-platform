@@ -1,0 +1,2 @@
+# Always use crlf line endings for inf files. Otherwise the signed cat files don't match anymore.
+*.inf eol=crlf

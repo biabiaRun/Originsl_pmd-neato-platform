@@ -1,0 +1,50 @@
+@echo off
+
+REM Copyright (C) 2017 pmdtechnologies ag
+
+REM THIS CODE AND INFORMATION ARE PROVIDED "AS IS" WITHOUT WARRANTY OF ANY
+REM KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+REM IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
+REM PARTICULAR PURPOSE.
+
+
+REM sign the file...
+${signtoolpath} sign /fd sha256 /n "pmdtechnologies ag" "${signtoolfile}" || goto ERROR
+${signtoolpath} sign /as /fd sha512 /n "pmdtechnologies ag" "${signtoolfile}" || goto ERROR
+
+set timestamp_server=http://rfc3161timestamp.globalsign.com/advanced
+call :timestamp "/td sha256" || goto ERROR
+call :timestamp "/tp 1 /td sha512" || goto ERROR
+
+REM return a successful code...
+echo SignSetup.bat exit code is 0.
+exit /b 0
+
+:ERROR
+REM return an error code...
+set ERRORCODE=%errorlevel%
+echo SignSetup.bat exit code is %ERRORCODE%.
+exit /b %ERRORCODE%
+
+
+
+REM Function timestamp
+:timestamp
+setlocal
+set PARAMETERS=%~1
+for /L %%a in (1,1,10) do (
+
+    REM wait 2 seconds...
+    %SYSTEMROOT%\System32\PING.EXE -n 2 127.0.0.1 > nul
+
+    REM try to timestamp the file...
+    ${signtoolpath} timestamp /tr %timestamp_server% %PARAMETERS% "${signtoolfile}"
+
+    if errorlevel 0 if not errorlevel 1 (
+      endlocal
+      exit /b 0
+    )
+)
+REM An error occured
+endlocal
+exit /b 1

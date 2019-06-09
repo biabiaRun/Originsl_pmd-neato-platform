@@ -1,0 +1,10 @@
+rootProject.name = 'JRoyale'
+
+include ':jroyale'
+findProject(':jroyale')?.name = 'jroyale'
+
+include ':sample'
+findProject(':sample')?.name = 'sample'
+
+include ':sampleLevel1'
+findProject(':sampleLevel1')?.name = 'sampleLevel1'

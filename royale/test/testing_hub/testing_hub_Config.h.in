@@ -1,0 +1,3 @@
+// the configured options and settings for Communication_Test
+#define testing_hub_VERSION_MAJOR @testing_hub_VERSION_MAJOR@
+#define testing_hub_VERSION_MINOR @testing_hub_VERSION_MINOR@

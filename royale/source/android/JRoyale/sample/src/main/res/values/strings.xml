@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">app</string>
+    <string name="textview">TextView</string>
+    <string name="royale_camera_output">Royale Camera Output</string>
+
+    <string name="camera_status_label">CAMERA STATUS:</string>
+    <string name="camera_status_value">there is no connected camera</string>
+    <string name="camera_image_view_description">
+        the image received by the camera or grey if there is no image
+    </string>
+</resources>

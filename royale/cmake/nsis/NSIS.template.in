@@ -1,0 +1,320 @@
+; Copyright (C) 2017 pmdtechnologies ag
+; 
+; THIS CODE AND INFORMATION ARE PROVIDED "AS IS" WITHOUT WARRANTY OF ANY
+; KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+; IMPLIED WARRANTIES OF MERCHANTABILITY AND\OR FITNESS FOR A
+; PARTICULAR PURPOSE.
+; 
+
+
+
+; START CPACK CONSTANTS --------------------------------------------------------------------
+    ; These are all Constants set in cmake and loaded in via cpack.
+    ; If you want to include your own CPACK variables, its good to name them CMAKE_\S*
+    ; and include them here for a better overview.
+    
+    !define CPACK_PACKAGE_NAME                   "@CPACK_PACKAGE_NAME@"
+    !define CPACK_PACKAGE_DESCRIPTION_SUMMARY    "@CPACK_PACKAGE_DESCRIPTION_SUMMARY@"
+    !define CPACK_PACKAGE_VENDOR                 "@CPACK_PACKAGE_VENDOR@"
+    !define CPACK_PACKAGE_VERSION_MAJOR          "@CPACK_PACKAGE_VERSION_MAJOR@"
+    !define CPACK_PACKAGE_VERSION_MINOR          "@CPACK_PACKAGE_VERSION_MINOR@"
+    !define CPACK_PACKAGE_VERSION                "@CPACK_PACKAGE_VERSION@"
+    !define CPACK_PACKAGE_INSTALL_DIRECTORY      "@CPACK_PACKAGE_INSTALL_DIRECTORY@"
+    
+    !define CPACK_PACKAGE_TOP_FOLDER            "@CPACK_PACKAGE_TOP_FOLDER@"
+    !define CPACK_NSIS_EXECUTABLES_DIRECTORY    "@CPACK_NSIS_EXECUTABLES_DIRECTORY@"
+    !define CPACK_NSIS_INSTALLED_ICON_NAME      "@CPACK_NSIS_INSTALLED_ICON_NAME@"
+    !define CPACK_NSIS_URL_INFO_ABOUT           "@CPACK_NSIS_URL_INFO_ABOUT@"
+    !define CPACK_NSIS_HELP_LINK                "@CPACK_NSIS_HELP_LINK@"
+    !define CPACK_NSIS_INSTALL_ROOT             "@CPACK_NSIS_INSTALL_ROOT@"
+    !define CPACK_NSIS_PACKAGE_NAME             "@CPACK_NSIS_PACKAGE_NAME@"
+    !define CPACK_NSIS_COMPRESSOR               "@CPACK_NSIS_COMPRESSOR@"
+    
+    !define CPACK_MODULE_PATH              "@CPACK_MODULE_PATH@"
+    !define CPACK_RESOURCE_FILE_LICENSE    "@CPACK_RESOURCE_FILE_LICENSE@"
+    !define CPACK_TEMPORARY_DIRECTORY      "@CPACK_TEMPORARY_DIRECTORY@"
+    
+    !define CPACK_TOPLEVEL_DIRECTORY                "@CPACK_TOPLEVEL_DIRECTORY@"
+    !define CPACK_OUTPUT_FILE_NAME                  "@CPACK_OUTPUT_FILE_NAME@"
+    !define CPACK_INSTALLER_ARCHITECTURE_BITNESS    "@CPACK_INSTALLER_ARCHITECTURE_BITNESS@"
+; END CPACK CONSTANTS ----------------------------------------------------------------------
+
+
+
+; START REQUIRED FILES -----------------------------------
+    ; You can include .nsi and .nsh from the NSIS.template.in directory using
+    ; !include "${CPACK_MODULE_PATH}\yourFile.nsh" or
+    ; !include "${CPACK_MODULE_PATH}\yourFile.nsi"
+    
+    !include "MUI2.nsh"
+    !include "x64.nsh"
+    !include "WinVer.nsh"
+    !include FileFunc.nsh
+    !include "${CPACK_MODULE_PATH}\FileAssociation.nsh"
+    !include "${CPACK_MODULE_PATH}\DriverInstallation.nsi"
+    !include "${CPACK_MODULE_PATH}\EstimatedSize.nsi"
+    !include "${CPACK_MODULE_PATH}\MUILanguages.nsi"
+    !include "${CPACK_MODULE_PATH}\UninstallPreviousVersions.nsh"
+; END REQUIRED FILES -------------------------------------
+
+
+
+; START REAL-CONSTANTS ------------------------------------------------------------------------------------
+    ; The Following Constants are defined for a better overview.
+    ; Its not recommended to use structures like "${CPACK_PACKAGE_NAME}${CPACK_PACKAGE_VERSION}" in multiple positions
+    ; because there is no good way to change them. So we use this section to define these structures.
+    
+    !define SW_APPLICATION_NAME    "${CPACK_NSIS_PACKAGE_NAME}"
+    !define SW_APPLICATION_PATH    "$INSTDIR\${CPACK_NSIS_EXECUTABLES_DIRECTORY}\${CPACK_NSIS_INSTALLED_ICON_NAME}"
+    !define SW_UNINSTALLER_PATH    "$INSTDIR\Uninstall.exe"
+    
+    !define SW_REG_DIRECTORY      "Software\${SW_APPLICATION_NAME}"
+    !define SW_REG_UNDIRECTORY    "Software\Microsoft\Windows\CurrentVersion\Uninstall\${SW_APPLICATION_NAME}"
+    
+    !define SW_REG_VALUE_DISPLAYNAME        "${SW_APPLICATION_NAME}"
+    !define SW_REG_VALUE_UNINSTALLSTRING    "${SW_UNINSTALLER_PATH}"
+    !define SW_REG_VALUE_INSTALLLOCATION    "$INSTDIR"
+    !define SW_REG_VALUE_DISPLAYICON        "${SW_APPLICATION_PATH}"
+    !define SW_REG_VALUE_PUBLISHER          "${CPACK_PACKAGE_VENDOR}"
+    !define SW_REG_VALUE_HELPLINK           "${CPACK_NSIS_HELP_LINK}"
+    !define SW_REG_VALUE_URLINFOABOUT       "${CPACK_NSIS_URL_INFO_ABOUT}"
+    !define SW_REG_VALUE_DISPLAYVERSION     "${CPACK_PACKAGE_VERSION}"
+    !define SW_REG_VALUE_VERSIONMAJOR       "${CPACK_PACKAGE_VERSION_MAJOR}"
+    !define SW_REG_VALUE_VERSIONMINOR       "${CPACK_PACKAGE_VERSION_MINOR}"
+    !define SW_REG_VALUE_NOMODIFY           "1"
+    !define SW_REG_VALUE_NOREPAIR           "1"
+    !define SW_REG_VALUE_COMMENTS           "${CPACK_PACKAGE_DESCRIPTION_SUMMARY}"
+    !define SW_REG_VALUE_INSTALLDATE        "${CPACK_PACKAGE_DESCRIPTION_SUMMARY}"
+    
+    !define VI_PRODUCTVERSION                   "${CPACK_PACKAGE_VERSION}.0"
+    !define VI_VERSION_VALUE_PRODUCT            "${SW_APPLICATION_NAME}"
+    !define VI_VERSION_VALUE_COMMENTS           "This will install ${SW_APPLICATION_NAME}"
+    !define VI_VERSION_VALUE_COMPANY            "${CPACK_PACKAGE_VENDOR}"
+    !define VI_VERSION_VALUE_LEGALCOPY          "© ${VI_VERSION_VALUE_COMPANY}"
+    !define VI_VERSION_VALUE_FILEDESCRIPTION    "${SW_APPLICATION_NAME} installer"
+    !define VI_VERSION_VALUE_FILEVERSION        "${CPACK_PACKAGE_VERSION}"
+; END REAL-CONSTANTS --------------------------------------------------------------------------------------
+
+
+
+; START GENERAL SETTINGS ------------------------------------------------------------------------------------------
+    ; see http://nsis.sourceforge.net/Docs/Chapter2.html#compilercommands , 2.3.7 Compiler Commands
+    
+    Name          "${CPACK_PACKAGE_NAME}"
+    OutFile       "${CPACK_TOPLEVEL_DIRECTORY}\${CPACK_OUTPUT_FILE_NAME}"
+    InstallDir    "${CPACK_NSIS_INSTALL_ROOT}\${CPACK_PACKAGE_INSTALL_DIRECTORY}"
+    
+    InstallDirRegKey    HKLM    "${SW_REG_DIRECTORY}" ""
+    BrandingText                "${CPACK_PACKAGE_NAME}"
+    SetCompressor               "${CPACK_NSIS_COMPRESSOR}"
+    
+    RequestExecutionLevel    admin
+    AllowRootDirInstall      true
+    ShowInstDetails          show
+    ShowUninstDetails        show
+    
+    ; version information
+    VIProductVersion                         "${VI_PRODUCTVERSION}"
+    VIAddVersionKey     "ProductName"        "${VI_VERSION_VALUE_PRODUCT}"
+    VIAddVersionKey     "Comments"           "${VI_VERSION_VALUE_COMMENTS}"
+    VIAddVersionKey     "CompanyName"        "${VI_VERSION_VALUE_COMPANY}"
+    VIAddVersionKey     "LegalCopyright"     "${VI_VERSION_VALUE_LEGALCOPY}"
+    VIAddVersionKey     "FileDescription"    "${VI_VERSION_VALUE_FILEDESCRIPTION}"
+    VIAddVersionKey     "FileVersion"        "${VI_VERSION_VALUE_FILEVERSION}"
+; END GENERAL SETTINGS -------------------------------------------------------------------------------------------
+
+
+
+; START Dump Log FILES -----------------------------------
+    !include "${CPACK_MODULE_PATH}\DumpLog.nsi"
+; END Dump Log FILES -------------------------------------
+
+
+
+; START MUI SETTINGS ----------------
+    
+    
+    !define MUI_ABORTWARNING
+    !define MUI_COMPONENTSPAGE_NODESC
+; END MUI SETTINGS ------------------
+
+
+
+; START PAGES --------------------------------------------------------
+    ; PAGE ICONS FROM CPACK
+    ; CPACK INSERT START : CPACK_NSIS_INSTALLER_MUI_ICON_CODE
+    @CPACK_NSIS_INSTALLER_MUI_ICON_CODE@
+    ; CPACK INSERT END : CPACK_NSIS_INSTALLER_MUI_ICON_CODE
+    
+    ; CPACK INSERT START : CPACK_NSIS_INSTALLER_ICON_CODE
+    @CPACK_NSIS_INSTALLER_ICON_CODE@
+    ; CPACK INSERT END : CPACK_NSIS_INSTALLER_ICON_CODE
+    
+    ; installer
+    !insertmacro MUI_PAGE_WELCOME
+    !insertmacro MUI_PAGE_LICENSE "${CPACK_RESOURCE_FILE_LICENSE}"
+    !insertmacro MUI_PAGE_COMPONENTS
+    !insertmacro MUI_PAGE_DIRECTORY
+    !insertmacro MUI_PAGE_INSTFILES
+    !insertmacro MUI_PAGE_FINISH
+    
+    ; uninstaller
+    !insertmacro MUI_UNPAGE_CONFIRM
+    !insertmacro MUI_UNPAGE_INSTFILES
+; END PAGES ----------------------------------------------------------
+
+
+
+; START INSTALL SECTIONS -----------------------------------------------------------------------------------
+    Section "-Install" install
+        SetOutPath "$INSTDIR"
+        
+        ; CPACK INSERT START : CPACK_NSIS_FULL_INSTALL
+        !define INST_DIR "${CPACK_TEMPORARY_DIRECTORY}"
+        @CPACK_NSIS_FULL_INSTALL@
+        ; CPACK INSERT END : CPACK_NSIS_FULL_INSTALL
+        
+        WriteRegStr SHCTX "${SW_REG_DIRECTORY}" "" $INSTDIR
+        WriteUninstaller "${SW_UNINSTALLER_PATH}"
+    SectionEnd
+    
+    Section "Driver" driver
+        !insertmacro DriverInstallation
+    SectionEnd
+    
+    Section "Startmenu Shortcuts" startmenu
+        ; CPACK INSERT START : CPACK_NSIS_CREATE_ICONS
+        Var /GLOBAL STARTMENU_FOLDER
+        StrCpy $STARTMENU_FOLDER  "${SW_APPLICATION_NAME}"
+        @CPACK_NSIS_CREATE_ICONS@
+        ; CPACK INSERT END : CPACK_NSIS_CREATE_ICONS
+    SectionEnd
+    
+    Section "Desktop Shortcut" desktopShortcut
+        CreateShortcut "$DESKTOP\${SW_APPLICATION_NAME}.lnk" "${SW_APPLICATION_PATH}"
+    SectionEnd
+    
+    Section "File Association" fileAssociation
+        ${RegisterExtension} "${SW_APPLICATION_PATH}" ".rrf" "RFF-File"
+    SectionEnd
+    
+    Section "-Uninstall Registration" uninstallerReg
+        ; Save information in registry in HKEY_LOCAL_MACHINE branch, Windows add\remove functionality depends on this
+        WriteRegStr   SHCTX "${SW_REG_UNDIRECTORY}"    "DisplayName"       "${SW_REG_VALUE_DISPLAYNAME}"
+        WriteRegStr   SHCTX "${SW_REG_UNDIRECTORY}"    "UninstallString"   "${SW_REG_VALUE_UNINSTALLSTRING}"
+        ; WriteRegStr   SHCTX "${SW_REG_UNDIRECTORY}"    "QuietUninstallString"  "${}"
+        WriteRegStr   SHCTX "${SW_REG_UNDIRECTORY}"    "InstallLocation"   "${SW_REG_VALUE_INSTALLLOCATION}"
+        WriteRegStr   SHCTX "${SW_REG_UNDIRECTORY}"    "InstallDate"       "${SW_REG_VALUE_INSTALLDATE}"
+        
+        WriteRegStr   SHCTX "${SW_REG_UNDIRECTORY}"    "DisplayIcon"       "${SW_REG_VALUE_DISPLAYICON}"
+        WriteRegStr   SHCTX "${SW_REG_UNDIRECTORY}"    "Publisher"         "${SW_REG_VALUE_PUBLISHER}"
+        WriteRegStr   SHCTX "${SW_REG_UNDIRECTORY}"    "HelpLink"          "${SW_REG_VALUE_HELPLINK}"
+        WriteRegStr   SHCTX "${SW_REG_UNDIRECTORY}"    "URLInfoAbout"      "${SW_REG_VALUE_URLINFOABOUT}"
+        WriteRegStr   SHCTX "${SW_REG_UNDIRECTORY}"    "DisplayVersion"    "${SW_REG_VALUE_DISPLAYVERSION}"
+        WriteRegDWORD SHCTX "${SW_REG_UNDIRECTORY}"    "VersionMajor"      "${SW_REG_VALUE_VERSIONMAJOR}"
+        WriteRegDWORD SHCTX "${SW_REG_UNDIRECTORY}"    "VersionMinor"      "${SW_REG_VALUE_VERSIONMINOR}"
+        
+        WriteRegDWORD SHCTX "${SW_REG_UNDIRECTORY}"    "NoModify"          "${SW_REG_VALUE_NOMODIFY}"
+        WriteRegDWORD SHCTX "${SW_REG_UNDIRECTORY}"    "NoRepair"          "${SW_REG_VALUE_NOREPAIR}"
+        
+        WriteRegDWORD SHCTX "${SW_REG_UNDIRECTORY}"    "Comments"          "${SW_REG_VALUE_COMMENTS}"
+        
+        Call GetInstalledSize
+        Pop $0
+        WriteRegDWORD SHCTX "${SW_REG_UNDIRECTORY}"    "EstimatedSize"     "$0"
+    SectionEnd
+
+    Section
+        Var /GLOBAL LOGFILE
+        ${If} $LOGFILE != ""
+            Push $LOGFILE
+            Call DumpLog
+        ${EndIf}
+    SectionEnd
+; END INSTALL SECTIONS ------------------------------------------------------------------------------------
+
+
+
+; START UNINSTALL SECTIONS ----------------------------------------
+    Section un.install
+        ; CPACK INSERT START : CPACK_NSIS_DELETE_FILES
+        @CPACK_NSIS_DELETE_FILES@
+        ; CPACK INSERT END : CPACK_NSIS_DELETE_FILES
+        
+        ; CPACK INSERT START : CPACK_NSIS_DELETE_DIRECTORIES
+        @CPACK_NSIS_DELETE_DIRECTORIES@
+        ; CPACK INSERT END : CPACK_NSIS_DELETE_DIRECTORIES
+
+        ; Remove the uninstaller itself.
+        Delete "$INSTDIR\Uninstall.exe"
+
+        ;Remove the installation directory if it is empty.
+        RMDir "$INSTDIR"
+        DeleteRegKey SHCTX "${SW_REG_DIRECTORY}"
+    SectionEnd
+    
+    Section un.driver
+    SectionEnd
+    
+    Section un.startmenu
+        ; CPACK INSERT START : CPACK_NSIS_DELETE_ICONS
+        StrCpy $STARTMENU_FOLDER "${SW_APPLICATION_NAME}"
+        @CPACK_NSIS_DELETE_ICONS@
+        @CPACK_NSIS_DELETE_ICONS_EXTRA@
+        ; CPACK INSERT END : CPACK_NSIS_DELETE_ICONS
+    SectionEnd
+    
+    Section un.desktopShortcut
+        Delete "$DESKTOP\${SW_APPLICATION_NAME}.lnk"
+    SectionEnd
+    
+    Section un.fileAssociation
+        ${unregisterExtension} ".rrf" "RFF-File"
+    SectionEnd
+    
+    Section un.uninstallerReg
+        DeleteRegKey SHCTX "${SW_REG_UNDIRECTORY}"
+    SectionEnd
+; END UNINSTALL SECTIONS -----------------------------------------
+
+
+
+; START LANGUAGES -----------------
+    ; externalized macro-collection for all supported languages
+    !insertmacro InsertMUILanguages
+; END LANGUAGES -------------------
+
+
+
+; START CALLBACKFUNCTIONS ------------------------------------------------------------------------------------------------
+    ; You can create callback functions (which have special names),
+    ; that will be called by the installer at certain points in the install.
+    ; see http://nsis.sourceforge.net/Docs/Chapter4.html#callbacks
+    
+    Function .onInit
+        ; include warning if an 32bit architecture wants to install an 64bit viewer
+        ${IfNot} ${RunningX64}
+        ${AndIf} ${CPACK_INSTALLER_ARCHITECTURE_BITNESS} == "64"
+            MessageBox MB_YESNO \
+            "You are trying to install a 64bit ${SW_APPLICATION_NAME} on a 32bit machine. Do you want to continue?" IDYES +2
+            Abort
+        ${EndIf}
+        !insertmacro UninstallPreviousVersions
+        !insertmacro MUI_LANGDLL_DISPLAY
+        # the plugins dir is automatically deleted when the installer exits
+        InitPluginsDir
+
+        ; Parse commandline parameters
+        !insertmacro GetParameters
+        !insertmacro GetOptions
+        ${GetParameters} $R0
+        ClearErrors
+        ${GetOptions} $R0 /LOGFILE= $LOGFILE
+    FunctionEnd
+    
+    ; un.onInit is a Callback Function, that means that is will be performed on a specific Event.
+    ; In this case it will be performed at the beginning of the uninstaller
+    Function un.onInit
+        !insertmacro MUI_LANGDLL_DISPLAY
+    FunctionEnd
+; END CALLBACKFUNCTIONS --------------------------------------------------------------------------------------------------

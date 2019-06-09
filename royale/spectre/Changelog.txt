@@ -1,0 +1,861 @@
+Change Log {#change_log}
+========
+
+Spectre 4.1.0
+--------------
+
+Spectre 4.1 is the first release to support checker-board imagers. The
+implementation is optimized for readability. It starts with a limited set of
+algorithms:
+
+- smoothingFilter
+- filterAdaptiveNoise
+- filterNFreq
+- filterFlyingPixel
+
+Further algorithms, and a backend optimized for computational speed will be
+added in later versions.
+
+#### Misc. ####
+
+- Extended spectreRrfParameterSetter to remove parameters from an input file
+- Added a tool to exchange the calibration data in an RRF
+- Added support for XYZ reference data in system tests
+- Removed remaining references to spectre3
+- Moved VariantTest to common to match the new location of Variant in Spectre
+  4.0
+- Adapted AstonInitTest to run for all backends compiled into
+  libSpectre/libProcessing
+- libCalibration will now skip unknown fields in JGF files instead of
+  returning an error
+- Fixed a bug to remove a possible "fixed grid" which does not depend on the
+  actual image contents in the MPI algorithm.
+
+
+Spectre 4.0.0
+--------------
+
+New major release of Spectre with numerous changes to the internals as well
+the API layer.
+
+#### Important Changes ####
+
+- Reconfiguration of Spectre now is based on a two step approach: Users first
+  select a basic configuration (e.g., modulation frequencies), and can select
+  in the next step the available extended options.
+- API and depth-compuation backend has been decoupled.
+- Multi-threading has been moved from the API layer to the libProcessing layer.
+- Multiple depth-computation backends are now available in libSpectre. The API
+  automatically selects one based on the requested configuration. More
+  optimized backends might be added in the future.
+
+#### Known Issues ####
+
+- The documentation for libProcessing, and the multi-threading architecture is
+  no longer up to date. It will be improved in the following releases of Spectre
+  4.
+- The IProcessingBackend interface is not fully stable, and might be altered
+  later on. This should not result in any changes for API users.
+- The ProcessingDispatcher, and the CMake configuration is still available in
+  the 4.0.0 release for legacy reasons. But the API will ignore it, and use
+  the new dynamic backend selection. It will be removed completely in later
+  iterations of Spectre 4.
+  
+
+Spectre 3.13.3
+--------------
+
+#### Calibration ####
+
+Added a new field SPECTRE\_BENTLEY\_IMAGER\_TYPE to indicate if a
+calibration is for checker board imagers (type = 1) or for dense imagers (type
+= 0). If the field is not present in a calibration file, a dense imager is
+assumed.
+
+Spectre 3.13.2
+--------------
+
+#### Bugfixes ####
+
+Fixed a possible race condition in the hole filling algorithm
+
+
+Spectre 3.13.1
+--------------
+
+#### Bugfixes ####
+
+Upper threshold for consistency tolerance increased to 4.
+
+
+Spectre 3.13.0
+--------------
+
+#### General ####
+
+- Added optional smoothing filter
+- Added optional hole filling algorithm to fill sole flagged / unflagged pixels
+- Added option to flag pixels where the noise prediction is higher than the
+  SBI activation threshold
+- Internal refactorings of API in preparation for Spectre 4
+
+
+#### Bugfixes ####
+
+- Renamed remaining occurences of PMD_SYSTEM_TARGET to SPECTRE_SYSTEM_TARGET
+- spectrePowerMeasurement once again handles individual parameters on the
+  command line
+- Stale system test files during remote tests on Linux are now removed during
+  the automatic build
+
+
+Spectre 3.12.0
+--------------
+
+#### General ####
+
+- Removed adaptive binning feature
+- A new version of libSpectre3 (libSpectre3_calib) is now provided for
+  inclusion with the pmd ToF calibration software
+
+### Bugfixes  ###
+
+- Fixed a critical bug which lead to wrong computation results if the
+  straylight approximation option was used in combination with
+  multi-threading, and specific camera resolustions.
+- Prevent usage of ARM NEON version with resolutions not divisible by 4,
+  because this is not supported.
+- Straylight removal once again works if used together with global binning
+
+
+#### Misc. ####
+
+- Refactored binning code to avoid unecessary memory copies
+- Added unit test for phase noise calculation
+- Fixed warnings if CMake < 3.7 is used
+- libCalibration now uses FLT_MAX instead of NaN for uninitialized fields to
+  avoid several issues in combination with finite-math
+- rrfParameterSetter now supports SpectreProcessingFlag, that is, parameters
+  not supported by Royale, but only by Spectre 
+
+### Spectre 4 Preparations ###
+
+- Refactored libProcessing to support multiple depth-processing
+  implementations.
+- The internal calibration structure is no longer changed during
+  reconfiguration, instead libProcessing will use a shadow (intermediate)
+  calibration for changes if they are necessary
+
+
+
+Spectre 3.11.0
+--------------
+
+### General ###
+
+- Added a new calcAutoExposure algorithm. The new exposure times are now calculated
+  based on raw data and fpn. If no calibration is present a fixed value for fpn will be 
+  used instead.
+
+### Misc.  ###
+
+- Added support for changing parameters in system test RRFs.
+- Added an IExtendedSpectre interface, so that new features for Spectre 4.0 can be 
+  added internally without exposing them to the public interface.
+
+Spectre 3.10.0
+--------------
+
+### General ###
+
+- Added support to control the accuracy of the stray light model. Spectre
+  defaults now to an approximation level of 4 which will lower the
+  computational load of the stray light removal algorithm significantly. The
+  old behavior can be restored by setting the approximation level to 1.
+- Optimized the filter2Freq implementation on the ARM platform
+- Changed the behavior of the getSpectre function
+  - getSpectre without any hint defaults to multi threaded processing
+    if neither the reference platform is active, nor an auto exposure only
+    fake calibration is used
+  - For the reference platform or the auto exposure only fake calibration the
+    default is single threaded processing
+  - Multi threaded processing defaults now to two threads
+
+#### Bugfixes ####
+
+- Fixed documentation generation for libProcessing
+- Fixed a bug which could lead to stripes of flagged pixels in the depth image
+  if global binning was activated
+- InspectorSpectre now works again together with gdbserver, and remote debugging
+
+### Misc.  ###
+
+- Switched to Android NDK 16b for prebuilt Spectre binaries
+- Android NDK 10e toolchain support is deprecated and will be 
+  removed in a future release
+- Added various missing copyright headers in contrib/cmake folders
+- Removed no longer required files from contrib/cmake folders
+
+
+Spectre 3.9.0
+--------------
+
+### General ###
+
+- Added support for multi-threading if binning is active
+- Improved ARM NEON implementation of phase calculation
+
+#### Misc. ####
+
+- Extended spectrePowerMeasurement with additional metrics
+- Documented an issue if SpectreStatus.hpp is included together with wingdi.h
+- Removed unecessary copies for one frequency use-cases
+
+#### Bugfixes ####
+
+- Fixed a possible source of NaN results during the two-frequency phase
+- Fixed a critical bug which could crash Spectre in the MPI algorithm
+- Fixed a major performance regression of the Linux AARCH64 build if MPI was
+  enabled
+- Fixed a bug which crashed Spectre if non-calibrated frequencies were
+  requested for calculation
+
+
+Spectre 3.8.0
+--------------
+
+### General ###
+
+- Changed semantics for multi-threading, so that the internal processing will 
+  apply the given number of threads if possible, otherwise it will fallback to 
+  single-threading (this is transparent for the user)
+- Adapted noiseThreshold parameter so that lower inputs are allowed
+- Added query function for unambiguous range
+- Updated Spectre libs to gcc5, Ubuntu 14.04 is now no longer supported instead 
+  Ubuntu 16.04 is set as default target for 32/64 Bit Linux on x86
+
+#### Tests ####
+
+- Created a unit test for flagMPIAmp algorithm
+
+#### Matlab Support ####
+
+- Added a ThirdPartySoftware.txt to the Spectre Matlab package
+- Added an option to remove outliers from InspektorSpectre's compare view
+
+#### Calibration Caching ####
+
+- Added caching mechanism for different calibrations to avoid redundant calculations
+
+#### Misc. ####
+
+- Migrated SpectrePowerMeasurement-tool to Spectre3 API
+- Fixed a Visual Studio IDE build error where rrfLib has not been added
+
+
+Spectre 3.7.0
+--------------
+
+### General ###
+
+- Added offical build for Linux ARM64 (Reference platform: Ubuntu 16.04 on
+  ODROID C2)
+- Multi-threading is now supported if straylight removal is activated
+
+#### Misc. ####
+
+- Improved unit test coverage for MPI algorithms
+- AdaptiveNoiseFilterType can no longer be changed for ARM platforms
+
+
+Spectre 3.6.0
+--------------
+
+#### General ####
+
+- Fixed a critical bug, which lead to a wrong return value for
+  getOutputWidth/Height if the adaptive binning was enabled
+- Changed MPI minimum limits
+- Generate SpectreParameter struct automatically based on Parameter.def
+- Added support for persistent initialization
+
+#### Tests ####
+
+- Added new system data containing worst-case scenarios for the 2-frequency
+  algorithm
+- Decoupled Spectre API tests from libCalibration
+- Added unit tests for Spectre 3 RRF reader
+
+#### Misc. ####
+
+- Improved Spectre RRF support to enable processing of RRFs recorded with the
+  calibration use-case
+- Fixed various memory errors reported by ASAN/Valgrind
+
+
+Spectre 3.5.0
+--------------
+
+#### General ####
+
+- Added new option "useAdaptiveBinning" which automatically adapts the
+  "GlobalBinning" option in each frame based on the computed
+  depth-image
+- If GlobalBinning is used, Spectre will no longer inflate the computed
+  depth-image, but output the image with the binned resolution.
+- Fixed a bug which made the persistance initialization
+  format unusable for cameras with a larger resolution
+
+#### Matlab Support ####
+
+- Extended Matlab bridge with support for writing reference data
+- Added Matlab wrapper to official release package
+- Removed redundant code from the Matlab bridge
+
+#### Misc. ####
+
+- Split test for processing RRF-Support
+- Fixed calculation of mean-distance in Spectre sample
+- Use CMake package configuration for binary packaging instead of
+  hard-coded shell scripts
+
+
+Spectre 3.4.0
+--------------
+
+#### General ####
+
+- Implementation and integration of the binning algorithm 
+- Optimize memory management of amplitudes data
+
+#### C++ - API ####
+
+- Added implementation of data format reader/writer for persistentInitialization
+- Added system tests for the Spectre AutoExposure feature
+
+#### Misc. ####
+
+- Modified InspektorSpectre, works now for calibration with and without PSF
+- Integration of a new Spectre Matlab bridge into the Matlab wrapper
+- Added support for getting persistent initalization data and unit tests
+- Added Spectre API documentation to Spectre binary package
+- Modified the tool for reading/writing rrf data files based on the new Spectre API
+
+
+Spectre 3.3.0
+--------------
+
+#### General ####
+
+Spectre now has experimental support for multi-threading. The
+depth-image can be computed with up to 3 threads. To enable the
+experimental feature SpectreFactoryHint::MULTI_THREADED can be passed
+to the factory function spectre::getSpectre. In this case Spectre will
+offer a new ParameterKey::NUMBER_THREADS which can be used to change
+the number of threads on-the-fly.
+*Note:* Using more than one thread is not supported if the sparse-point
+cloud or straylight correction is activated.
+
+#### Misc. ####
+
+- Added an additional documentation covering only the Spectre API, but
+  not the processing internals.
+- Fixed a memory leak in spectreApiSample
+- Added unit tests for the RRF-Reader
+- Improved mocking support for C functions
+
+
+Spectre 3.2.0
+--------------
+
+#### General ####
+
+- Corrected the company name in license files
+- Remove old CMake artifact which creates the "royale_version.prop" file
+
+#### C++ - API ####
+
+- Added a version of Spectre which only provides an AutoExposure
+  processing
+- Added functions for safe (de-)allocation of
+  spectre::Configuration from outside Spectre's shared object
+
+#### Misc. ####
+
+- Replace the old test data for straylight with a new test data set (incl. 
+  a straylight scene, and activated correction)
+- Added a new tool to edit parameters of existing RRF files
+- Switched from dynamic to a static allocation of the LensCenter 
+  and calibrationROI
+- Make SpectreParameter struct const in processing
+- Fixed a bug in a failing unit test and in the testing script which causes
+  the script to continue after an error
+- Optimize the AutoExposure computation logic
+
+
+Spectre 3.1.0
+--------------
+
+#### C++ - API ####
+
+- NUM_FREQUENCIES parameter is now always available
+- MPI related parameters are no longer available for one frequency
+  calibrations
+- Fixed a bug which lead to unneeded processing reinitializations after a call
+  to Spectre::reconfiguration()
+- Added a C++ API sample
+- Invalid parameter combinations (e.g., enabling MPI if
+  NUM_FREQUENCIES is set to 1) are now rejected during Spectre::reconfigure()
+
+#### Misc. ####
+
+- filter2Freq can now disabled/enabled
+- Improved Spectre architecture documentation
+- Simplified C processing sample
+- Clean-up of Matlab wrappers
+- InspektorSpectre now works with the Spectre 3.0 processing structures
+- Improved CMake flag handling for AARCH64 on Linux ARM
+- Fixed a bug which prevented successful calibration creation in the "Junge
+  Grimme" writer sample
+
+
+Spectre 3.0.0
+--------------
+
+Switched to the new C++ - API. The old API is no longer
+supported. During the switch major changes have taken place in the C
+processing and C calibration handling code. This new version also
+defines a well-defined ABI for each platform, and provides dynamic
+libraries by default.
+
+
+Spectre 2.10.0
+--------------
+
+**Note:** This is the last regular release of the Specte 2.x series. Spectre
+3.x will incorporate major changes to the public interface.
+
+#### General ####
+
+- Changed Spectre license
+- Added optional support for straylight correction
+- Converted various tests to real unit tests
+- Support for custom calibration fields has been added to the interface
+- calcCartesianCoordinates is now available in an optimized ARM variant
+
+#### Misc. ####
+
+- Fixed various "unused function" warnings for GCC/clang
+- All platforms now use the same CMake version (3.6.3)
+- Documentation package no longer contains runtime DLL, but only the HTML
+  documentation
+- Fixed a possible out-of-memory error due to randomized test data
+- Fixed a bug in the phase wiggling correction
+
+
+Spectre 2.9.5
+-------------
+
+#### General ####
+
+- C parts of Spectre are now taken into account for building the doxygen
+  documentation
+- Added ThirdPartySoftware.txt containing an overview of used third party
+  software packages
+- A precomputed mask is now used on all platforms during the processing
+- Support for a I1P4I1I1 input has been added to the AstonInputBuilder
+
+
+#### Calibration ####
+
+- Validation for a required minimum number of entries has been added to the
+  "Junge Grimme" format
+- Support for storing an optional lens center has been added to the "Bentley"
+  calibration configuration
+- Support for storing an optional parametrization of a point spread function
+  has been added to the "Bentley" calibration configuration
+- Tests for the "Junge Grimme" writer interface have been added
+
+#### Misc. ####
+
+- The automaticTestScript.bat should now return a non-zero value if a test
+  fails
+- Build scripts for jg_matlab have been added
+- Test for filterAdaptiveNoise has been converted to a real unit test
+- Errors during initialization of Spectre will now be reported back by the SpectreFactory
+- Sample code has been cleaned-up
+- The lookup table for the atan is now coded statically, and no longer
+  computed on compile time.
+
+
+Spectre 2.9.0
+-------------
+
+#### General ####
+
+- Added support to read/write RRFv3 files with reference data
+- Build rrfLib always as static library
+- Removed reference to PMD_DumpInfo throughout the processing chain, and its
+  tests
+- Added support for building with Android NDK13
+- Do a proper matching of calibration and input probe data if modulated intensity frames
+  are used
+- Refactored compare framework for all unit tests to improve readability
+
+
+#### Calibration ####
+
+- Improved unit test coverage for encoding/decoding of values in the "Junge
+  Grimme" calibration format
+- Fixed edge in readCalib (numPixel = 0)
+- Added Matlab support for writing "Junge Grimme" calibration files
+- Added "Product code" as optional field for Bentley calibration configuration
+
+#### Misc. ####
+
+- Changed index width for unscrambling raw data to be at least 32-bits to
+  prevent overflows for 100k cameras
+- Use proper values in calc2PhaseDistance unit test
+- Switched to gmock1.8.0
+- Added ChangeLog to Royale package
+- Added unit tests for processing initialization (spectreAstonInit)
+- Fixed various cppCheck issues
+- Fixed swapped numColumns/numRows in SpectreOutput for x86 platform
+- Added test automation for Raspberry PI builds
+- Adapted all automation scripts for the new CI infrastructure
+
+
+Spectre 2.8.5
+-------------
+
+#### General ####
+
+- Added a tool for inspecting the internal state of the processing pipeline
+
+#### Calibration ####
+
+- Added unit tests for individual encode/decode routines for the "Junge 
+  Grimme" Calibration format.
+
+#### Misc. ####
+
+- Removed members from processing structs (ARM code for wiggling tables, 
+  FrameSetComposition, illuminationModes, imgagerModes, phaseOrder, 
+  sensorROI/subROI), because they are never used, have no purpose or are
+  redudant.
+- Fixed a 32-bit build error bug with the clang compiler, because of arm 
+  NEON code.
+- Changed the NEON 32-bit intrinsic code for arm 32-bit cross-compiling 
+  build with clang compiler.
+
+
+
+Spectre 2.8.0
+-------------
+
+#### Calibration ####
+
+- libcalibration now supports the new "Junge Grimme" calibration format with
+  the "Bentley" calibration configuration
+- libcalibration now includes a writer with C interface for creating "Junge
+  Grimme" files
+- Added documentation for libcalibration (usage, specification for calibration
+  formats)
+- Added new samples for libcalibration (reading and writting of calibration)
+
+#### Documentation ####
+
+- Restructured documentation, updated outdated information
+- Removed separate processing documentation, build only one documentation for
+  Spectre
+
+#### Misc. ####
+
+- Removed CommonProcessingInitTest, because it is duplicated by
+  ProcessiningInitTest
+- Fixed a bug which prevented the application of the calibrated mask if the
+  optimization target arm was selected
+- Improved libCalibration to add function name automatically
+- Changed PMDDumpInfo into a singleton, as first step to get rid of global
+  variables
+- Converted calcCartesianCoordinates test to proper unit tests and merged it
+  with pointCloudTest
+
+
+
+Spectre 2.7.5
+-------------
+
+#### General ####
+
+- Converted correctAmplitudeWiggling / flagFlyingPixel tests to proper unit tests
+- Removed unused wrapper code
+- Added support for reading Royale Recording Files (RRFv2) directly in Spectre
+- Refactored automatic testing to enable tests on remote devices during cross
+  compiling
+- Fixed a critical bug which lead to an incorrect error code during
+  adaptCalibration if the frame order I1P4P4 was used
+
+#### Misc ####
+
+- Use CTEST_CUSTOMS_TESTS_IGNORE properly to allow disabling tests
+- Moved Aston tracer to common package
+- Fixed failing unit tests on FP32 platform
+- Removed a workaround for Ubuntu 32 compiler flags
+
+Spectre 2.7.0
+-------------
+
+#### General ####
+
+- Use improved Median filter implementation on x86
+- Converted flagAmplitudeThreshold, calcAutoExposure, flagNoise,
+  flagAsymmetry, flagMask to real unit tests
+- Unit tests for public interface of libcalibration should once again work on
+  Windows builds
+
+#### Misc ####
+
+- Use valid filter type (3x3) for adaptive noise filter in sample data
+- Call correct initialization function in spectrePowerMeasurement test
+
+Spectre 2.6.5
+-------------
+
+#### General ####
+
+- Dynamic linking should once again be working under Windows. Added explicit
+  exports for libcalibration / libprocessing
+- Fixed a serious bug which could lead to a incorrect application of phase
+  wiggling (usage of wiggling information for the wrong frequency) in the
+  processing initialization
+- Replaced calculation of bitSize in datadescriptor.c to make it less likely
+  that the calculated calibration block size is wrong (e.g., prevent usage of
+  legacy x87 FPU)
+
+#### Tests ####
+
+- spectreToleranceTest/spectreRunTimeTest now use the libcalibration interface
+  instead of the legacy C++ AstonCalibrationBuilder
+- Converted calcPhase / correctFPPN / calcPhase2Distance / flagSaturation /
+  unscrambleReIm to proper unit tests without external dependencies to test data
+- Improved command line option support for power measurement test
+- Improved test coverage for reading Aston calibration files
+- Removed unused benchmarks implemented as tests
+- Fixed failing TrepnEnergyMeter tests if the date on the test device was <
+  year 2000
+
+#### Misc. ####
+
+- Public libcalibration headers now contain proper extern "C" declarations if
+  compiled as C++ files
+- Remove version information from libcalibration / libprocessing to ease
+  linking for Royale
+- Improved automatic packaging on jenkins for Royale
+
+Spectre 2.6.0
+-------------
+
+#### General ####
+
+- Support for calibrations which contain three blocks with per frequency data
+- Use SSE2 math for 32-Bit Linux (x86) builds (x87 FPU could cause a regression with
+  the compression used in the Aston calibration format)
+
+#### Calibration handling ####
+
+- Removed all external dependencies to unit tests
+- Fixed wrong return type in decompression routine for Aston files
+- New function to get the calibration type from a calibration handle without
+  reparsing the file
+
+#### Misc. ####
+
+- Use arm-rpi-4.9.3-linux-gnueabihf for ARM builds
+- Added architecture to all package names
+- Removed external dependencies for unscrambleIntensity unit tests
+- Fixed several memory leaks in unit tests
+
+Spectre 2.5.5
+-------------
+
+#### General ####
+- Simplified processing sample (removed power measurement code)
+- Moved all algorithm implementation out of the header files into .inl files
+- Use radial distances for flying pixel
+- Added support for sparse point cloud computation. Can be toggled through the
+  parameter { "Configuration", "UseSparsePointCloud" }, default is off.
+- Removed Intermediate data from C++ API
+- Support for cross-compiling to Linux ARM (Raspberry Pi)
+
+#### Calibration handling ####
+Handling of calibration has been changed significantly.
+- A new library with a C API for handling calibration (libspectre_calibration) has been
+  added to the project
+- The library can read the new Aston format, and the old legacy TAR format
+- spectre::Spectre / spectre::SpectreFactory have been changed so that they
+  use the new library internally in most cases
+- All calibration specific parts of the Spectre C++ API are deprecated
+
+#### Misc. ####
+- Various minor bugfixes
+- Converted calcAmplitude / calcAmplitudeNoise to real unit tests (without
+  dumped test data)
+
+Spectre 2.5.0
+-------------
+#### General ####
+Changed the output format of the 3D coordinates. Instead of a point cloud
+{x,y,z} we now return {x,y,z,c} where c is a float in the interval [0.0, 1.0]
+describing confidence of the depth measurement. The maximum confidence is
+denoted by 1.0 and the minimum by 0.0.
+
+#### Misc. ####
+Internal refactorings as preparation for the new C processing interface:
+- SpectreCalibration has been moved to common/calibration
+- SpectreOutput/SpectreInput/SpectreParameter have been moved to
+  processing/processing.hpp (public interface)
+- processing/aston/astonProcessing.hpp has been moved to
+  processing/processingInternal.hpp (only one flavor of processing will
+  be offeredat one time)
+- SpectreIntermediate has been moved to processing/procesingInternal.hpp
+
+
+Spectre 2.4.5
+-------------
+#### General ####
+- Added support for building dynamic libraries (now the default). The old
+  behavior can be reenabled by setting the option flag SPECTRE\_BUILD\_SHARED
+  to off
+- Handling of compile flags refactored
+    * Flags on Android cross compilation are now handled similarly to other
+      supported platforms through cmake/flags.cmake.
+    * User provided flags no longer overwritten during configuration.
+    * Cleanup of compile flags across all platforms
+
+#### NumEmulator ####
+- Added support for saturation arithmetic
+- Fixed invalid array lengths in FPIntermediateTest
+- Added documentation
+
+#### Misc ####
+- Fixed test errors under valgrind
+- Configured CTest for automatic tests properly
+- Removed TestExecutionAlgorithmPowerTest.runsAtLeast period
+- Fixed a memory leak in spectreAstonInputLoad/spectreAstonInputFree
+- Moved horrify_royale.sh for CI with the Royale project
+- horrify_royale.sh now generates a version header during the CI, and adds it
+  to Royale
+
+Spectre 2.4.0
+------------
+#### General ####
+- Android ARM64 bit build is now part of the Spectre binary release
+- Added framework to measure the power consumption of individual algorithms
+
+#### NumEmulator ####
+- Added processing platform using the numEmulator for 32-bit fixed-point (PoC)
+- Ported two algorithms to 32-bit fixed-point: unscrambleIntensity,
+  calcPhaseNoise
+
+#### Misc ####
+- Only append variant suffix to container wrapper if a variant is in use
+- Added support for input variants in Spectre Matlab implementation
+- Added .gitattributes to enable creating source packages through git-archive
+- Refactored several test names to comply with our new naming convention
+
+
+Spectre 2.3.5
+-------------
+##### General #####
+- Renamed several libs, tests and executables so that they conform with our
+  new naming convention.
+
+##### Misc #####
+- Moved build scripts into the repository
+- Added data flow diagrams of the processing
+- Improved Matlab scripts so that they can handle raw data files besides the
+  standard Spectre containers
+- Added support for different input "variants" (FrameSetCompositions) to the
+  Matlab wrapper
+- Fixed several bugs in the processing wrapper
+
+Spectre 2.3.0
+-------------
+##### General #####
+- Renamed neon platform to arm
+- Renamed general platform to reference
+- Added x86 platform
+
+##### NumEmulator #####
+Added additional module numEmulator
+a template class based approach to emulate fundamental numerical
+operations, such as fixed point arithmetic on fundamental data types.
+
+##### ARM NEON #####
+- Combined flagAmplitude/flagAsym
+- Port flagNoise
+- Combined calcPhase2Distance/correctTemperature/correctFPPN
+
+##### Misc #####
+- Batch processing tool for Spectre input
+- Added Matlab tools for visualizing Spectre containers
+- getContainer now accepts a const std::vector
+
+Spectre 2.2.5
+-------------
+##### ARM NEON #####
+- ARM-NEON is now supported by Spectre (by setting the target platform
+  to neon) officially
+- filterAdaptiveNoise added
+- Moved calcPixel main loop into individual algorithms
+
+##### Misc #####
+- Separated initialization functions for LUTs from the respective algorithms
+- Added function getSpectreVersion() and getGitRevisionDescription() to
+  retrieve information about the Spectre build
+- Added missing test data for wall_40cm flagMask test case
+- processingARM test removed from memcheck target
+
+Spectre 2.1.0
+---------------
+#### Documentation ####
+- Added documentation for containers (Input, Output, Parameter, Calibration)
+- Added processing flowchart
+- Added FAQ
+
+#### Matlab wrapper ####
+Matlab wrapper for all main data structures of the Spectre API added (Input,
+Output, Parameter, Calibration, Intermediate)
+
+#### Misc ####
+- Proof of concept implementation
+- Sample API Interface
+- Google Mock test environment
+
+Spectre 2.0.5
+---------------
+
+#### Misc.  ####
+Improved test environment, and added support for API containers (Input,
+Output, Parameter, Calibration)
+
+
+Spectre 2.0.0
+---------------
+#### General ####
+- First release of Spectre
+- Unified file format which allows serialzing/deserializing all containers
+- Different access levels to the API through activation codes
+
+#### Documentation ####
+Documentation framework with support for automatic HTML/PDF generation
+added. Automatic generation of manuals for Spectre, and the Processing.
+
+#### Matlab wrapper ####
+Matlab wrapper for the Calibration container. Support for reading/writting
+calibration with the new Spectre format.
+
+#### Misc. ####
+- Profiling runtime (ARM Android)
+- Profiling performance (ARM Android)

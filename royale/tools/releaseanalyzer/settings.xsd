@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+  <xsd:element name="Settings">
+    <xsd:complexType>
+      <xsd:sequence>
+        <xsd:element name="Platform" type="PlatformType" minOccurs="1" maxOccurs="6"/>
+      </xsd:sequence>
+    </xsd:complexType>
+  </xsd:element>
+
+  <xsd:complexType name="PlatformType">
+    <xsd:sequence>
+      <xsd:element name="Package" type="xsd:string"/>
+      <xsd:element name="Unpackpath" type="xsd:string"/>
+      <xsd:element name="Checkpath" type="xsd:string"/>
+      <xsd:element name="SevenZipPath" type="xsd:string"/>
+      <xsd:element name="Ignorepathandsubs" type="IgnorepathType" minOccurs="0" maxOccurs="unbounded"/>
+      <xsd:element name="Validationfile" type="xsd:string"/>
+      <xsd:element name="Differencefile" type="xsd:string"/>
+      <xsd:element name="Debug" type="xsd:unsignedShort"/>
+      <xsd:element name="CompileSamples" type="xsd:unsignedShort"/>
+      <xsd:element name="CompileBDD" type="xsd:unsignedShort"/>
+      <xsd:element name="RunBDD" type="xsd:unsignedShort"/>
+      <xsd:element name="FullAutomatic" type="xsd:unsignedShort"/>
+    </xsd:sequence>
+    <xsd:attribute name="PlatformName" type="xsd:string"/>
+  </xsd:complexType>
+
+  <xsd:complexType name="IgnorepathType">
+    <xsd:sequence>
+      <xsd:element name="Path" type="xsd:string"/>
+    </xsd:sequence>
+  </xsd:complexType>
+</xsd:schema>

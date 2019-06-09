@@ -1,0 +1,11 @@
+///****************************************************************************\
+//* Copyright (C) 2016 Infineon Technologies
+//*
+//* THIS CODE AND INFORMATION ARE PROVIDED "AS IS" WITHOUT WARRANTY OF ANY
+//* KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+//* IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
+//* PARTICULAR PURPOSE.
+//*
+//\****************************************************************************/
+//ref_clk_i;output_frequency;enable_wavegen;fssc;kspread;delta;anaip_pllcfg1;anaip_pllcfg2;anaip_pllcfg3;anaip_pllcfg4;anaip_pllcfg5;anaip_pllcfg6;anaip_pllcfg7;anaip_pllcfg8
+  24000000,  80320000,1,   10000,0.5000,0.0125,26209,64662, 3810,21801,37224,18381,22290,    2,

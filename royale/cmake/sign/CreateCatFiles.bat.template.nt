@@ -1,0 +1,30 @@
+REM Copyright (C) 2018 pmdtechnologies ag
+
+REM THIS CODE AND INFORMATION ARE PROVIDED "AS IS" WITHOUT WARRANTY OF ANY
+REM KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+REM IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
+REM PARTICULAR PURPOSE.
+
+set "ERRORCODE=0"
+${INFVERIFPATH} /u /osver NTX86.6.1 "D:\repos\royal3585\royale\drivers\cypress_camboard_pico\bin\win7\x86\cyusb3.inf" | findstr "WARNING ERROR" && set "ERRORCODE=1"
+${INFVERIFPATH} /u /osver NTAMD64.6.1 "D:\repos\royal3585\royale\drivers\cypress_camboard_pico\bin\win7\x64\cyusb3.inf" | findstr "WARNING ERROR" && set "ERRORCODE=1"
+${INFVERIFPATH} /u /osver NTX86.6.2 "D:\repos\royal3585\royale\drivers\cypress_camboard_pico\bin\win8\x86\cyusb3.inf" | findstr "WARNING ERROR" && set "ERRORCODE=1"
+${INFVERIFPATH} /u /osver NTAMD64.6.2 "D:\repos\royal3585\royale\drivers\cypress_camboard_pico\bin\win8\x64\cyusb3.inf" | findstr "WARNING ERROR" && set "ERRORCODE=1"
+${INFVERIFPATH} /u /osver NTX86.10.0 "D:\repos\royal3585\royale\drivers\cypress_camboard_pico\bin\win10\x86\cyusb3.inf" | findstr "WARNING ERROR" && set "ERRORCODE=1"
+${INFVERIFPATH} /u /osver NTAMD64.10.0 "D:\repos\royal3585\royale\drivers\cypress_camboard_pico\bin\win10\x64\cyusb3.inf" | findstr "WARNING ERROR" && set "ERRORCODE=1"
+if %ERRORCODE% EQU 1 goto ERROR
+
+${INF2CATPATH} /driver:${royaledir}\drivers\cypress_camboard_pico\bin\win7\x86 /os:7_X86 || goto ERROR
+${INF2CATPATH} /driver:${royaledir}\drivers\cypress_camboard_pico\bin\win7\x64 /os:7_X64 || goto ERROR
+${INF2CATPATH} /driver:${royaledir}\drivers\cypress_camboard_pico\bin\win8\x86 /os:8_X86 || goto ERROR
+${INF2CATPATH} /driver:${royaledir}\drivers\cypress_camboard_pico\bin\win8\x64 /os:8_X64 || goto ERROR
+${INF2CATPATH} /driver:${royaledir}\drivers\cypress_camboard_pico\bin\win10\x86 /os:10_X86 || goto ERROR
+${INF2CATPATH} /driver:${royaledir}\drivers\cypress_camboard_pico\bin\win10\x64 /os:10_X64 || goto ERROR
+
+echo "All cat files created"
+exit /b 0
+
+:ERROR
+REM return an error code...
+echo "An error occured. Can not create cat files."
+exit /b 1

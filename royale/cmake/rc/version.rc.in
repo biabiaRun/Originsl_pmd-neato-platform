@@ -1,0 +1,76 @@
+// Ressource file for versioning of Royale
+//
+// for details see:
+// http://msdn.microsoft.com/en-us/library/windows/desktop/aa381058%28v=vs.85%29.aspx
+//
+
+#define VER_FILEVERSION             @ROYALE_VERSION_MAJOR@,@ROYALE_VERSION_MINOR@,@ROYALE_VERSION_PATCH@,@ROYALE_VERSION_BUILD@
+#define VER_FILEVERSION_STR         "@ROYALE_VERSION_MAJOR@.@ROYALE_VERSION_MINOR@.@ROYALE_VERSION_PATCH@.@ROYALE_VERSION_BUILD@\0"
+
+#define VER_PRODUCTVERSION          @ROYALE_VERSION_MAJOR@,@ROYALE_VERSION_MINOR@,@ROYALE_VERSION_PATCH@,@ROYALE_VERSION_BUILD@
+#define VER_PRODUCTVERSION_STR      "@ROYALE_VERSION_MAJOR@.@ROYALE_VERSION_MINOR@.@ROYALE_VERSION_PATCH@.@ROYALE_VERSION_BUILD@\0"
+
+#define APSTUDIO_READONLY_SYMBOLS
+#include "windows.h"
+//#include "afxres.h"
+#undef APSTUDIO_READONLY_SYMBOLS
+
+//#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_DEU)
+
+#ifdef APSTUDIO_INVOKED
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+    "\0"
+END
+
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+/////////////////////////////////////////////////////////////////////////////
+// Version info
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION @ROYALE_VERSION_MAJOR@,@ROYALE_VERSION_MINOR@,@ROYALE_VERSION_PATCH@,@ROYALE_VERSION_BUILD@
+ PRODUCTVERSION @ROYALE_VERSION_MAJOR@,@ROYALE_VERSION_MINOR@,@ROYALE_VERSION_PATCH@,@ROYALE_VERSION_BUILD@
+ FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
+#ifdef _DEBUG
+ FILEFLAGS VS_FF_DEBUG
+#else
+ FILEFLAGS 0x20L
+#endif
+ FILEOS VOS__WINDOWS32
+ FILETYPE @RC_FILETYPE@
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "000004b0"
+        BEGIN
+            VALUE "ProductVersion", VER_PRODUCTVERSION_STR
+            VALUE "FileVersion", VER_FILEVERSION_STR
+            VALUE "ProductName", "@RC_PRODUCTNAME@\0"
+            VALUE "CompanyName", "pmd technologies gmbh & Infineon Technologies AG\0"
+            VALUE "LegalCopyright", "pmd technologies gmbh & Infineon Technologies AG\0"
+            VALUE "FileDescription",  "@RC_FILEDESCRIPTION@\0"
+            VALUE "InternalName",     "@RC_INTERNALNAME@\0"
+            VALUE "OriginalFilename", "@RC_ORIGINALFILENAME@\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0, 1200, 0x800, 1200
+    END
+END
+
