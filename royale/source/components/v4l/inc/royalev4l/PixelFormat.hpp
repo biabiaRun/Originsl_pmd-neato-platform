@@ -22,6 +22,7 @@ namespace v4l
 {
     enum v4l2PixelFormat {
         PIX_FMT_SBGGR12,
+        PIX_FMT_SBGGR12P,
         PIX_FMT_MAX,
     };
 
@@ -30,6 +31,8 @@ namespace v4l
         switch(format) {
         case PIX_FMT_SBGGR12:
             return V4L2_PIX_FMT_SBGGR12;
+        case PIX_FMT_SBGGR12P:
+            return V4L2_PIX_FMT_SBGGR12P;
         default:
             throw royale::common::LogicError ("Unknown v4l2 format");
         }

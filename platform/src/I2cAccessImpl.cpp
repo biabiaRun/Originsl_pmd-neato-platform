@@ -60,6 +60,8 @@ inline void serializeAddress(size_t addrSize, uint16_t regAddr,
         return;
     else if(addrSize == 2)
         regAddr = htons(regAddr);
+    else if(addrSize == 1)
+        ;
     else
         assert(false); /* invalid addr size */
 

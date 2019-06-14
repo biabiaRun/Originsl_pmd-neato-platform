@@ -335,8 +335,8 @@ std::unique_ptr<ICameraDevice> CameraFactory::createCamera()
 
     // create an IBridgeDataReceiver implementation in order to receive the data
     std::shared_ptr<royale::hal::IBridgeDataReceiver> bridgeReceiver =
-        std::make_shared<v4l::bridge::BridgeV4l> ("/dev/video0", PIX_FMT_SBGGR12);
-    static_cast<v4l::bridge::BridgeV4l *> (bridgeReceiver.get())->setTransferFormat (BufferDataFormat::S32V234);
+        std::make_shared<v4l::bridge::BridgeV4l> ("/dev/video0", PIX_FMT_SBGGR12P);
+    static_cast<v4l::bridge::BridgeV4l *> (bridgeReceiver.get())->setTransferFormat (BufferDataFormat::RAW12);
 
     // create an instance of a I2CAccess
     std::shared_ptr<royale::pal::II2cBusAccess> i2cAccess = std::make_shared<I2cAccessImpl> ("/dev/i2c-0");

@@ -180,7 +180,7 @@ void BridgeV4l::openConnection ()
     v4l2_priority priority = V4L2_PRIORITY_RECORD;
     int err = ioctl (m_deviceHandle->fd, VIDIOC_S_PRIORITY, &priority);
     LOG (DEBUG) << "ioctl VIDIOC_S_PRIORITY";
-    if (err)
+    if (err && errno != ENOTTY) // ignore if VIDIOC_S_PRIORITY is unsupported
     {
         // store the current errno, as close() may change it
         int errnum = errno;
@@ -253,7 +253,6 @@ std::size_t BridgeV4l::executeUseCase (int imageWidth, int imageHeight, std::siz
     {
         openConnection();
     }
-
 
     bool reallocBuffers = ! (m_width == imageWidth &&
                              m_height == imageHeight &&
@@ -379,6 +378,7 @@ void BridgeV4l::acquisitionFunction()
         LOG (DEBUG) << "Trying to capture a frame";
 #endif
         int err = ioctl (m_deviceHandle->fd, VIDIOC_DQBUF, &ioctlBuffer);
+        LOG (DEBUG) << "VIDIOC_DQBUF " << err;
         if (err)
         {
             int errnum = errno;
@@ -554,13 +554,13 @@ void BridgeV4l::createAndQueueV4lBuffers (std::size_t bufferCount, std::size_t p
 #ifdef ROYALE_LOGGING_VERBOSE_BRIDGE
         LOG (DEBUG) << "Going to mmap video buffer number " << i << ", length " << queryBuf.length;
 #endif
-        if (queryBuf.length < pixelCount * sizeof (uint16_t))
+        if (queryBuf.length < BufferUtils::expectedRawSize (pixelCount, m_transferFormat))
         {
             LOG (ERROR) << "Buffer is too small to handle the expected image size";
             throw NotImplemented ("TODO: configure larger buffers in the driver");
         }
         // mmap only the size that's needed, assuming the driver does not use 24 bits per pixel.
-        queryBuf.length = static_cast<__u32> (pixelCount * sizeof (uint16_t));
+        queryBuf.length = static_cast<__u32> (BufferUtils::expectedRawSize (pixelCount, m_transferFormat));
 
         // Here PROT_WRITE is requested because of the in-place data normalization in the
         // acquisitionFunction. If the driver is providing data that's already in the format for
