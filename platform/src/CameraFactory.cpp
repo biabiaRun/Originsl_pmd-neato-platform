@@ -339,7 +339,7 @@ std::unique_ptr<ICameraDevice> CameraFactory::createCamera()
     static_cast<v4l::bridge::BridgeV4l *> (bridgeReceiver.get())->setTransferFormat (BufferDataFormat::RAW12);
 
     // create an instance of a I2CAccess
-    std::shared_ptr<royale::pal::II2cBusAccess> i2cAccess = std::make_shared<I2cAccessImpl> ("/dev/i2c-0");
+    std::shared_ptr<royale::pal::II2cBusAccess> i2cAccess = std::make_shared<I2cAccessImpl> ("/dev/i2c-3");
 
     auto imagerAdapter = std::make_shared<royale::pal::Access2I2cDeviceAdapter> (i2cAccess, 0x3d);
     // get an implementation of the IBridgeImager interface in order to talk to the imager
