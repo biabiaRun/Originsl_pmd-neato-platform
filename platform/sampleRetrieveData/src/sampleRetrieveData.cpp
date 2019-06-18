@@ -76,7 +76,7 @@ int main (int argc, char **argv)
     }
 
     // choose a use case
-    auto selectedUseCaseIdx = 7u;
+    auto selectedUseCaseIdx = 0u;
 
     // set an operation mode
     cout << "Set use case start" << std::endl;
