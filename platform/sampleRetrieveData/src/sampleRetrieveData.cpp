@@ -46,10 +46,19 @@ int main (int argc, char **argv)
 {
     // this represents the main camera device object
     unique_ptr<royale::ICameraDevice> cameraDevice;
+    // if non-null, choose this use case instead of the default
+    unique_ptr<royale::String> commandLineUseCase;
 
     CameraFactory factory;
-    cameraDevice = factory.createCamera();
+    if (argc > 1)
+    {
+        auto arg = std::unique_ptr<royale::String> (new royale::String (argv[1]));
 
+	cout << "Assuming command-line argument is the name of a use case" << endl;
+	commandLineUseCase = std::move (arg);
+    }
+
+    cameraDevice = factory.createCamera();
     if (cameraDevice == nullptr)
     {
         cerr << "Cannot create the camera device" << endl;
@@ -75,11 +84,52 @@ int main (int argc, char **argv)
         return 1;
     }
 
+    cout << "Supported use cases:" << std::endl;
+    const auto listIndent = std::string ("    ");
+    const auto noteIndent = std::string ("        ");
+
+    for (size_t i = 0; i < useCases.size(); ++i)
+    {
+	    cout << listIndent << useCases[i] << endl;
+
+	    uint32_t streamCount = 0;
+	    status = cameraDevice->getNumberOfStreams (useCases[i], streamCount);
+	    if (royale::CameraStatus::SUCCESS == status && streamCount > 1)
+	    {
+		    cout << noteIndent << "this operation mode has " << streamCount << " streams" << endl;
+	    }
+    }
+
     // choose a use case
     auto selectedUseCaseIdx = 0u;
+    if (commandLineUseCase)
+    {
+        auto useCaseFound = false;
+
+        for (auto i = 0u; i < useCases.size(); ++i)
+        {
+            if (*commandLineUseCase == useCases[i])
+            {
+                selectedUseCaseIdx = i;
+                useCaseFound = true;
+                break;
+            }
+        }
+
+        if (!useCaseFound)
+        {
+            cerr << "Error: the chosen use case is not supported by this camera" << endl;
+            return 1;
+        }
+    }
+    else
+    {
+        // choose the first use case
+        selectedUseCaseIdx = 0;
+    }
 
     // set an operation mode
-    cout << "Set use case start" << std::endl;
+    cout << "Set use case " << useCases[selectedUseCaseIdx] << " start" << std::endl;
     if (cameraDevice->setUseCase (useCases.at (selectedUseCaseIdx)) != royale::CameraStatus::SUCCESS)
     {
         cerr << "Error setting use case" << endl;
