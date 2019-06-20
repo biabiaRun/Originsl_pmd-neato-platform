@@ -38,7 +38,7 @@ public:
 
     void onNewData (const royale::DepthData *data) override
     {
-        cout << "Received a frame!";
+
     }
 };
 
@@ -64,16 +64,14 @@ int main (int argc, char **argv)
         cerr << "Cannot create the camera device" << endl;
         return 1;
     }
-    cout << "Initialize devices end ok" << std::endl;
-
-    // IMPORTANT: call the initialize method before working with the camera device
     cout << "Initialize camera start" << std::endl;
+    // IMPORTANT: call the initialize method before working with the camera device
     if (cameraDevice->initialize() != royale::CameraStatus::SUCCESS)
     {
         cerr << "Cannot initialize the camera device" << endl;
         return 1;
     }
-    cout << "Initialize camera end ok" << std::endl;
+    cout << "Initialize camera OK" << std::endl;
 
     royale::Vector<royale::String> useCases;
     auto status = cameraDevice->getUseCases (useCases);
@@ -129,13 +127,12 @@ int main (int argc, char **argv)
     }
 
     // set an operation mode
-    cout << "Set use case " << useCases[selectedUseCaseIdx] << " start" << std::endl;
+    cout << "Set use case " << useCases[selectedUseCaseIdx] << std::endl;
     if (cameraDevice->setUseCase (useCases.at (selectedUseCaseIdx)) != royale::CameraStatus::SUCCESS)
     {
         cerr << "Error setting use case" << endl;
         return 1;
     }
-    cout << "Set use case end" << std::endl;
 
     // Retrieve the IDs of the different streams
     royale::Vector<royale::StreamId> streamIds;
@@ -148,7 +145,7 @@ int main (int argc, char **argv)
     cout << "Stream IDs : ";
     for (auto curStream : streamIds)
     {
-        cout << curStream << ", ";
+        cout << curStream << " ";
     }
     cout << endl;
 
