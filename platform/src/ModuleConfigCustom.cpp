@@ -76,76 +76,6 @@ const ModuleConfig moduleConfigCustom
         { 224, 172 },
         royale::usecase::UseCaseList{
             royale::usecase::UseCase{
-                "MODE_9_5FPS",
-                std::make_shared<royale::usecase::UseCaseEightPhase> (
-                5u, 80320000, 60240000, royale::Pair<uint32_t, uint32_t> { MIN_EXPO_NR, 2000u }, 2000u, 2000u, 200u,
-                royale::usecase::ExposureGray::Off,
-                royale::usecase::IntensityPhaseOrder::IntensityFirstPhase,
-                true, ssc_freq, ssc_kspread, ssc_delta_80320kHz, ssc_delta_60240kHz),
-                royale::moduleconfig::CommonId2Frequencies,
-                royale::CallbackData::Depth
-            },
-            royale::usecase::UseCase{
-                "MODE_9_1FPS",
-                std::make_shared<royale::usecase::UseCaseEightPhase> (
-                1u, 80320000, 60240000, royale::Pair<uint32_t, uint32_t> { MIN_EXPO_NR, 2250u }, 2250u, 2250u, 200u,
-                royale::usecase::ExposureGray::Off,
-                royale::usecase::IntensityPhaseOrder::IntensityFirstPhase,
-                true, ssc_freq, ssc_kspread, ssc_delta_80320kHz, ssc_delta_60240kHz),
-                royale::moduleconfig::CommonId2Frequencies,
-                royale::CallbackData::Depth
-            },
-            royale::usecase::UseCase{
-                "MODE_9_2FPS",
-                std::make_shared<royale::usecase::UseCaseEightPhase> (
-                2u, 80320000, 60240000, royale::Pair<uint32_t, uint32_t> { MIN_EXPO_NR, 2250u }, 2250u, 2250u, 200u,
-                royale::usecase::ExposureGray::Off,
-                royale::usecase::IntensityPhaseOrder::IntensityFirstPhase,
-                true, ssc_freq, ssc_kspread, ssc_delta_80320kHz, ssc_delta_60240kHz),
-                royale::moduleconfig::CommonId2Frequencies,
-                royale::CallbackData::Depth
-            },
-            royale::usecase::UseCase{
-                "MODE_9_3FPS",
-                std::make_shared<royale::usecase::UseCaseEightPhase> (
-                3u, 80320000, 60240000, royale::Pair<uint32_t, uint32_t> { MIN_EXPO_NR, 2250u }, 2250u, 2250u, 200u,
-                royale::usecase::ExposureGray::Off,
-                royale::usecase::IntensityPhaseOrder::IntensityFirstPhase,
-                true, ssc_freq, ssc_kspread, ssc_delta_80320kHz, ssc_delta_60240kHz),
-                royale::moduleconfig::CommonId2Frequencies,
-                royale::CallbackData::Depth
-            },
-            royale::usecase::UseCase{
-                "MODE_9_10FPS",
-                std::make_shared<royale::usecase::UseCaseEightPhase> (
-                10u, 80320000, 60240000, royale::Pair<uint32_t, uint32_t> { MIN_EXPO_NR, 1000u }, 1000u, 1000u, 200u,
-                royale::usecase::ExposureGray::Off,
-                royale::usecase::IntensityPhaseOrder::IntensityFirstPhase,
-                true, ssc_freq, ssc_kspread, ssc_delta_80320kHz, ssc_delta_60240kHz),
-                royale::moduleconfig::CommonId2Frequencies,
-                royale::CallbackData::Depth
-            },
-            royale::usecase::UseCase{
-                "MODE_9_15FPS",
-                std::make_shared<royale::usecase::UseCaseEightPhase> (
-                15u, 80320000, 60240000, royale::Pair<uint32_t, uint32_t> { MIN_EXPO_NR, 650u }, 650u, 650u, 200u,
-                royale::usecase::ExposureGray::Off,
-                royale::usecase::IntensityPhaseOrder::IntensityFirstPhase,
-                true, ssc_freq, ssc_kspread, ssc_delta_80320kHz, ssc_delta_60240kHz),
-                royale::moduleconfig::CommonId2Frequencies,
-                royale::CallbackData::Depth
-            },
-            royale::usecase::UseCase{
-                "MODE_9_25FPS",
-                std::make_shared<royale::usecase::UseCaseEightPhase> (
-                25u, 80320000, 60240000, royale::Pair<uint32_t, uint32_t> { MIN_EXPO_NR, 400u }, 400u, 400u, 200u,
-                royale::usecase::ExposureGray::Off,
-                royale::usecase::IntensityPhaseOrder::IntensityFirstPhase,
-                true, ssc_freq, ssc_kspread, ssc_delta_80320kHz, ssc_delta_60240kHz),
-                royale::moduleconfig::CommonId2Frequencies,
-                royale::CallbackData::Depth
-            },
-            royale::usecase::UseCase{
                 "MODE_5_5FPS",
                 std::make_shared<royale::usecase::UseCaseFourPhase> (
                 5u, 60240000, royale::Pair<uint32_t, uint32_t> { MIN_EXPO_NR, 3500u }, 3500u, 200u,
@@ -176,39 +106,19 @@ const ModuleConfig moduleConfigCustom
                 royale::CallbackData::Depth
             },
             royale::usecase::UseCase{
-                "MODE_5_30FPS",
+                "MODE_5_5FPS_80MHZ",
                 std::make_shared<royale::usecase::UseCaseFourPhase> (
-                30u, 60240000, royale::Pair<uint32_t, uint32_t> { MIN_EXPO_NR, 550u }, 550u, 200u,
+                5u, 80320000, royale::Pair<uint32_t, uint32_t> { MIN_EXPO_NR, 3500u }, 3500u, 200u,
                 royale::usecase::ExposureGray::Off,
                 royale::usecase::IntensityPhaseOrder::IntensityFirstPhase,
-                true, ssc_freq, ssc_kspread, ssc_delta_60240kHz),
+                true, ssc_freq, ssc_kspread, ssc_delta_80320kHz),
                 royale::moduleconfig::CommonId1Frequency,
                 royale::CallbackData::Depth
             },
             royale::usecase::UseCase{
-                "MODE_5_35FPS",
+                "MODE_5_5FPS_300US",
                 std::make_shared<royale::usecase::UseCaseFourPhase> (
-                35u, 60240000, royale::Pair<uint32_t, uint32_t> { MIN_EXPO_NR, 500u }, 500u, 200u,
-                royale::usecase::ExposureGray::Off,
-                royale::usecase::IntensityPhaseOrder::IntensityFirstPhase,
-                true, ssc_freq, ssc_kspread, ssc_delta_60240kHz),
-                royale::moduleconfig::CommonId1Frequency,
-                royale::CallbackData::Depth
-            },
-            royale::usecase::UseCase{
-                "MODE_5_45FPS",
-                std::make_shared<royale::usecase::UseCaseFourPhase> (
-                45u, 60240000, royale::Pair<uint32_t, uint32_t> { MIN_EXPO_NR, 350u }, 350u, 200u,
-                royale::usecase::ExposureGray::Off,
-                royale::usecase::IntensityPhaseOrder::IntensityFirstPhase,
-                true, ssc_freq, ssc_kspread, ssc_delta_60240kHz),
-                royale::moduleconfig::CommonId1Frequency,
-                royale::CallbackData::Depth
-            },
-            royale::usecase::UseCase{
-                "MODE_5_60FPS",
-                std::make_shared<royale::usecase::UseCaseFourPhase> (
-                60u, 60240000, royale::Pair<uint32_t, uint32_t> { MIN_EXPO_NR, 250u }, 250u, 200u,
+		5u, 60240000, royale::Pair<uint32_t, uint32_t> { 300u, 300u }, 300u, 300u,
                 royale::usecase::ExposureGray::Off,
                 royale::usecase::IntensityPhaseOrder::IntensityFirstPhase,
                 true, ssc_freq, ssc_kspread, ssc_delta_60240kHz),

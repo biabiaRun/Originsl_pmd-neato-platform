@@ -18,18 +18,18 @@ set(HEADERS
     )
     
 set(SOURCES
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/sampleRetrieveData.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/sampleRetrieveDataNoPlayback.cpp"
     )
 
 link_directories(
     ${CMAKE_SYSROOT}/usr/local/lib
     )
 
-add_executable(sampleRetrieveData
+add_executable(sampleRetrieveDataNoPlayback
     ${HEADERS}
     ${SOURCES}
     )
 
-install(TARGETS sampleRetrieveData DESTINATION ${ROYALE_INSTALL_BIN_DIR})
+install(TARGETS sampleRetrieveDataNoPlayback DESTINATION ${ROYALE_INSTALL_BIN_DIR})
 
-target_link_libraries(sampleRetrieveData platform)
+target_link_libraries(sampleRetrieveDataNoPlayback platform)
