@@ -150,5 +150,6 @@ INSTALL(TARGETS platform
         ARCHIVE DESTINATION ${ROYALE_INSTALL_LIB_DIR})
 
 if (ROYALE_ENABLE_PLATFORM_SAMPLE)
-    add_subdirectory(sampleRetrieveData)
+  add_subdirectory(sampleRetrieveData)
+  add_subdirectory(emcraft_acceptance_test)
 endif ()
