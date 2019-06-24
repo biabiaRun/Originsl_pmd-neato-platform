@@ -1,7 +1,13 @@
 #include <iostream>
 #include "stdlib.h"
-#include "camera.h"
 
+#include <royale/ICameraDevice.hpp>
+
+#include <CameraFactory.hpp>
+
+using namespace royale;
+using namespace platform;
+#include "camera.h"
 void Camera::onNewData (const royale::DepthData *data)
 {
     // Do something with the data
@@ -20,7 +26,7 @@ Camera::CameraError Camera::RunInitializeTests()
     if (status != royale::CameraStatus::SUCCESS)
     {
         std::cerr << "[ERROR] Camera device could not be initialized. " 
-                  << royale::getErrorString(status).c_str() << std::endl;
+                  << royale::getStatusString(status).c_str() << std::endl;
         return CAM_NOT_INITIALIZED;
     }
 
@@ -36,7 +42,7 @@ Camera::CameraError Camera::RunStreamTests()
     if (status != royale::CameraStatus::SUCCESS)
     {
         std::cerr << "[ERROR] Could not get the camera streams. " 
-                  << royale::getErrorString(status).c_str() << std::endl;
+                  << royale::getStatusString(status).c_str() << std::endl;
         return CAM_STREAM_ERROR;
     }
     if (streamids.size() > 1) 
@@ -68,7 +74,7 @@ Camera::CameraError Camera::RunAccessLevelTests(int user_level)
     if (status != royale::CameraStatus::SUCCESS)
     {
         std::cerr << "[ERROR] Could not grab the access level. " 
-                  << royale::getErrorString(status).c_str() << std::endl;
+                  << royale::getStatusString(status).c_str() << std::endl;
         return ACCESS_LEVEL_ERROR;
     }
 
@@ -93,7 +99,7 @@ Camera::CameraError Camera::RunUseCaseTests()
     if (status != royale::CameraStatus::SUCCESS)
     {
         std::cerr << "[ERROR] Could not get use cases. " 
-                  << royale::getErrorString(status).c_str() << std::endl;
+                  << royale::getStatusString(status).c_str() << std::endl;
         return USE_CASE_ERROR;
     }
     royale::String current_use_case;
@@ -101,7 +107,7 @@ Camera::CameraError Camera::RunUseCaseTests()
     if (status != royale::CameraStatus::SUCCESS)
     {
         std::cerr << "[ERROR] Could not get the current use case. " 
-                  << royale::getErrorString(status).c_str() << std::endl;
+                  << royale::getStatusString(status).c_str() << std::endl;
         return USE_CASE_ERROR;
     }
 
@@ -126,7 +132,7 @@ Camera::CameraError Camera::RunUseCaseTests()
         if (status != royale::CameraStatus::SUCCESS)
         {
             std::cerr << "[ERROR] Could not set a new use case. " 
-                      << royale::getErrorString(status).c_str() << std::endl;
+                      << royale::getStatusString(status).c_str() << std::endl;
             return USE_CASE_ERROR;
         }
         else
@@ -135,13 +141,13 @@ Camera::CameraError Camera::RunUseCaseTests()
             if (status != royale::CameraStatus::SUCCESS)
             {
                 std::cerr << "[ERROR] Could not get the current use case. " 
-                          << royale::getErrorString(status).c_str() << std::endl;
+                          << royale::getStatusString(status).c_str() << std::endl;
                 return USE_CASE_ERROR;
             }
             if (current_use_case != next_use_case)
             {
                 std::cerr << "[ERROR] Current use case does not match the set use case. " 
-                      << royale::getErrorString(status).c_str() << std::endl;
+                      << royale::getStatusString(status).c_str() << std::endl;
                 return USE_CASE_ERROR;
             }
         }
@@ -158,7 +164,7 @@ Camera::CameraError Camera::RunExposureTests()
     if (status != royale::CameraStatus::SUCCESS)
     {
         std::cerr << "[ERROR] Could not set the exposure mode to Automatic. " 
-                  << royale::getErrorString(status).c_str() << std::endl;
+                  << royale::getStatusString(status).c_str() << std::endl;
         return EXPOSURE_MODE_ERROR;
     }
     // Set Manual Exposure
@@ -166,7 +172,7 @@ Camera::CameraError Camera::RunExposureTests()
     if (status != royale::CameraStatus::SUCCESS)
     {
         std::cerr << "[ERROR] Could not set the exposure mode to Manual. " 
-                  << royale::getErrorString(status).c_str() << std::endl;
+                  << royale::getStatusString(status).c_str() << std::endl;
         return EXPOSURE_MODE_ERROR;
     }
 
@@ -176,7 +182,7 @@ Camera::CameraError Camera::RunExposureTests()
     if (status != royale::CameraStatus::SUCCESS)
     {
         std::cerr << "[ERROR] Could not get exposure limits. " 
-                  << royale::getErrorString(status).c_str() << std::endl;
+                  << royale::getStatusString(status).c_str() << std::endl;
         return EXPOSURE_MODE_ERROR;
     }
 
@@ -186,7 +192,7 @@ Camera::CameraError Camera::RunExposureTests()
     if (status != royale::CameraStatus::SUCCESS)
     {
         std::cerr << "[ERROR] Could set the exposure to " << rand_exposure << ". " 
-                  << royale::getErrorString(status).c_str() << std::endl;
+                  << royale::getStatusString(status).c_str() << std::endl;
         return EXPOSURE_MODE_ERROR;
     }
 
@@ -213,7 +219,7 @@ Camera::CameraError Camera::RunProcessingParametersTests()
     if (status != royale::CameraStatus::SUCCESS)
     {
         std::cerr << "[ERROR] Could not get processing parameters. "
-                  << royale::getErrorString(status).c_str() << std::endl;
+                  << royale::getStatusString(status).c_str() << std::endl;
         return PROCESSING_PARAMETER_ERROR;
     }
 
@@ -257,7 +263,7 @@ Camera::CameraError Camera::RunProcessingParametersTests()
     if (status != royale::CameraStatus::SUCCESS)
     {
         std::cerr << "[ERROR] Could not set the processing parameters. "
-                  << royale::getErrorString(status).c_str() << std::endl;
+                  << royale::getStatusString(status).c_str() << std::endl;
         return PROCESSING_PARAMETER_ERROR;
     }
 
@@ -266,7 +272,7 @@ Camera::CameraError Camera::RunProcessingParametersTests()
     if (status != royale::CameraStatus::SUCCESS)
     {
         std::cerr << "[ERROR] Could not get processing parameters. "
-                  << royale::getErrorString(status).c_str() << std::endl;
+                  << royale::getStatusString(status).c_str() << std::endl;
         return PROCESSING_PARAMETER_ERROR;
     }
     CameraError err = NONE;

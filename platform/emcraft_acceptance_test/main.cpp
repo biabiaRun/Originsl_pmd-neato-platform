@@ -1,30 +1,26 @@
 #include <iostream>
 #include <string>
+#include <royale/ICameraDevice.hpp>
+#include <CameraFactory.hpp>
 
+using namespace std;
+using namespace royale;
+using namespace platform;
 #include "camera.h"
 
 const bool EXIT_ON_ERROR = true;
 
 int main(int argc, char **argv)
 {
-    // Setup the Camera Manager
     std::string ACCESS_CODE;
     if (argc >= 2)
     {
         ACCESS_CODE = argv[1];
     }
-    royale::CameraManager manager(ACCESS_CODE);
 
-    // [Setup] Make sure at least one camera is connected
-    // Grab the *FIRST* camera found and create a CameraDevice
-    auto camlist = manager.getConnectedCameraList();
-    if(camlist.empty())
-    {
-        std::cerr << "[ERROR] No camera connected" << std::endl;
-        return Camera::CameraError::CAM_NOT_DETECTED;
-    }
-    Camera cam = Camera(manager.createCamera(camlist.at(0)), camlist.at(0).c_str());
-    
+    CameraFactory factory;
+    Camera cam = Camera(factory.createCamera());
+
     // [Setup] Camera Initialization Test
     Camera::CameraError error = cam.RunInitializeTests();
     if (EXIT_ON_ERROR && error != Camera::CameraError::NONE) { return error; }

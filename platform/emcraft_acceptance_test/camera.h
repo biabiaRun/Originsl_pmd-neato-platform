@@ -1,7 +1,6 @@
 #ifndef __CAMERA_H__
 #define __CAMERA_H__
 
-#include <royale.hpp>
 #include <string>
 
 class Camera : public royale::IDepthDataListener
@@ -28,9 +27,8 @@ public:
     };
 
     Camera() : camera_(nullptr) {};
-    Camera(std::unique_ptr<royale::ICameraDevice> c, std::string id) 
-        : camera_(std::move(c)),
-          id_(id)
+    Camera(std::unique_ptr<royale::ICameraDevice> c)
+        : camera_(std::move(c))
     {};
     inline const std::string GetID() const { return id_; }
 

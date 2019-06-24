@@ -1,30 +1,38 @@
-cmake_minimum_required(VERSION 2.8)
+#****************************************************************************
+# Copyright (C) 2018 pmdtechnologies ag
+#
+# THIS CODE AND INFORMATION ARE PROVIDED "AS IS" WITHOUT WARRANTY OF ANY
+# KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
+# PARTICULAR PURPOSE.
+#
+#****************************************************************************
 
-# Create Project
-project (acceptance_tests)
-set(CMAKE_PREFIX_PATH "/opt/royale/share")
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}/inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../royale/source/core/inc
+    )
 
-# Compile as C++11
+set(HEADERS
+  )
+
 add_compile_options(-std=c++11)
 
-# Sources
-set(TARGET_SOURCES
-    main.cpp
-    camera.cpp
-)
+set(SOURCES
+  "${CMAKE_CURRENT_SOURCE_DIR}/main.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/camera.cpp"
+    )
 
-# Find Packages
-find_package(royale REQUIRED)
+link_directories(
+    ${CMAKE_SYSROOT}/usr/local/lib
+    )
 
-# Additional Include Directories
-link_directories(${royale_LIB_DIR})
-include_directories(
-  /opt/royale/samples/inc
-)
+add_executable(acceptance_test
+    ${HEADERS}
+    ${SOURCES}
+    )
 
-# Build
-add_executable(${PROJECT_NAME} ${TARGET_SOURCES})
+install(TARGETS acceptance_test DESTINATION ${ROYALE_INSTALL_BIN_DIR})
 
-# Additional Dependencies
-#COPY_ROYALE_LIBS(${PROJECT_NAME})
-target_link_libraries(${PROJECT_NAME} "${royale_LIBS}")
+target_link_libraries(acceptance_test platform)
