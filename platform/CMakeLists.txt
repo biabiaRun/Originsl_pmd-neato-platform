@@ -40,7 +40,6 @@ if (ROYALE_ENABLE_PLATFORM_SAMPLE)
 endif ()
 
 link_directories(
-        ${CMAKE_SYSROOT}/usr/local/lib
         ${PROCESSING_SPECTRE_LIB_DIR}
 )
 
@@ -123,7 +122,6 @@ else()
             )
 
     link_directories(
-            ${CMAKE_SYSROOT}/usr/local/lib
             ${PROCESSING_SPECTRE_LIB_DIR}
     )
 
