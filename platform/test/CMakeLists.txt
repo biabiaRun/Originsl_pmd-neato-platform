@@ -29,7 +29,6 @@ set(SOURCES
     )
 
 link_directories(
-    ${CMAKE_SYSROOT}/usr/local/lib
     )
 
 add_executable(test_platform

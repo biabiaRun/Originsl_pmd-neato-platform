@@ -25,7 +25,6 @@ set(SOURCES
     )
 
 link_directories(
-    ${CMAKE_SYSROOT}/usr/local/lib
     )
 
 add_executable(acceptance_test
