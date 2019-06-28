@@ -65,7 +65,7 @@ else()
 endif()
 
 # Provide the include directories to the caller
-set(royale_INCLUDE_DIRS "${royale_INSTALL_PATH}/include;${royale_INSTALL_PATH}/include/royaleCAPI")
+set(royale_INCLUDE_DIRS "${royale_INSTALL_PATH}/include;${royale_INSTALL_PATH}/include/royaleCAPI;${royale_INSTALL_PATH}/include/royale")
 include_directories(${royale_INCLUDE_DIRS})
 
 set(royale_LIBS "royale")
