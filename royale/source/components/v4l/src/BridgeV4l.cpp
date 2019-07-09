@@ -66,6 +66,7 @@ namespace
             m_index {queryBuf.index},
             m_length {queryBuf.length}
         {
+	    m_normalizedData = new uint16_t[pixelCount];
         }
 
         // The OffsetBasedCapturedBuffer class has already deleted the copy constructor and copy
@@ -86,6 +87,8 @@ namespace
                     LOG (ERROR) << "Error while munmapping buffer " << errno;
                 }
             }
+
+	    delete m_normalizedData;
         }
 
         /**
@@ -97,10 +100,22 @@ namespace
             return m_index;
         }
 
+        ROYALE_API void normalizeData()
+        {
+            uint8_t *tmp = reinterpret_cast<uint8_t *> (OffsetBasedCapturedBuffer::getPixelData ());
+            BufferUtils::copyOrInPlaceRaw12 (tmp, getPixelCount(), reinterpret_cast<uint16_t *> (m_normalizedData));
+        }
+
+        ROYALE_API uint16_t *getPixelData()
+        {
+            return m_normalizedData;
+        }
+
     private:
         __u32 m_index;
         /** The v4l2_buffer.length value (capacity, not currently valid data) */
         __u32 m_length;
+        uint16_t *m_normalizedData;
     };
 }
 
@@ -447,7 +462,7 @@ void BridgeV4l::acquisitionFunction()
         }
         else
         {
-            BufferUtils::normalize (*buffer, m_transferFormat);
+            buffer->normalizeData ();
         }
 
         try
