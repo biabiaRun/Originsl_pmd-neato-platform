@@ -109,7 +109,7 @@ TEST_F (CameraDeviceFixture, TestLensParameters)
 
 TEST_F (CameraDeviceFixture, TestSweepExposure)
 {
-    const uint32_t MAX_RETRIES_PER_EXPOSURE_SET = 5;
+    const uint32_t MAX_RETRIES_PER_EXPOSURE_SET = 10;
     const uint32_t MS_TIME_TO_WAIT_BETWEEN_ATTEMPTS_FOR_ONE_FPS = 500;
     const uint32_t STEP_SIZE = 100;
 
@@ -167,7 +167,7 @@ TEST_F (CameraDeviceFixture, TestReceiveData)
 
     ASSERT_EQ (camera->startCapture(), CameraStatus::SUCCESS);
 
-    std::this_thread::sleep_for (std::chrono::milliseconds (100));
+    std::this_thread::sleep_for (std::chrono::milliseconds (500));
     ASSERT_GT (depthListener.m_count, 0);
 }
 
@@ -195,8 +195,10 @@ TEST_F (CameraDeviceFixture, TestAutoExposure)
     // Check if exposure time is adapted if we start with the lowest exposure
     {
         ASSERT_EQ (camera->setExposureMode (ExposureMode::MANUAL), CameraStatus::SUCCESS);
-        status = camera->setExposureTime (exposureLimits.first);
         std::this_thread::sleep_for (std::chrono::milliseconds (500));
+        status = camera->setExposureTime (exposureLimits.first);
+        ASSERT_EQ (status, CameraStatus::SUCCESS);
+        std::this_thread::sleep_for (std::chrono::milliseconds (1000));
         ASSERT_GT (depthListener.m_count, 0);
         auto curCount = depthListener.m_count;
         ASSERT_EQ (depthListener.m_expoTimes.at (1), exposureLimits.first);
@@ -215,7 +217,9 @@ TEST_F (CameraDeviceFixture, TestAutoExposure)
     // Check if exposure time is adapted if we start with the highest exposure
     {
         ASSERT_EQ (camera->setExposureMode (ExposureMode::MANUAL), CameraStatus::SUCCESS);
+        std::this_thread::sleep_for (std::chrono::milliseconds (500));
         status = camera->setExposureTime (exposureLimits.second);
+        ASSERT_EQ (status, CameraStatus::SUCCESS);
         std::this_thread::sleep_for (std::chrono::milliseconds (500));
         ASSERT_GT (depthListener.m_count, 0);
         auto curCount = depthListener.m_count;
@@ -246,13 +250,13 @@ TEST_F (CameraDeviceFixture, TestTemperature)
 
     ASSERT_EQ (camera->startCapture(), CameraStatus::SUCCESS);
 
-    std::this_thread::sleep_for (std::chrono::milliseconds (100));
+    std::this_thread::sleep_for (std::chrono::milliseconds (500));
     ASSERT_GT (extendedListener.m_count, 0);
 
     auto curTemperature = extendedListener.m_temperature;
     extendedListener.m_count = 0u;
 
-    std::this_thread::sleep_for (std::chrono::milliseconds (300));
+    std::this_thread::sleep_for (std::chrono::milliseconds (500));
     ASSERT_GT (extendedListener.m_count, 0);
 
     // Check if the temperature increased
