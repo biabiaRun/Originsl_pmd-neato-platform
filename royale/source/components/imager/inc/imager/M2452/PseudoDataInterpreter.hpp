@@ -51,6 +51,7 @@ namespace royale
 
                 uint16_t getSequenceIndex (const royale::common::ICapturedRawFrame &frame) const override
                 {
+                    LOG (WARN) << "seq idx " << frame.getPseudoData() [1];
                     return frame.getPseudoData() [1];
                 }
 

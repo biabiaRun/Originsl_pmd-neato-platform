@@ -49,6 +49,12 @@ int main (int argc, char **argv)
     // if non-null, choose this use case instead of the default
     unique_ptr<royale::String> commandLineUseCase;
 
+
+    royale::common::LogSettings::getInstance ()->setLogFile ("log.txt");
+    uint16_t logSettings = 0xf;
+    royale::common::LogSettings::getInstance ()->setLogLevel (logSettings);//royale::common::LogSettings::ENABLE_ALL_LOGS);
+    LOG (DEBUG) << "hello";
+
     CameraFactory factory;
     if (argc > 1)
     {
