@@ -127,7 +127,7 @@ const ModuleConfig moduleConfigCustom
             },
         },
         royale::config::BandwidthRequirementCategory::NO_THROTTLING,
-        royale::config::FrameTransmissionMode::SUPERFRAME,
+			royale::config::FrameTransmissionMode::SUPERFRAME,
         "A65",
         65.0f,
         60.0f,

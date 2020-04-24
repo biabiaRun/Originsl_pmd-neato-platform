@@ -40,6 +40,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <cstring>
+#include <fstream>
+#include <iostream>
 
 using namespace royale::buffer;
 using namespace royale::common;
@@ -234,12 +237,22 @@ void BridgeV4l::videoSetFormat (unsigned int imageWidth, unsigned int imageHeigh
     struct v4l2_format fmt;
     int ret;
 
-    memset (&fmt, 0, sizeof fmt);
-    fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    fmt.fmt.pix.width = imageWidth;
-    fmt.fmt.pix.height = imageHeight;
-    fmt.fmt.pix.pixelformat = getV4l2Format (m_pixelFormat);
-    fmt.fmt.pix.field = V4L2_FIELD_ANY;
+    fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+    ioctl(m_deviceHandle->fd, VIDIOC_G_FMT, &fmt);
+#if 0
+    printf("Got format: %dx%d (plane sizes: %d, %d) format %d\n",
+		    fmt.fmt.pix_mp.width, fmt.fmt.pix_mp.height,
+		    fmt.fmt.pix_mp.plane_fmt[0].sizeimage,
+		    fmt.fmt.pix_mp.plane_fmt[1].sizeimage,
+		    fmt.fmt.pix_mp.pixelformat);
+#endif
+    fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+    fmt.fmt.pix_mp.width = imageWidth;
+    fmt.fmt.pix_mp.height = imageHeight;
+    fmt.fmt.pix_mp.pixelformat = getV4l2Format (m_pixelFormat);
+    fmt.fmt.pix_mp.field = V4L2_FIELD_ANY;
+    fmt.fmt.pix_mp.num_planes = 1;
+    fmt.fmt.pix_mp.plane_fmt[0].sizeimage = imageWidth*imageHeight*12;
 
     ret = ioctl (m_deviceHandle->fd, VIDIOC_S_FMT, &fmt);
     LOG (DEBUG) << "ioctl VIDIOC_S_FMT";
@@ -248,9 +261,9 @@ void BridgeV4l::videoSetFormat (unsigned int imageWidth, unsigned int imageHeigh
         throw LogicError (std::string ("Could not set v4l2 format err: ") + strerror (errno));
     }
 
-    LOG (DEBUG) << "V4L Format set ok. Width: " << fmt.fmt.pix.width
-                << " Height: " << fmt.fmt.pix.height
-                << " Size: " << fmt.fmt.pix.sizeimage;
+    LOG (DEBUG) << "V4L Format set ok. Width: " << fmt.fmt.pix_mp.width
+                << " Height: " << fmt.fmt.pix_mp.height
+                << " Size: " << fmt.fmt.pix_mp.plane_fmt[0].sizeimage;
 
     m_width = imageWidth;
     m_height = imageHeight;
@@ -269,6 +282,7 @@ std::size_t BridgeV4l::executeUseCase (int imageWidth, int imageHeight, std::siz
         openConnection();
     }
 
+//    imageHeight = 173;
     bool reallocBuffers = ! (m_width == imageWidth &&
                              m_height == imageHeight &&
                              m_currentBuffers.size() == bufferCount);
@@ -299,7 +313,7 @@ void BridgeV4l::videoStopStream()
     }
 
     // Calling VIDIOC_STREAMOFF will unblock the acquisition thread
-    const static int streamType = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    const static int streamType = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
     int err = ioctl (m_deviceHandle->fd, VIDIOC_STREAMOFF, &streamType);
     LOG (DEBUG) << "ioctl VIDIOC_STREAMOFF";
     switch (err)
@@ -326,7 +340,7 @@ void BridgeV4l::videoStartStream()
         return;
     }
 
-    const static int streamType = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    const static int streamType = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
     int err = ioctl (m_deviceHandle->fd, VIDIOC_STREAMON, &streamType);
     LOG (DEBUG) << "ioctl VIDIOC_STREAMON";
     if (err)
@@ -386,8 +400,12 @@ void BridgeV4l::acquisitionFunction()
         {
             0
         };
-        ioctlBuffer.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	struct v4l2_plane plane;
+
+        ioctlBuffer.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
         ioctlBuffer.memory = V4L2_MEMORY_MMAP;
+	ioctlBuffer.m.planes = &plane;
+	ioctlBuffer.length = 1;
 
 #ifdef ROYALE_LOGGING_VERBOSE_BRIDGE
         LOG (DEBUG) << "Trying to capture a frame";
@@ -481,6 +499,10 @@ void BridgeV4l::acquisitionFunction()
             std::lock_guard<std::mutex> lock (m_changeListenerLock);
             if (m_captureListener)
             {
+		    static int cnt = 0;
+		    std::ofstream fs (std::string("data") + std::to_string(cnt++) + ".bin", std::ios::out  | std::ios::binary | std::ios::app/* | std::ios::trunc*/);
+		    fs.write((char *)buffer->getPixelData(), (long)buffer->getPixelCount()*2);
+		    fs.close();
                 m_captureListener->bufferCallback (buffer);
             }
             else
@@ -523,8 +545,9 @@ void BridgeV4l::createAndQueueV4lBuffers (std::size_t bufferCount, std::size_t p
         0
     };
     req.count = static_cast<__u32> (bufferCount);
-    req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
     req.memory = V4L2_MEMORY_MMAP;
+    req.count = 3;
 
     err = ioctl (m_deviceHandle->fd, VIDIOC_REQBUFS, &req);
     LOG (DEBUG) << "ioctl VIDIOC_REQBUFS(" << bufferCount << ")";
@@ -550,10 +573,15 @@ void BridgeV4l::createAndQueueV4lBuffers (std::size_t bufferCount, std::size_t p
         {
             0
         };
+	struct v4l2_plane planes[1];
 
         queryBuf.index = static_cast<__u32> (i);
-        queryBuf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+        queryBuf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
         queryBuf.memory = V4L2_MEMORY_MMAP;
+	queryBuf.index = i;
+	queryBuf.m.planes = planes;
+	queryBuf.length = 1;
+	//queryBuf.count = 1;
 
         err = ioctl (m_deviceHandle->fd, VIDIOC_QUERYBUF, &queryBuf);
         LOG (DEBUG) << "ioctl VIDIOC_QUERYBUF";
@@ -569,23 +597,25 @@ void BridgeV4l::createAndQueueV4lBuffers (std::size_t bufferCount, std::size_t p
 #ifdef ROYALE_LOGGING_VERBOSE_BRIDGE
         LOG (DEBUG) << "Going to mmap video buffer number " << i << ", length " << queryBuf.length;
 #endif
-        if (queryBuf.length < BufferUtils::expectedRawSize (pixelCount, m_transferFormat))
+        if (queryBuf.m.planes[0].length < BufferUtils::expectedRawSize (pixelCount, m_transferFormat))
         {
-            LOG (ERROR) << "Buffer is too small to handle the expected image size";
-            throw NotImplemented ("TODO: configure larger buffers in the driver");
+		LOG (ERROR) << "Buffer is too small to handle the expected image size " << queryBuf.m.planes[0].length;
         }
         // mmap only the size that's needed, assuming the driver does not use 24 bits per pixel.
-        queryBuf.length = static_cast<__u32> (BufferUtils::expectedRawSize (pixelCount, m_transferFormat));
+        //queryBuf.length = static_cast<__u32> (BufferUtils::expectedRawSize (pixelCount, m_transferFormat));
+	LOG (ERROR) << "Buffer size " << queryBuf.m.planes[0].length << "off " << queryBuf.m.offset;
 
         // Here PROT_WRITE is requested because of the in-place data normalization in the
         // acquisitionFunction. If the driver is providing data that's already in the format for
         // ICapturedBuffer then PROT_READ should be sufficient.
-        uint8_t *data = static_cast<uint8_t *> (mmap (NULL, queryBuf.length, PROT_READ | PROT_WRITE, MAP_SHARED, m_deviceHandle->fd, queryBuf.m.offset));
+        uint8_t *data = static_cast<uint8_t *> (mmap (NULL, queryBuf.m.planes[0].length, PROT_READ | PROT_WRITE, MAP_SHARED, m_deviceHandle->fd, queryBuf.m.planes[0].m.mem_offset));
         if (MAP_FAILED == data)
         {
             LOG (ERROR) << "Failed to mmap video buffer number " << i << ", error " << errno;
             throw NotImplemented ("TODO: Add error handling");
         }
+
+	memset(data, 0xff, queryBuf.m.planes[0].length);
 
         auto captureBuffer = common::makeUnique<CapturedV4lBuffer> (queryBuf, data, pixelCount);
         handles.push_back (std::move (captureBuffer));
@@ -646,9 +676,15 @@ void BridgeV4l::queueBufferLocked (royale::hal::ICapturedBuffer *cap)
     {
         0
     };
+    struct v4l2_plane plane;
+
     ioctlBuffer.index = buffer->getIndex();
-    ioctlBuffer.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    ioctlBuffer.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
     ioctlBuffer.memory = V4L2_MEMORY_MMAP;
+    ioctlBuffer.m.planes = &plane;
+    ioctlBuffer.length = 1;
+    ioctlBuffer.m.planes[0].bytesused = 57792;
+//    ioctlBuffer.count = 1;
 #ifdef ROYALE_LOGGING_VERBOSE_BRIDGE
     LOG (DEBUG) << "Queuing video buffer " << ioctlBuffer.index;
 #endif
@@ -687,7 +723,7 @@ void BridgeV4l::destroyBuffers (void)
         0
     };
     req.count = 0;
-    req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
     req.memory = V4L2_MEMORY_MMAP;
 
     err = ioctl (m_deviceHandle->fd, VIDIOC_REQBUFS, &req);

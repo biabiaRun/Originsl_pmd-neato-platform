@@ -156,6 +156,8 @@ namespace
         {
             if (m_buffer->getPixelCount() < m_pixelsPerFrame * frameCount)
             {
+		    LOG (DEBUG) << __func__ << " pix " << m_buffer->getPixelCount() << " pix per f " << m_pixelsPerFrame << " frame cnt " << frameCount;
+
                 throw LogicError ("out of bounds trying to create more frames than there are pixels");
             }
         }
@@ -705,6 +707,8 @@ void FrameCollectorBase::bufferCallback (royale::hal::ICapturedBuffer *buffer)
         throw LogicError ("FrameCollector received frames during / after destruction");
     }
 
+    LOG (WARN) << "Frame number " << frameNumber;
+
     // Check for either data corruption or logic corruption. This is probably data corruption of the
     // individual buffer, so don't do any other processing based on it.
     if (0 == m_bufferActionMap.count (sequence))
@@ -713,7 +717,8 @@ void FrameCollectorBase::bufferCallback (royale::hal::ICapturedBuffer *buffer)
         // this doesn't update the drop stats, instead the number of drops will be updated with
         // the number of lost frames when a known frame number is received
         return;
-    }
+    } else
+        LOG (WARN) << "!!! Action for sequence " << uint32_t {sequence} << " in bufferCallback";
 
     bool resetSequenceBase = false;
     if (!m_sequenceBaseKnown)
