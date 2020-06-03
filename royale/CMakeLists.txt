@@ -140,6 +140,7 @@ OPTION(ROYALE_ENABLE_SAMPLES            "Build all samples" ON)
 OPTION(ROYALE_LOGGING_FORCE             "Force the enabling of logging output even with ROYALE_LOGGING set to OFF and in RELEASE mode" ON)
 OPTION(ROYALE_LOGGING                   "Enable logging output globally if DEBUG is on" ON)
 OPTION(ROYALE_LOGGING_VERBOSE_BRIDGE    "Enable extra logging in the connectivity layer" ON)
+OPTION(ROYALE_SAVE_RAW_BIN_FILES        "Enable saving the raw data to local disk" OFF)
 
 SET(ROYALE_PROCESSING_IMPLEMENTATION    "SPECTRE"  CACHE STRING "Switch between Spectre and simple processing. Simple processing does not use any calibration information!" )
 SET_PROPERTY(CACHE ROYALE_PROCESSING_IMPLEMENTATION PROPERTY STRINGS "SPECTRE;SIMPLE" )
@@ -194,7 +195,7 @@ if (NOT ROYALE_ENABLE_RELEASEANALYZER)
   add_subdirectory(contrib)
 
   add_subdirectory(spectre)
-  
+
   # Add all samples
   add_subdirectory(samples)
 

@@ -127,7 +127,7 @@ else()
 
     target_link_libraries(platform royale)
     # target_link_libraries(platform debug ${ROYALE_LIB_LOCATION_DEBUG})
-    # target_link_libraries(platform optimized ${ROYALE_LIB_LOCATION_RELEASE})    
+    # target_link_libraries(platform optimized ${ROYALE_LIB_LOCATION_RELEASE})
 endif()
 
 FILE(GLOB PLATFORM_HEADERS inc/*)
@@ -150,4 +150,5 @@ INSTALL(TARGETS platform
 if (ROYALE_ENABLE_PLATFORM_SAMPLE)
   add_subdirectory(sampleRetrieveData)
   add_subdirectory(emcraft_acceptance_test)
+  add_subdirectory(iqc-testing)
 endif ()
