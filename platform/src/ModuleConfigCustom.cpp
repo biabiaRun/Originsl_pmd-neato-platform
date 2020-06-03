@@ -98,7 +98,7 @@ const ModuleConfig moduleConfigCustom
             royale::usecase::UseCase{
                 "MODE_5_15FPS",
                 std::make_shared<royale::usecase::UseCaseFourPhase> (
-                15u, 60240000, royale::Pair<uint32_t, uint32_t> { MIN_EXPO_NR, 1150u }, 1150u, 200u,
+                15u, 60240000, royale::Pair<uint32_t, uint32_t> { MIN_EXPO_NR, 1430u }, 1430u, 200u,
                 royale::usecase::ExposureGray::Off,
                 royale::usecase::IntensityPhaseOrder::IntensityFirstPhase,
                 true, ssc_freq, ssc_kspread, ssc_delta_60240kHz),
@@ -118,7 +118,7 @@ const ModuleConfig moduleConfigCustom
             royale::usecase::UseCase{
                 "MODE_5_5FPS_300US",
                 std::make_shared<royale::usecase::UseCaseFourPhase> (
-		5u, 60240000, royale::Pair<uint32_t, uint32_t> { 300u, 300u }, 300u, 300u,
+		            5u, 60240000, royale::Pair<uint32_t, uint32_t> { 300u, 300u }, 300u, 300u,
                 royale::usecase::ExposureGray::Off,
                 royale::usecase::IntensityPhaseOrder::IntensityFirstPhase,
                 true, ssc_freq, ssc_kspread, ssc_delta_60240kHz),
@@ -127,8 +127,8 @@ const ModuleConfig moduleConfigCustom
             },
         },
         royale::config::BandwidthRequirementCategory::NO_THROTTLING,
-			royale::config::FrameTransmissionMode::SUPERFRAME,
-        "A65",
+			  royale::config::FrameTransmissionMode::SUPERFRAME,
+        "A66",
         65.0f,
         60.0f,
         true

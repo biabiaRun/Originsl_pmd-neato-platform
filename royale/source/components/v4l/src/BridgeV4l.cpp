@@ -499,10 +499,12 @@ void BridgeV4l::acquisitionFunction()
             std::lock_guard<std::mutex> lock (m_changeListenerLock);
             if (m_captureListener)
             {
-		    static int cnt = 0;
-		    std::ofstream fs (std::string("data") + std::to_string(cnt++) + ".bin", std::ios::out  | std::ios::binary | std::ios::app/* | std::ios::trunc*/);
-		    fs.write((char *)buffer->getPixelData(), (long)buffer->getPixelCount()*2);
-		    fs.close();
+#ifdef ROYALE_SAVE_RAW_BIN_FILES
+                static int cnt = 0;
+                std::ofstream fs (std::string("data") + std::to_string(cnt++) + ".bin", std::ios::out  | std::ios::binary | std::ios::app/* | std::ios::trunc*/);
+                fs.write((char *)buffer->getPixelData(), (long)buffer->getPixelCount()*2);
+                fs.close();
+#endif
                 m_captureListener->bufferCallback (buffer);
             }
             else
@@ -578,7 +580,6 @@ void BridgeV4l::createAndQueueV4lBuffers (std::size_t bufferCount, std::size_t p
         queryBuf.index = static_cast<__u32> (i);
         queryBuf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
         queryBuf.memory = V4L2_MEMORY_MMAP;
-	queryBuf.index = i;
 	queryBuf.m.planes = planes;
 	queryBuf.length = 1;
 	//queryBuf.count = 1;

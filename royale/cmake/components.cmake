@@ -16,6 +16,10 @@ if (ROYALE_LOGGING_VERBOSE_BRIDGE)
     ADD_DEFINITIONS ("-DROYALE_LOGGING_VERBOSE_BRIDGE")
 endif()
 
+if (ROYALE_SAVE_RAW_BIN_FILES)
+    ADD_DEFINITIONS ("-DROYALE_SAVE_RAW_BIN_FILES")
+endif()
+
 # Amundsen bridges
 # The protocol is UVC-like, but not using the operating system's UVC stack, nor using Win10's Frame
 # Server.  The implementation uses the same USB access libraries as Enclustra.
