@@ -67,7 +67,7 @@ namespace
         CapturedV4lBuffer (const v4l2_buffer &queryBuf, uint8_t *data, std::size_t pixelCount) :
             OffsetBasedCapturedBuffer {data, queryBuf.length, 0, pixelCount, 0},
             m_index {queryBuf.index},
-            m_length {queryBuf.length}
+            m_length {queryBuf.m.planes[0].length}
         {
 	    m_normalizedData = new uint16_t[pixelCount];
         }
