@@ -1,0 +1,8 @@
+digraph "spectre::Parameter"
+{
+ // INTERACTIVE_SVG=YES
+  bgcolor="transparent";
+  edge [fontname="Helvetica",fontsize="10",labelfontname="Helvetica",labelfontsize="10"];
+  node [fontname="Helvetica",fontsize="10",shape=record];
+  Node1 [label="{spectre::Parameter\n|- m_impl\l|+ Parameter()\l+ Parameter()\l+ Parameter()\l+ Parameter()\l+ ~Parameter()\l+ description()\l+ getValue()\l+ hasBounds()\l+ impl()\l+ isValid()\land 10 more...\l}",height=0.2,width=0.4,color="black", fillcolor="grey75", style="filled" fontcolor="black"];
+}

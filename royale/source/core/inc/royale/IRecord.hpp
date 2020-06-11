@@ -11,6 +11,7 @@
 #pragma once
 
 #include <collector/IFrameCaptureListener.hpp>
+#include <royale/IEventListener.hpp>
 #include <royale/ProcessingFlag.hpp>
 #include <royale/StreamId.hpp>
 
@@ -63,5 +64,21 @@ namespace royale
          * If the system is recording, the listener will not be changed and false is returned.
          */
         virtual bool setFrameCaptureListener (royale::collector::IFrameCaptureListener *captureListener) = 0;
+
+        /**
+         *  Register listener for event notifications.
+         */
+        virtual void registerEventListener (royale::IEventListener *listener) = 0;
+
+        /**
+         *  Unregisters listener for event notifications.
+         */
+        virtual void unregisterEventListener() = 0;
+
+        /**
+         *  bool conversion operator, returns if object is a "real" recorder or just a dummy.
+         */
+        virtual operator bool() const = 0;
+
     };
 }

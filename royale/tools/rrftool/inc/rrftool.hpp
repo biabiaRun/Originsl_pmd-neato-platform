@@ -17,6 +17,8 @@
 #include <RRFReader.h>
 #include <RRFWriter.h>
 
+#include <royale.hpp>
+
 class RRFTool :
     public QMainWindow,
     public Ui::RRFToolWindow
@@ -33,12 +35,14 @@ protected slots :
     void on_actionSaveAs_triggered();
     void on_actionExit_triggered();
     void on_actionCloseFile_triggered();
+    void on_actionExportRaw_triggered();
 
 private :
 
     void clearInfoBox();
     void fillInfoBox();
     bool saveFrames (const royale_rrf_handle &outHandle);
+    bool exportRaw (const struct royale_fileinformation_v3 *fileinfo, const QString outDir);
 
 private:
 

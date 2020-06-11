@@ -11,14 +11,13 @@
 #ifndef __DELETER_HPP__
 #define __DELETER_HPP__
 
-
 namespace spectre
 {
     namespace details
     {
         template<typename T>
         struct Deleter;
-    }  // details
-}  // spectre
+    } // namespace details
+} // namespace spectre
 
 #endif

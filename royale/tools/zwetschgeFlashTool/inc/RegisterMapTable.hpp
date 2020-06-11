@@ -31,4 +31,9 @@ public:
     void addEntry (const royale::imager::TimedRegisterListEntry &entry);
     void addRegisterMapList (const royale::imager::TimedRegisterList &reglist);
 
+private slots:
+
+    void showContextMenu (const QPoint &pos);
+    void copyToClipboard();
+
 };

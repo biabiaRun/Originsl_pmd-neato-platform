@@ -55,8 +55,30 @@ typedef enum royale_processing_flag
     ROYALE_PROC_FLAG_SMOOTHING_FILTER_TYPE_INT,           ///< Determines the type of smoothing that is used
     ROYALE_PROC_FLAG_USE_FLAG_SBI_BOOL,                   ///< Enable/Disable the flagging of pixels where the SBI was active
     ROYALE_PROC_FLAG_USE_HOLE_FILLING_BOOL,               ///< Enable/Disable the hole filling algorithm
-    ROYALE_PROC_FLAG_AUTO_EXPO_MIN_INT,                   ///< The minimum value for the auto exposure algorithm
-    ROYALE_PROC_FLAG_AUTO_EXPO_MAX_INT,                   ///< The maximum value for the auto exposure algorithm
+    ROYALE_PROC_FLAG_RESERVED_1,
+    ROYALE_PROC_FLAG_RESERVED_2,
+    ROYALE_PROC_FLAG_RESERVED_3,
+    ROYALE_PROC_FLAG_RESERVED_4,
+    ROYALE_PROC_FLAG_RESERVED_5,
+    ROYALE_PROC_FLAG_RESERVED_6,
+    ROYALE_PROC_FLAG_RESERVED_7,
+    ROYALE_PROC_FLAG_RESERVED_8,
+    ROYALE_PROC_FLAG_AUTO_EXPO_MIN_INT,                     ///< The minimum value for the auto exposure algorithm
+    ROYALE_PROC_FLAG_AUTO_EXPO_MAX_INT,                     ///< The maximum value for the auto exposure algorithm
+    ROYALE_PROC_FLAG_SPECTRE_PROCESSING_TYPE_INT,           ///< The processing type used by Spectre
+    ROYALE_PROC_FLAG_USE_GRAY_IMAGE_FALLBACK_AMP_BOOL,      ///< Uses the fallback image in the gray image pipeline as amplitude image
+    ROYALE_PROC_FLAG_GRAY_IMAGE_MEAN_MAP_INT,               ///< Value where the mean of the gray image is mapped to
+    ROYALE_PROC_FLAG_SIGMA_D_FLOAT,                         ///< SigmaD
+    ROYALE_PROC_FLAG_NOISE_FILTER_ITERATIONS_INT,           ///< Iterations of the noise filter
+    ROYALE_PROC_FLAG_FYLING_PIXEL_ANGLE_LIMIT_FLOAT,        ///< Angle limit of the flying pixel algorithm
+    ROYALE_PROC_FLAG_FYLING_PIXEL_AMP_THRESHOLD_FLOAT,      ///< Amplitude threshold of the flying pixel algorithm
+    ROYALE_PROC_FLAG_FYLING_PIXEL_MIN_NEIGHBORS_INT,        ///< Minimum neighbors for the flying pixel algorithm
+    ROYALE_PROC_FLAG_FYLING_PIXEL_MAX_NEIGHBORS_INT,        ///< Maximum neighbors for the flying pixel algorithm
+    ROYALE_PROC_FLAG_FYLING_PIXEL_NOISE_RATIO_THRESH_FLOAT, ///< Noiseratio threshold
+    ROYALE_PROC_FLAG_SMOOTHING_FILTER_RESET_THRESH_FLOAT,   ///< Reset value for the smoothing
+    ROYALE_PROC_FLAG_CCTHRESH_INT,                          ///< Connected components threshold
+    ROYALE_PROC_FLAG_PHASE_NOISE_THRESH_FLOAT,              ///< PhaseNoise threshold
+    ROYALE_PROC_FLAG_STRAYLIGHT_THRESH_FLOAT,               ///< Straylight threshold
     ROYALE_PROC_FLAG_NUM_FLAGS
 } royale_processing_flag;
 

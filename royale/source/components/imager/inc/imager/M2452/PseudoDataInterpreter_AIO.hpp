@@ -32,14 +32,13 @@ namespace royale
                     return new PseudoDataInterpreter_AIO (*this);
                 }
 
-                void getTemperatureRawValues (const royale::common::ICapturedRawFrame &frame,
-                                              uint16_t &vRef1,
-                                              uint16_t &vNtc1,
-                                              uint16_t &vRef2,
-                                              uint16_t &vNtc2,
-                                              uint16_t &offset) const override
+                std::vector<uint16_t> getTemperatureRawValues (const common::ICapturedRawFrame &frame) const override
                 {
-                    offset = 0u;
+                    std::vector<uint16_t> result(4);
+                    uint16_t &vRef1 = result[0];
+                    uint16_t &vRef2 = result[1];
+                    uint16_t &vNtc1 = result[2];
+                    uint16_t &vNtc2 = result[3];
                     vRef1 = frame.getPseudoData() [vRef1I];
                     vRef2 = frame.getPseudoData() [vRef2I];
                     vNtc1 = frame.getPseudoData() [vNtc1I];
@@ -48,18 +47,18 @@ namespace royale
                         vRef1,
                         vRef2,
                         vNtc1,
-                        vNtc2,
-                        offset);
+                        vNtc2);
                     checkValues (
                         vRef1,
                         vRef2,
                         vNtc1,
-                        vNtc2,
-                        offset);
+                        vNtc2);
+                    return result;
                 }
 
                 uint16_t getSequenceIndex (const royale::common::ICapturedRawFrame &frame) const override
                 {
+                    LOG (WARN) << "seq idx " << frame.getPseudoData() [163];
                     return frame.getPseudoData() [163];
                 }
 
@@ -68,8 +67,7 @@ namespace royale
                 void discardAllSurplusBits (uint16_t &vRef1,
                                             uint16_t &vRef2,
                                             uint16_t &vNtc1,
-                                            uint16_t &vNtc2,
-                                            uint16_t &offset) const
+                                            uint16_t &vNtc2) const
                 {
                     auto discardSurplusBits = [ = ] (uint16_t &value)
                     {
@@ -81,14 +79,12 @@ namespace royale
                     discardSurplusBits (vNtc1);
                     discardSurplusBits (vRef2);
                     discardSurplusBits (vNtc2);
-                    discardSurplusBits (offset);
                 }
 
                 void checkValues (uint16_t &vRef1,
                                   uint16_t &vRef2,
                                   uint16_t &vNtc1,
-                                  uint16_t &vNtc2,
-                                  uint16_t &offset) const
+                                  uint16_t &vNtc2) const
                 {
 
                     if (vRef2 > vRef1)

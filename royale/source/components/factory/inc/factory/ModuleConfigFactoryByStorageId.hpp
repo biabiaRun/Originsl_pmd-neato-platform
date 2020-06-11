@@ -43,7 +43,8 @@ namespace royale
                     const royale::Vector<uint8_t> &defaultId = {});
 
             std::shared_ptr<const royale::config::ModuleConfig>
-            probeAndCreate (royale::factory::IBridgeFactory &bridgeFactory) const override;
+            probeAndCreate (royale::factory::IBridgeFactory &bridgeFactory,
+                            royale::CameraAccessLevel accessLevel = royale::CameraAccessLevel::L3) const override;
 
         private:
             std::shared_ptr<royale::common::ISensorRoutingConfig> m_route;

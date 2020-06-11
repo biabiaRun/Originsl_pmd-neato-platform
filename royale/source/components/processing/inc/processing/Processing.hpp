@@ -20,6 +20,7 @@
 
 #include <royale/IExposureListener2.hpp>
 #include <processing/ExtendedData.hpp>
+#include <royale/IEvent.hpp>
 #include <royale/ProcessingFlag.hpp>
 #include <royale/LensParameters.hpp>
 #include <royale/String.hpp>
@@ -72,6 +73,11 @@ namespace royale
 
             royale::Vector<royale::Pair<royale::String, royale::String>> getProcessingInfo() override;
 
+            void registerEventListener (royale::IEventListener *listener) override;
+            void unregisterEventListener() override;
+            void setProcessingActivated (bool activated) override;
+            bool getProcessingActivated() override;
+
         protected:
 
             /**
@@ -87,6 +93,7 @@ namespace royale
                     depthImage.reset (new royale::DepthImage());
                     sparsePointCloud.reset (new royale::SparsePointCloud());
                     irImage.reset (new royale::IRImage());
+                    depthIrImage.reset (new royale::DepthIRImage());
                     extendedData.reset (new royale::processing::ExtendedData());
                 }
 
@@ -100,6 +107,7 @@ namespace royale
                 std::shared_ptr<royale::DepthImage> depthImage;
                 std::shared_ptr<royale::SparsePointCloud> sparsePointCloud;
                 std::shared_ptr<royale::IRImage> irImage;
+                std::shared_ptr<royale::DepthIRImage> depthIrImage;
                 std::shared_ptr<royale::processing::ExtendedData> extendedData;
                 royale::StreamId streamId;
             };
@@ -177,6 +185,13 @@ namespace royale
             * @return royale string with the version of the processing.
             */
             virtual royale::String getProcessingVersion() = 0;
+
+            void sendEvent (const royale::EventSeverity &severity, const royale::String &description);
+
+            royale::IEventListener *m_eventListener;
+            std::mutex m_eventMutex;
+
+            bool m_processingActivated;
         };
     }
 }

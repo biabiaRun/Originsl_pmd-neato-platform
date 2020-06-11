@@ -22,7 +22,7 @@ namespace royale
     namespace storage
     {
         /**
-         * Wrapper for reading a StorageFormatZwetschge (or other storage format) image from disk.
+         * Wrapper for reading a StorageFormatX image from disk.
          */
         class StorageFile :
             public royale::pal::IStorageReadRandom
@@ -35,7 +35,7 @@ namespace royale
             // IStorageReadRandom
             void readStorage (std::size_t startAddr, std::vector<uint8_t> &buf) override;
 
-        private:
+        protected:
             /**
              * What this means is implementation-defined, please read the comments in
              * StorageRoutingFilename.

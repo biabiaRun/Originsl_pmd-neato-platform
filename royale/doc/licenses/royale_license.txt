@@ -1,6 +1,6 @@
 ﻿Royale License for camera systems
 
-Version 1.2, January 2018
+Version 1.3, June 2019
 
 TERMS AND CONDITIONS FOR USE AND REPRODUCTION
 
@@ -11,7 +11,7 @@ TERMS AND CONDITIONS FOR USE AND REPRODUCTION
 by sections 1 to 8 of this document.
 
 "Licensor" shall mean the company pmdtechnologies ag, organized under the laws of Germany, with
-offices at Am Eichenhang 50, 57076 Siegen, Germany.
+offices at Martinshardt 19, 57074 Siegen, Germany.
 
 "Licensee" shall mean an individual or legal entity exercising permissions granted by this License.
 

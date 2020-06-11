@@ -85,25 +85,21 @@ namespace royale
                     throw royale::common::NotImplemented ("Not supported");
                 }
 
-                void getTemperatureRawValues (const common::ICapturedRawFrame &frame,
-                                              uint16_t &vRef1,
-                                              uint16_t &vNtc1,
-                                              uint16_t &vRef2,
-                                              uint16_t &vNtc2,
-                                              uint16_t &offset) const override
+                std::vector<uint16_t> getTemperatureRawValues (const common::ICapturedRawFrame &frame) const override
                 {
-                    offset = 0u;
-                    //only use the relevant 12 Bits of the values
-                    vRef1 = frame.getPseudoData() [vRef2V4] & 0xFFF;
-                    vRef2 = frame.getPseudoData() [vRef2V1] & 0xFFF;
-                    vNtc1 = frame.getPseudoData() [vNtc2V4] & 0xFFF;
-                    vNtc2 = frame.getPseudoData() [vNtc2V1] & 0xFFF;
+                    std::vector<uint16_t> result(4);
+                    // only use the relevant 12 Bits of the values
+                    result[0] = frame.getPseudoData() [vRef2V1] & 0xFFF;
+                    result[1] = frame.getPseudoData() [vRef2V4] & 0xFFF;
+                    result[2] = frame.getPseudoData() [vNtc2V1] & 0xFFF;
+                    result[3] = frame.getPseudoData() [vNtc2V4] & 0xFFF;
+                    return result;
                 }
 
-                static const uint16_t vRef2V1 = 46u;
-                static const uint16_t vRef2V4 = 47u;
-                static const uint16_t vNtc2V1 = 48u;
-                static const uint16_t vNtc2V4 = 49u;
+                static const uint16_t vRef2V4 = 46u;
+                static const uint16_t vRef2V1 = 47u;
+                static const uint16_t vNtc2V4 = 48u;
+                static const uint16_t vNtc2V1 = 49u;
 
                 uint16_t getRequiredImageWidth() const override
                 {
@@ -117,8 +113,8 @@ namespace royale
 
                     if (m_usesInternalCurrentMonitor)
                     {
-                        eyeError |= frame.getPseudoData() [41] & 0x3FF;
-                        eyeError |= (frame.getPseudoData() [42] & 0x1F) << 16;
+                        eyeError |= frame.getPseudoData() [41] & 0x3FFu;
+                        eyeError |= (frame.getPseudoData() [42] & 0x1Fu) << 16u;
                     }
                 }
 

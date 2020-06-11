@@ -11,6 +11,8 @@
 #include <QApplication>
 #include <rrftool.hpp>
 
+ADD_DEBUG_CONSOLE
+
 int main (int argc, char *argv[])
 {
     QApplication app (argc, argv);

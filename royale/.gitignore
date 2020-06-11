@@ -2,6 +2,7 @@ doc/build
 build
 Custom.cmake
 CMakeLists.txt.user
+CMakeLists.txt.user.*
 *.swp
 *.kate-swp
 android/obj
@@ -19,10 +20,6 @@ doc/internal/master.log
 doc/internal/testing.log
 doc/internal/title.log
 testing/bdd/build
-testing/releaseanalyzer/bin
-testing/releaseanalyzer/build
-testing/releaseanalyzer/release
-tools/releaseanalyzer/settings.xml
 .vimrc
 .ycm_*
 tags

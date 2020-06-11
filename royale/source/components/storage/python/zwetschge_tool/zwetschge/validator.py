@@ -38,7 +38,7 @@ class Validator:
             raise ValueError ('Use Case "{name}" has mismatched raw frame count vs imagerFrequencies'.format (name=uc.name))
         for idx in range(0, len (freqs)):
             if freqs[idx] != uc.imagerFrequencies[idx]:
-                raise ValueError ('Use Case "{name}" has mismatched raw frame sets vs imagerFrequencies'.format (name=uc.name))
+                raise ValueError ('Use Case "{name}" has mismatched raw frame sets vs imagerFrequencies'.format (name=uc.name))                
         # there are many numbers that match the rawFrameCount, choosing uc.measurementBlocks as the
         # "most likely to be correct", as it's often a single number
         rawFrameCount = sum (uc.measurementBlocks)

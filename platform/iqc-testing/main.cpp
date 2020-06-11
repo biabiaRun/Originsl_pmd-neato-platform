@@ -17,9 +17,9 @@ int main(int argc, char **argv)
     //CameraFactory factory;
     Camera cam;
 
-    royale::String test_mode = "MODE_5_5FPS";
-    int test_fps = 5;
-    int numSecondsToStream = 60;
+    royale::String test_mode = "MODE_5_15FPS";
+    int test_fps = 15;
+    int numSecondsToStream = 10;
 
     // [Setup] Camera Initialization Test
     Camera::CameraError error = cam.RunInitializeTests(test_mode, test_fps);

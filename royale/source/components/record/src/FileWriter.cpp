@@ -14,10 +14,6 @@
 #include <string.h>
 #include <exception>
 
-#ifndef ROYALE_ENABLE_PLATFORM_CODE
-#include <royale-version.h>
-#endif
-
 using namespace royale;
 using namespace royale::record;
 
@@ -50,11 +46,13 @@ void FileWriter::open (const std::string &filename, const std::vector<uint8_t> &
 {
     close();
 
-    fopen_royale_rrf (m_file, filename.c_str(), "wb");
+    int fopenerror = 0;
+    fopen_royale_rrf (m_file, filename.c_str(), "wb", fopenerror);
 
     if (!m_file)
     {
-        throw (std::invalid_argument ("Could not open file"));
+        throw (std::invalid_argument (std::string ("Could not open file : ")
+                                      + std::string (strerror_royale_rrf (fopenerror))));
     }
 
     // Fill the file header
@@ -111,7 +109,7 @@ void FileWriter::open (const std::string &filename, const std::vector<uint8_t> &
     }
 
     // Write the calibration data block
-    m_fileHeader.calibrationOffset = ftell64_royale_rrf (m_file);
+    m_fileHeader.calibrationOffset = static_cast<uint64_t> (ftell64_royale_rrf (m_file));
     m_fileHeader.calibrationSize = static_cast<uint32_t> (calibrationData.size());
 
     if (!calibrationData.empty ())
@@ -119,7 +117,7 @@ void FileWriter::open (const std::string &filename, const std::vector<uint8_t> &
         fwrite_checked (&calibrationData[0], calibrationData.size(), 1, m_file);
     }
 
-    m_fileHeader.framesOffset = ftell64_royale_rrf (m_file);
+    m_fileHeader.framesOffset = static_cast<uint64_t> (ftell64_royale_rrf (m_file));
 
     if (fseek64_royale_rrf (m_file, 0, SEEK_SET))
     {
@@ -138,7 +136,7 @@ void FileWriter::close()
 {
     if (m_file)
     {
-        m_fileHeader.framesSize = ftell64_royale_rrf (m_file) - m_fileHeader.framesOffset;
+        m_fileHeader.framesSize = static_cast<uint64_t> (ftell64_royale_rrf (m_file)) - m_fileHeader.framesOffset;
 
         if (fseek64_royale_rrf (m_file, 0, SEEK_SET))
         {
@@ -170,7 +168,7 @@ void FileWriter::put (const std::vector <const uint16_t *> &imageData,
         return;
     }
 
-    uint64_t frameStart = ftell64_royale_rrf (m_file);
+    uint64_t frameStart = static_cast<uint64_t> (ftell64_royale_rrf (m_file));
 
     // Write frame header
     fwrite_checked (frameHeader, sizeof (royale_frameheader_v3), 1, m_file);
@@ -225,7 +223,7 @@ void FileWriter::put (const std::vector <const uint16_t *> &imageData,
     }
 
     // Update frame size in frame header
-    uint64_t frameEnd = ftell64_royale_rrf (m_file);
+    uint64_t frameEnd = static_cast<uint64_t> (ftell64_royale_rrf (m_file));
     newFrameHeader.frameSize = static_cast<uint32_t> (frameEnd - frameStart);
     fseek64_royale_rrf (m_file, frameStart, SEEK_SET);
     fwrite_checked (&newFrameHeader, sizeof (royale_frameheader_v3), 1, m_file);

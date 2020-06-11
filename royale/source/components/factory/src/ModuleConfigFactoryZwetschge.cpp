@@ -13,7 +13,7 @@
 #include <factory/ImagerFactory.hpp>
 #include <factory/ModuleConfigFactoryZwetschge.hpp>
 #include <factory/NonVolatileStorageFactory.hpp>
-#include <storage/StorageFile.hpp>
+#include <storage/StorageFileZwetschge.hpp>
 #include <storage/StorageFormatZwetschge.hpp>
 
 using namespace royale::common;
@@ -34,7 +34,8 @@ ModuleConfigFactoryZwetschge::ModuleConfigFactoryZwetschge (
 }
 
 std::shared_ptr<const royale::config::ModuleConfig>
-ModuleConfigFactoryZwetschge::probeAndCreate (royale::factory::IBridgeFactory &bf) const
+ModuleConfigFactoryZwetschge::probeAndCreate (royale::factory::IBridgeFactory &bf,
+        royale::CameraAccessLevel accessLevel) const
 {
     try
     {
@@ -93,7 +94,7 @@ ModuleConfigFactoryZwetschge::probeAndCreate (royale::factory::IBridgeFactory &b
         {
             try
             {
-                auto storageFile = std::make_shared<StorageFile> (FlashMemoryConfig{}, zwetschgeBackupFile);
+                auto storageFile = std::make_shared<StorageFileZwetschge> (FlashMemoryConfig{}, zwetschgeBackupFile);
                 zwetschgeFile = std::make_shared<StorageFormatZwetschge> (storageFile);
                 fileFound = true;
             }
@@ -125,7 +126,16 @@ ModuleConfigFactoryZwetschge::probeAndCreate (royale::factory::IBridgeFactory &b
             }
         }
 
-        auto modConfig = readAndCreate (* (externalConfig.calibration), useCaching);
+        std::shared_ptr<royale::config::ModuleConfig> modConfig = nullptr;
+        try
+        {
+            modConfig = readAndCreate (* (externalConfig.calibration), useCaching, accessLevel);
+        }
+        catch (...)
+        {
+            throw DataNotFound ("No flash information available");
+        }
+
         if (modConfig != nullptr)
         {
             modConfig->imagerConfig.externalImagerConfig = std::move (externalConfig.imagerExternalConfig);

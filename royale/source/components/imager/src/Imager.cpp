@@ -200,12 +200,13 @@ void Imager::reconfigureTargetFrameRate (uint16_t targetFrameRate, uint16_t &rec
     reconfigure (newUcd, reconfigIndex);
 }
 
-void Imager::stopCapture()
+uint16_t Imager::stopCapture()
 {
     if (ImagerState::Capturing != m_imagerState)
     {
         throw WrongState();
     }
+    return 0u;
 }
 
 void Imager::shutDownSequencer()
@@ -349,7 +350,7 @@ void Imager::prepareFrameRateSettings (const ImagerUseCaseDefinition &useCase)
             calcRawFrameRateTime (useCase,
                                   rf.exposureTime,
                                   rf.modulationFrequency,
-                                  rf.isStartOfLinkedRawFrames, // \todo ROYAL-2456 needs to fix this
+                                  isFirstFrame (rfList, rf_mapping.first), // \todo ROYAL-2456 needs to fix this
                                   rawFrameTime.at (rf_mapping.first));
 
             const auto tRfsDiff = rfTargetTimes[rf_mapping.first] - rawFrameTime.at (rf_mapping.first);

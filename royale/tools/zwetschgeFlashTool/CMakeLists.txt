@@ -24,6 +24,7 @@ set(SOURCES
   "${CMAKE_CURRENT_SOURCE_DIR}/../spiFlashTool/src/BridgeImagerL4.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/../spiFlashTool/src/SPIStorage_M2453.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/../spiFlashTool/src/SPIStorage_M2455.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../spiFlashTool/src/SPIStorage_M2457.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/../spiFlashTool/src/SPIStorageHardwareSpi.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/../spiFlashTool/src/SPIStorageHelper.cpp"
   )
@@ -32,6 +33,7 @@ set(HEADERS
   "${CMAKE_CURRENT_SOURCE_DIR}/../spiFlashTool/inc/BridgeImagerL4.hpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/../spiFlashTool/inc/SPIStorage_M2453.hpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/../spiFlashTool/inc/SPIStorage_M2455.hpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../spiFlashTool/inc/SPIStorage_M2457.hpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/../spiFlashTool/inc/SPIStorageHardwareSpi.hpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/../spiFlashTool/inc/SPIStorageHelper.hpp"
   )

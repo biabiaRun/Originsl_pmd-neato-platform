@@ -1,5 +1,5 @@
-add_subdirectory(matlab)
 add_subdirectory(wrapper)
+add_subdirectory(matlab)
 	
 IF(ROYALE_INSTALL_TO_MATLAB_FOLDER)
   INSTALL(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/matlab_debug/" DESTINATION "${ROYALE_INSTALL_MATLAB_EXAMPLE_DIR}" CONFIGURATIONS Debug)

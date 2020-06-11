@@ -60,7 +60,7 @@ namespace
         {
         }
 
-        void onNewData (const IExtendedData *data)
+        void onNewData (const IExtendedData *data) override
         {
             if (!data->hasRawData())
             {

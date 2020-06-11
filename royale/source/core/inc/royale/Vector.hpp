@@ -330,14 +330,14 @@ namespace royale
                   typename = typename std::enable_if< (royale::iterator::is_same<IteratorType, reverse_iterator>::value) >::type>
         size_t indexFromIterator (IteratorType it)
         {
-            return it.base() - begin();
+            return static_cast<size_t> (it.base() - begin());
         }
 
         template < typename... Dummy, typename IteratorType,
                    typename = typename std::enable_if < (royale::iterator::is_same<IteratorType, reverse_iterator>::value || royale::iterator::is_same<IteratorType, const_reverse_iterator>::value) >::type >
         size_t indexFromIterator (IteratorType it) const
         {
-            return it.base() - cbegin();
+            return static_cast<size_t> (it.base() - cbegin());
         }
 
         /**
@@ -351,14 +351,14 @@ namespace royale
                   typename = typename std::enable_if< (royale::iterator::is_same<IteratorType, iterator>::value) >::type>
         size_t indexFromIterator (IteratorType it)
         {
-            return it - begin();
+            return static_cast<size_t> (it - begin());
         }
 
         template < typename IteratorType,
                    typename = typename std::enable_if < (royale::iterator::is_same<IteratorType, iterator>::value || royale::iterator::is_same<IteratorType, const_iterator>::value) >::type >
         size_t indexFromIterator (IteratorType it) const
         {
-            return it - cbegin();
+            return static_cast<size_t> (it - cbegin());
         }
 
         /**
@@ -908,7 +908,7 @@ namespace royale
         size_t m_allocationSize;
         size_t m_actualSize;
 
-        const int GROWTH_FACTOR = 2;
+        const unsigned int GROWTH_FACTOR = 2;
     };
 
     template<class T>
@@ -1011,12 +1011,12 @@ namespace royale
     template <class InputIterator>
     Vector<T>::Vector (InputIterator first, InputIterator last) :
         m_data (std::shared_ptr<V_TYPE> (new V_TYPE[sizeof (T) * (last - first)], std::default_delete<V_TYPE[]>())),
-        m_allocationSize ( (last - first)),
-        m_actualSize ( (last - first))
+        m_allocationSize (static_cast<size_t>(last - first)),
+        m_actualSize (static_cast<size_t>(last - first))
     {
         for (InputIterator i = first; i != last; ++i)
         {
-            new (data() + (m_allocationSize - (last - i))) T (*i);
+            new (data() + (m_allocationSize - static_cast<size_t>(last - i))) T (*i);
         }
     }
 
@@ -1307,7 +1307,7 @@ namespace royale
 
         // return position
         size_t index = 0;
-        size_t numItems = (last - first) < 0 ? first - last : last - first;
+        size_t numItems = last - first < 0 ? static_cast<size_t>(first - last) : static_cast<size_t>(last - first);
 
         // realloc is needed
         if (m_allocationSize < (numItems + size()))
@@ -1352,14 +1352,14 @@ namespace royale
         // realloc is not needed
         else
         {
-            size_t iteratingTimes   = end() - position;
+            size_t iteratingTimes   = static_cast<size_t> (end() - position);
             size_t lastIndex        = m_actualSize - 1;
 
             // take the originally last item and place it at the new end
             const_reverse_iterator posChanger;
             for (posChanger = rbegin(); iteratingTimes > 0; posChanger++)
             {
-                size_t offset = numItems + (posChanger - rbegin());
+                size_t offset = numItems + static_cast<size_t>(posChanger - rbegin());
 
                 // if we place items behind the actualSize, we need to use placement new
                 // otherwise we have to use "="; memAssign manages these cases.
@@ -1374,7 +1374,7 @@ namespace royale
             {
                 // if we place items behind the actualSize, we need to use placement new
                 // otherwise we have to use "="; memAssign manages these cases.
-                memAssign (index + offset, * (first + offset));
+                memAssign (static_cast<size_t>(index + offset), * (first + static_cast<long>(offset)));
             }
 
             m_actualSize += numItems;
@@ -1414,9 +1414,9 @@ namespace royale
             iterator insertIterator (beginPos);
 
             // we use the available space
-            while (insertIterator != (beginPos + n))
+            while (insertIterator != (beginPos + static_cast<long> (n)))
             {
-                memAssign ( (insertIterator - beginPos), val);
+                memAssign (static_cast<size_t> (insertIterator - beginPos), val);
                 insertIterator++;
             }
             if (insertIterator < end())
@@ -1440,7 +1440,7 @@ namespace royale
     void Vector<T>::assign (InputIterator_first first, InputIterator_last last)
     {
         // return position
-        size_t numItems = (last - first) < 0 ? first - last : last - first;
+        size_t numItems = (last - first) < 0 ? static_cast<size_t> (first - last) : static_cast<size_t> (last - first);
 
         // realloc is needed
         if (m_allocationSize < numItems)
@@ -1468,7 +1468,7 @@ namespace royale
         {
             for (size_t i = 0; i < numItems; i++)
             {
-                memAssign (i, * (first + i));
+                memAssign (i, * (first + static_cast<long> (i)));
             }
 
             // erase unused elements at the end
@@ -1486,16 +1486,16 @@ namespace royale
               typename, typename> // evaluation in definition
     typename Vector<T>::iterator Vector<T>::replace (const_iterator start, const_iterator end, InputIterator_first first, InputIterator_last last)
     {
-        size_t corrInput = (last - first);
+        size_t corrInput = static_cast<size_t>(last - first);
 
         if (last < first)
         {
-            corrInput = (first - last);
+            corrInput = static_cast<size_t>(first - last);
         }
 
         size_t numItems = (corrInput < static_cast<size_t> (end - start)) ? corrInput : static_cast<size_t> (end - start);
 
-        return replace (start, first, first + numItems);
+        return replace (start, first, first + static_cast<long> (numItems));
     }
 
     template <class T>
@@ -1515,7 +1515,7 @@ namespace royale
 
         // return position
         size_t index = 0;
-        size_t numItems = last - first < 0 ? first - last : last - first;
+        size_t numItems = last - first < 0 ? static_cast<size_t> (first - last) : static_cast<size_t> (last - first);
 
         // realloc is needed
         if (m_allocationSize < (indexFromIterator (position) + numItems + 1))
@@ -1563,7 +1563,7 @@ namespace royale
             {
                 // if we place items behind the actualSize, we need to use placement new
                 // otherwise we have to use "="; memAssign manages these cases.
-                memAssign (index + offset, * (first + offset));
+                memAssign (index + offset, * (first + static_cast<long> (offset)));
             }
 
             m_actualSize = (index + numItems) > m_actualSize ? index + numItems : m_actualSize;
@@ -1598,13 +1598,13 @@ namespace royale
     template <class T>
     typename Vector<T>::iterator Vector<T>::erase (size_t index, size_t numElements)
     {
-        return erase (iteratorFromIndex (index), iteratorFromIndex (index) + numElements);
+        return erase (iteratorFromIndex (index), iteratorFromIndex (index) + static_cast<long> (numElements));
     }
 
     template <class T>
     typename Vector<T>::iterator Vector<T>::erase (const_iterator position, size_t numElements)
     {
-        return erase (position, position + numElements);
+        return erase (position, position + static_cast<long> (numElements));
     }
 
     template <class T>
@@ -1614,7 +1614,7 @@ namespace royale
         {
             assert (first < last && last <= end());
 
-            size_t noDelItems = (last - first);
+            size_t noDelItems = static_cast<size_t>(last - first);
             size_t startIndex = indexFromIterator (first);
             for (size_t i = startIndex; i < m_actualSize; i++)
             {
@@ -1672,18 +1672,18 @@ namespace royale
             throw std::out_of_range ("position out of range");
         }
 
-        size_t numElementsCorrected = (position + numElements > end() ? end() - position : numElements);
+        size_t numElementsCorrected = (position + static_cast<long> (numElements) > end() ? static_cast<size_t> (end() - position) : numElements);
 
         // Take Elements out
         Vector<T> takenElements;
         takenElements.reserve (numElementsCorrected);
         for (size_t index = 0; index < numElementsCorrected; index++)
         {
-            takenElements.push_back (std::move (operator[] (position - begin() + index)));
+            takenElements.push_back (std::move (operator[] (position - begin() + static_cast<long> (index))));
         }
 
         // close gaps
-        erase (position, position + numElements);
+        erase (position, position + static_cast<long> (numElements));
 
         return takenElements;
     }

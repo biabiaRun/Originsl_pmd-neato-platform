@@ -6,10 +6,10 @@ ENDIF()
 find_package(Threads REQUIRED)
 
 if (APPLE)
-   SET (FREEGLUT_INCLUDE_DIR "/opt/local/include" "usr/local/include")
+   SET (FREEGLUT_INCLUDE_DIR "/opt/local/include" "/usr/local/include")
    SET (GLUT_LIBRARIES glut)
    ADD_DEFINITIONS (-DGL_DO_NOT_WARN_IF_MULTI_GL_VERSION_HEADERS_INCLUDED)
-   link_directories( "/opt/local/lib" "usr/local/lib" )
+   link_directories( "/opt/local/lib" "/usr/local/lib" )
 endif ()
 
 include_directories(

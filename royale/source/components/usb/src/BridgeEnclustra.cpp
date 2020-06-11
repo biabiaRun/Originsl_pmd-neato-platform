@@ -161,7 +161,7 @@ namespace
         // to do a read.
 
         const unsigned int readBit = read ? 1 : 0;
-        buffer.push_back (static_cast<uint8_t> ( (devAddr << 1) | readBit));
+        buffer.push_back (static_cast<uint8_t> ( (devAddr << 1u) | readBit));
 
         // Fill the rest of the 8-byte preamble
         const std::size_t preambleUsedBytes = 1;
@@ -266,7 +266,7 @@ std::size_t BridgeEnclustra::executeUseCase (int imageWidth, int imageHeight, st
     // at byte zero.  Included in the calculations for clarity.
     const size_t pixelOffset = 0;
 
-    const size_t pixelCount = imageWidth * imageHeight;
+    const size_t pixelCount = static_cast<size_t> (imageWidth * imageHeight);
 
     size_t bufferSize = pixelCount * sizeof (uint16_t);
     // If the size is an exact multiple of ENCLUSTRA_FRAME_PADDING_SIZE, add a full packet of
@@ -387,6 +387,7 @@ void BridgeEnclustra::acquisitionFunction()
             {
                 // recoverable error, run the loop again (tests m_runAcquisition if the read has a timeout)
                 LOG (ERROR) << "receiveRawFrame() returned false!";
+                std::this_thread::sleep_for (std::chrono::microseconds (1));
                 continue;
             }
 
@@ -402,7 +403,7 @@ void BridgeEnclustra::acquisitionFunction()
                     LOG (DEBUG) << "Frame not aligned, mismatched by " << alignment;
                     fastRealignCounter = SINGLE_REALIGN_COUNT;
                     auto buffer = frame->getUnderlyingBuffer ();
-                    auto goodBytes = frame->getUnderlyingBufferSize () - alignment;
+                    auto goodBytes = static_cast<size_t> (frame->getUnderlyingBufferSize () - alignment);
                     std::memmove (buffer, buffer + alignment, goodBytes);
                     if (receiveRawFrame (*frame, goodBytes))
                     {
@@ -423,7 +424,7 @@ void BridgeEnclustra::acquisitionFunction()
                     // The acquisition thread has already tried to realign.  Spending too long trying
                     // to realign can cause problems with the next frame too, so just read the
                     // remaining data to clear the hardware's buffer.
-                    auto goodBytes = frame->getUnderlyingBufferSize () - alignment;
+                    auto goodBytes = static_cast<size_t> (frame->getUnderlyingBufferSize () - alignment);
                     if (!receiveRawFrame (*frame, goodBytes))
                     {
                         LOG (DEBUG) << "Failed to read data from USB";
@@ -513,7 +514,7 @@ std::ptrdiff_t BridgeEnclustra::checkAlignment (OffsetBasedCapturedBuffer &frame
         static_assert (ENCLUSTRA_MIN_DATA_PACKET_SIZE > 4, "Enclustra alignment code will test a negative array index");
         if (isInPixelArea (rawData, offset) && (! isInPixelArea (rawData, offset - 2)) && (! isInPixelArea (rawData, offset - 4)))
         {
-            return offset;
+            return static_cast<std::ptrdiff_t> (offset);
         }
     }
 

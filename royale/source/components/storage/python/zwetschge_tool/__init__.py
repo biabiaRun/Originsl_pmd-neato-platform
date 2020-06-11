@@ -5,5 +5,6 @@ sys.modules['zwetschge_tool'] = sys.modules[__name__]
 from . import lena
 from . import util
 from . import zwetschge
+from .version import version as __version__
 
 

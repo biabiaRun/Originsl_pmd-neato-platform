@@ -79,8 +79,8 @@ IBufferActionCalc::Result BufferActionCalcIndividual::calculateActions (
     for (const auto streamId : useCase.getStreamIds())
     {
         // For individual frames, the number of buffers is simply the number of frames in any
-        // frame group of the stream, and multiply by 2 for double-buffering.
-        bufferCount += 2 * bufferCountsForStream.at (streamId);
+        // frame group of the stream, and multiply by BUFFER_MULT_FACTOR for multi-buffering.
+        bufferCount += BUFFER_MULT_FACTOR * bufferCountsForStream.at (streamId);
     }
 
     // Get height of each frame's image, in pixels.  The width is already in m_imageWidth, but the

@@ -34,10 +34,5 @@ SET(CMAKE_CXX_FLAGS_RELEASE                         "${CMAKE_CXX_FLAGS_RELEASE} 
 #SET(CMAKE_CXX_FLAGS_MINSIZEREL                      "")
 #SET(CMAKE_CXX_FLAGS_RELWITHDEBINFO                  "")
 
-if(ROYALE_ENABLE_COV)
-  SET(CMAKE_CXX_FLAGS_DEBUG                         "${CMAKE_CXX_FLAGS_DEBUG} -fprofile-arcs -ftest-coverage")
-  SET(CMAKE_C_FLAGS_DEBUG                           "${CMAKE_C_FLAGS_DEBUG}   -fprofile-arcs -ftest-coverage")
-endif()
-
 SET (CMAKE_BUILD_WITH_INSTALL_RPATH OFF CACHE BOOL "")
 SET (CMAKE_INSTALL_RPATH "\$ORIGIN/" CACHE STRING "")

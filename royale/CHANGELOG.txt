@@ -1,10 +1,272 @@
 ChangeLog for Royale
 ====================
 
-Status of current long term support versions
---------------------------------------------
+v3.31.0 - 2020-03-27
+--------------------
 
-Version v3.21.1 is the current version of the v3.x LTS branch.
+### SDK
+
+#### Changes
+
+- Added functions to set calibration data in the Python wrapper
+
+#### Features
+
+- Added Spectre 4.7
+- Added a simple Qt example
+- Added the TI TMP103 temperature sensor
+- Added the x1.2 module
+
+#### Bugfixes
+
+- Installer will now only prompt once about uninstalling older versions
+- Added a way to refresh the camera list in the CameraManager
+- Added a fix for the IRS2771C B12 flash readout 
+- Added handling of IntermediateData to the Python wrapper
+- Removed nulls at the end of the ID string for recordings
+- Fixed a segfault in CameraDevice.cpp if m_recording is a nullptr.
+
+#### Changes affecting source code customers
+
+- Fixed readout of GIT revision
+
+### Royale Viewer
+
+#### Bugfixes
+
+- Removed the noise display from the pixel view
+- Fixed a render bug by ordering the points according to the distance
+- Fixed loading cfg files for multiple streams
+
+v3.30.0 - 2020-02-21
+--------------------
+
+### SDK
+
+#### Features
+
+- Added Spectre 4.6
+
+#### Changes affecting source code 
+
+- Some smaller changes concerning the tool to create the flash files
+
+### Royale Viewer
+
+#### Features
+
+- Added a button to reset the previous changes
+
+v3.29.0 - 2019-12-13
+--------------------
+
+### SDK
+
+#### Features
+
+- Added support for the IRS2887
+- Added support for Europa 2
+
+### Features for source code customers
+
+- Added a class for time measurements
+- Added a tool to export data from rrf files
+- Added a tool to convert raw data to rrf
+
+#### Changes affecting source code customers
+
+- On Windows the console will be visible for debug builds of GUI tools
+- Removed the unused releaseanalyzer
+
+### Royale Viewer
+
+#### Features
+
+- Added a command line option to set a gamma value (e.g. --gamma=0.5)
+
+#### Bugfixes
+
+- Refactoring of the menu handling
+
+v3.28.0 - 2019-10-31
+--------------------
+
+### SDK
+
+#### Changes
+
+- Removed unsupported modules : 
+    OZT-0114
+    OZT-0116
+
+#### Features
+
+- Updated the Python wrapper to use Numpy for the output
+- Added a new event for frame drops (EventFrameDropped) which can be received by
+  registering an event listener
+
+#### Bugfixes
+
+- Fixed setting the exposure time before capture start for some new imagers
+- Changed the auto exposure limits in Spectre to be persistent, this fixed a bug
+  that appeared when changing the Spectre processing type
+- Fixed a deadlock that could happen during the switching of use cases  
+
+### Features for source code customers
+
+#### Changes affecting source code customers
+
+- Added a new CMake script to enable code coverage
+- Optimized the performance of the 2D view in RoyaleViewer in debug mode
+
+### Royale Viewer
+
+#### Bugfixes
+
+- Fixed start state of the frustum checkbox
+- Added fix for the 3D viewing frustum
+- Fixed a crash on MacOS
+
+v3.27.0 - 2019-08-30
+--------------------
+
+### SDK
+
+#### Changes
+
+- Removed unsupported modules : 
+    MTT016
+    Orat45
+    Orpheus
+    Older pico monstar versions
+    Salome
+    X1
+
+#### Features
+
+- Added the X1.1 module
+- Added Spectre 4.5
+
+#### Bugfixes
+
+- Fixed crash if the frame couldn't be written correctly during the recording
+- Added fix for the exposure times for 35% DC for the IRS2381 
+
+### Royale Viewer
+
+#### Bugfixes
+
+- Fixed checkbox appearance on Android
+
+v3.26.0 - 2019-08-01
+--------------------
+
+### SDK
+
+#### Features
+
+- Added Spectre 4.4
+- Added support for Spectre processing type
+- Added option to limit playback to a certain range
+- Added support for the OZT-0114 module
+- Added support for the OZT-0116 module
+
+#### Bugfixes
+
+- Added support for some customer rrf files
+
+### Royale Viewer
+
+#### Features
+
+- Added an option for Level 2 customers to show the flagged pixels
+- Added spin boxes to limit playback to a certain range
+
+v3.25.0 - 2019-07-12
+--------------------
+
+### SDK
+
+#### Changes
+
+- Switched to Visual Studio 2017 and Qt 5.12 for Windows
+- The Linux versions of Royale now use the system installation of Qt. To install Qt
+  please run :
+  sudo apt-get install qt5-default
+
+#### Features
+
+- Added Spectre 4.3
+- Added a combined depth image and IR image listener
+
+#### Bugfixes
+
+- Removed non functional setFrameRate methods for imagers >= IRS2381 
+- Fixed a bug that some files could be initialized but failed playing back
+- Fixed the PID of pmdModule277x
+- Fixed deactivating of processing if raw data callback is set before initialization 
+
+### Features for source code customers
+
+#### Changes affecting source code customers
+
+- Switched to latest Gtest version
+- Fixed address in license file
+- Added debug output which Spectre backend is used
+- Added some tooling to help with the device file creation (import_py_regmap.py)
+
+### Royale Viewer
+
+#### Bugfixes
+
+- Fixed checkbox appearance on Ubuntu
+
+v3.24.0 - 2019-06-14
+--------------------
+
+### SDK
+
+#### Features
+
+- Added access to the IReplay interface for the Python wrapper
+- Added processing parameters to set the lower and upper limit for the 
+  autoexposure (Level 2 access needed)
+- Added functions to enable use case loading from flash for imagers >= IRS2381 
+- Added SWIG interface file for Python wrapper to the installation
+
+#### Bugfixes
+
+- Added check for the design step of newer imagers 
+- Fixed a bug in the autoexposure handling when switching use cases
+- Added set/getFilterLevel to the CAPI and C# wrapper
+
+### Features for source code customers
+
+#### Changes affecting source code customers
+
+- Added Windows build target to create a developer package
+- Disabled the usage of MIPI short packets for older imagers
+- Refactored logging and added syslog functionality
+- Added handling of V4L pixel format
+- Added buffer format for the S32V234 platform
+
+### USB firmware
+
+#### Features
+
+- Added firmware for pmdModule277x
+
+### Royale Viewer
+
+#### Features
+
+- Added more information to the pixel info view
+
+#### Bugfixes
+
+- Dropping a cfg file on a paused playback will repeat the current frame
+- Fixed the pixel position that is shown in the pixel info view
+- Hide the pixel info view if the data size changes
 
 v3.23.0 - 2019-05-03
 --------------------

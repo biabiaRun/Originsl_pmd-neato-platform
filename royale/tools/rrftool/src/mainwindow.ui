@@ -208,7 +208,7 @@
      <x>0</x>
      <y>0</y>
      <width>791</width>
-     <height>26</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -217,6 +217,7 @@
     </property>
     <addaction name="actionOpenFile"/>
     <addaction name="actionSaveAs"/>
+    <addaction name="actionExportRaw"/>
     <addaction name="actionCloseFile"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>
@@ -256,6 +257,14 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+W</string>
+   </property>
+  </action>
+  <action name="actionExportRaw">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Export Raw</string>
    </property>
   </action>
  </widget>

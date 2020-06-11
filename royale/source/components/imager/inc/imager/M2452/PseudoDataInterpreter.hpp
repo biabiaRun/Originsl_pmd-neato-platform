@@ -51,7 +51,6 @@ namespace royale
 
                 uint16_t getSequenceIndex (const royale::common::ICapturedRawFrame &frame) const override
                 {
-                    LOG (WARN) << "seq idx " << frame.getPseudoData() [1];
                     return frame.getPseudoData() [1];
                 }
 
@@ -84,12 +83,7 @@ namespace royale
                                                  (float) (expoReg & 0x3FFF) / ( (float) modfreq / 1000.0f));
                 }
 
-                void getTemperatureRawValues (const common::ICapturedRawFrame &frame,
-                                              uint16_t &vRef1,
-                                              uint16_t &vNtc1,
-                                              uint16_t &vRef2,
-                                              uint16_t &vNtc2,
-                                              uint16_t &offset) const override
+                std::vector<uint16_t> getTemperatureRawValues (const common::ICapturedRawFrame &) const override
                 {
                     throw royale::common::NotImplemented ("Not supported");
                 }

@@ -60,10 +60,12 @@ void FileReaderDispatcher::open (const std::string &filename)
         throw (std::invalid_argument ("Could not find recording"));
     }
 
-    fopen_royale_rrf (m_file, filename.c_str(), "rb");
+    int fopenerror = 0;
+    fopen_royale_rrf (m_file, filename.c_str(), "rb", fopenerror);
     if (!m_file)
     {
-        throw (std::logic_error ("Could not open recording"));
+        throw (std::logic_error (std::string ("Could not open recording : ")
+                                 + std::string (strerror_royale_rrf (fopenerror))));
     }
 
     fseek64_royale_rrf (m_file, 0, SEEK_SET);

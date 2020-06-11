@@ -279,3 +279,28 @@ TEST (TestReaderWriter, ReadWriteMixed)
 
     remove (testfilename.c_str());
 }
+
+TEST (TestReaderWriter, WriteError)
+{
+    remove (testfilename.c_str());
+
+    UseCaseFourPhase testUC (45u, 30000000, { 50u, 1000u }, 1000u, 1000u);
+
+    std::vector<UseCaseDefinition> ucVec;
+    ucVec.push_back (testUC);
+    ucVec.push_back (testUC);
+    ucVec.push_back (testUC);
+    ucVec.push_back (testUC);
+    ucVec.push_back (testUC);
+
+    writeFile (ucVec);
+
+    int chmoderr = 0;
+    chmod_royale (testfilename.c_str(), S_IREAD, chmoderr);
+
+    EXPECT_THROW (writeFile (ucVec), std::invalid_argument);
+
+    chmod_royale (testfilename.c_str(), S_IREAD | S_IWRITE, chmoderr);
+
+    remove (testfilename.c_str());
+}

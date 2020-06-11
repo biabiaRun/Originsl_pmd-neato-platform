@@ -1,10 +1,143 @@
 Change Log {#change_log}
 ========
 
+Spectre 4.7.0
+--------------
+
+#### General ####
+
+- Added support for the new Dutton calibration configuration to
+  libCalibration.
+- Added support for new processing type (NG) which is available for both
+  standard & checker-board imagers. NG processing can be requested through the
+  basic configuration.
+
+
+#### Build System & Thirdparty Dependecies ####
+
+- Refactored the whole build system so that it conforms more to CMake
+  best-practices.
+- Simplified the internal build processes significantly.
+- CMake 3.15 is now required to build Spectre.
+- All thirdparty dependencies are now as (unaltered) ZIP archives, and Spectre
+  specific patches are applied during the build process.
+- Updated googletest/gmock to version 1.10
+
+#### Misc. ####
+
+- clang-format 8.0 is now used for code formatting. The respective rule file
+  is now part of the Spectre source code.
+- The new formatting rules have been applied to the whole code base. 
+
+
+Spectre 4.6.0
+--------------
+
+#### General ####
+
+- Added spectreJgfTool to dump information about a JGF
+- Added a new processing type GRAY_IMAGE, and a matching backend
+  implementation
+      - The new mode only computes an improved gray image from an intensity
+        image with illumination on & off
+      - Depth data is not computed in this mode
+
+### Bugfixes ###
+
+- Auto exposure is now supported for one-frequency in the cbFast_opt backend
+
+#### Misc. ####
+
+- Removed several no longer needed files
+- Moved rrfLib/rdsReader from contrib to inputReader
+- Moved all thirdparty code to the contrib folder
+
+
+Spectre 4.5.0
+--------------
+
+#### General ####
+
+- Added support for straylight removal for checker-board imagers in backend
+  cbFast_ref
+- Added support for hole filling in cbFast_ref
+- Added support for the new Cope calibration configuration to
+  libCalibration.
+
+Spectre 4.4.0
+--------------
+
+#### General ####
+
+
+- Improved cbFast_opt pipeline's performance on ARM and x86
+- cbFast_opt now supports one-frequency use-cases
+- cbFast_opt is now available for all imagers of type cb independent of their resolution
+- Added a new pipeline type cbBinned which delegates the depth computation
+  from cb to the ws pipeline, at the cost of a reduced resolution
+- Refactored multi-threading implementation for ws pipelines to allow better
+  maintainability in the future. Multi-threading backend are now seperated
+  from their single-threded counter parts (e.g., ws_x86 vs. ws_x86Multi)
+- Renamed cmake defines for enabling/disabling calibration formats to be
+  consistent with the Spectre naming convention
+
+
+Spectre 4.3.0
+--------------
+
+#### General ####
+
+- Spectre 4.3 features a complete pipeline (re)-implementation for
+  scaled images which is a first step for lowered computational load.
+- The new pipeline includes 
+    - smoothingFilter
+    - filterAdaptiveNoise
+    - filterNFreq
+    - filterFlyingPixel
+    - holeFilling
+- The Halide license has been added to the ThirdPartySoftware.txt as the new
+  pipeline uses Halide and its runtime.
+- Added ISpectre::backendId to request an identifier of the currently used
+  pipeline implementation.
+
+
+#### Bugfixes ####
+
+- Fixed an uninitialized memory error in spectreCalibrationLibInternUnitTest
+
+### Known issues ###
+
+**Note:** These issues only affect new scaled images. Older images
+are not affected:
+
+- Not all combinations of algorithms are supported by the new pipeline. If a
+  not supported combination is selected, the implementation falls back to the
+  slower reference implementation.
+- The new pipeline is not available in the MacOSX version.
+- The optimization process for reducing the computational load has not been
+  done throughout all platforms completely. Further optimizations are planned
+  for future release.
+
+Spectre 4.2.0
+--------------
+
+#### General ####
+
+- Added 11x11 binning
+- Added RDS support
+- Added tests:
+  - spectreSpectreSystemTest with spectreOnly test
+  - tests for ArrayHolder / ArrayReference
+
+#### Bugfixes ####
+
+- Fixed a possible race-condition in the hole-filling multi-threaded implementation
+
+
 Spectre 4.1.0
 --------------
 
-Spectre 4.1 is the first release to support checker-board imagers. The
+Spectre 4.1 is the first release to support scaled images. The
 implementation is optimized for readability. It starts with a limited set of
 algorithms:
 
@@ -68,8 +201,8 @@ Spectre 3.13.3
 #### Calibration ####
 
 Added a new field SPECTRE\_BENTLEY\_IMAGER\_TYPE to indicate if a
-calibration is for checker board imagers (type = 1) or for dense imagers (type
-= 0). If the field is not present in a calibration file, a dense imager is
+calibration is for scaled images (type = 1) or for dense images (type
+= 0). If the field is not present in a calibration file, a dense image is
 assumed.
 
 Spectre 3.13.2

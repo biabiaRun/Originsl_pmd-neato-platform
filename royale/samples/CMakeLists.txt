@@ -28,6 +28,7 @@ ELSE ()
     INSTALL(DIRECTORY inc DESTINATION "${ROYALE_INSTALL_SAMPLES_DIR}")
 
     INSTALL(DIRECTORY ${SAMPLE_CPP_SUBFOLDER}/sampleCameraInfo DESTINATION "${ROYALE_INSTALL_SAMPLES_DIR}/${SAMPLE_CPP_SUBFOLDER}")
+    INSTALL(DIRECTORY ${SAMPLE_CPP_SUBFOLDER}/sampleQtViewer DESTINATION "${ROYALE_INSTALL_SAMPLES_DIR}/${SAMPLE_CPP_SUBFOLDER}")
     INSTALL(DIRECTORY ${SAMPLE_CPP_SUBFOLDER}/sampleExportPLY DESTINATION "${ROYALE_INSTALL_SAMPLES_DIR}/${SAMPLE_CPP_SUBFOLDER}")
     INSTALL(DIRECTORY ${SAMPLE_CPP_SUBFOLDER}/sampleIReplay DESTINATION "${ROYALE_INSTALL_SAMPLES_DIR}/${SAMPLE_CPP_SUBFOLDER}")
     INSTALL(DIRECTORY ${SAMPLE_CPP_SUBFOLDER}/sampleMultiCamera DESTINATION "${ROYALE_INSTALL_SAMPLES_DIR}/${SAMPLE_CPP_SUBFOLDER}")
@@ -49,8 +50,6 @@ ELSE ()
     ENDIF ()
 ENDIF ()
 
-add_subdirectory(python)
-
 # If we don't want the samples to be built return at this point
 IF ((NOT ROYALE_ENABLE_SAMPLES) OR (${ROYALE_TARGET_PLATFORM} STREQUAL ANDROID))
     RETURN()
@@ -64,7 +63,7 @@ include_directories(
         ${CMAKE_CURRENT_SOURCE_DIR}/../source/royaleCAPI/inc
         ${CMAKE_CURRENT_SOURCE_DIR}/inc)
 
-# Sample Camera Info
+# Sample Camera Info 
 #------------------------------------------------
 
 add_executable(sampleCameraInfo
@@ -79,6 +78,68 @@ SET_TARGET_PROPERTIES(sampleCameraInfo
 install(TARGETS sampleCameraInfo
         RUNTIME DESTINATION ${ROYALE_INSTALL_BIN_DIR})
 
+# Sample Qt Viewer
+#------------------------------------------------
+
+# On systems that need it, find QT based on the QTDIR environment variable
+if (DEFINED ENV{QTDIR})
+    set (CMAKE_PREFIX_PATH "$ENV{QTDIR}")
+endif()
+
+# Widgets finds its own dependencies.
+find_package(Qt5Widgets 5 QUIET)
+
+if(Qt5Widgets_FOUND)
+    # As moc files are generated in the binary dir, tell CMake
+    # to always look for includes there:
+    set(CMAKE_INCLUDE_CURRENT_DIR ON)
+
+    include_directories(sampleQtViewer
+            ${SAMPLE_CPP_SUBFOLDER}/sampleQtViewer/inc)
+
+    set(SOURCES
+      "${SAMPLE_CPP_SUBFOLDER}/sampleQtViewer/src/main.cpp"
+      "${SAMPLE_CPP_SUBFOLDER}/sampleQtViewer/src/sampleQtViewer.cpp"
+      )
+
+    set(HEADERS
+      )
+
+    set(MOC_HEADERS
+      "${SAMPLE_CPP_SUBFOLDER}/sampleQtViewer/inc/sampleQtViewer.hpp"
+      )
+
+    set(UI_FILES
+      "${SAMPLE_CPP_SUBFOLDER}/sampleQtViewer/src/mainwindow.ui"
+      )
+
+    qt5_wrap_ui(UI_HEADERS ${UI_FILES})
+    qt5_wrap_cpp(MOCED_HEADERS ${MOC_HEADERS})
+
+    add_executable(sampleQtViewer
+      ${SOURCES}
+      ${HEADERS}
+      ${MOC_HEADERS}
+      ${UI_HEADERS}
+      ${MOCED_HEADERS}
+      ${ASSEMBLY_RC}
+            )
+
+    target_link_libraries(sampleQtViewer royale)
+
+    include_directories( SYSTEM
+        ${Qt5Widgets_INCLUDE_DIRS}
+        ${Qt5OpenGL_INCLUDE_DIRS}
+        )
+
+    target_link_libraries(sampleQtViewer Qt5::Widgets)
+
+    target_link_libraries(sampleQtViewer ${QT_LIBRARIES})
+
+    SET_TARGET_PROPERTIES(sampleQtViewer
+            PROPERTIES
+            FOLDER samples)
+endif()
 # Sample Record RRF
 #------------------------------------------------
 

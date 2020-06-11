@@ -35,7 +35,7 @@ namespace royale
         static const double ssc_delta_60240kHz = 0.0166;
 
         static const royale::config::IlluminationConfig illuConfig = royale::config::IlluminationConfig{ royale::usecase::RawFrameSet::DutyCycle::DC_25, 90000000, royale::config::IlluminationPad::SE_P };
-        static const royale::config::TemperatureSensorConfig tempsensorConfig = royale::config::TemperatureSensorConfig{ royale::config::TemperatureSensorConfig::TemperatureSensorType::PSEUDODATA,
+        static const royale::config::TemperatureSensorConfig tempsensorConfig = royale::config::TemperatureSensorConfig{ royale::config::TemperatureSensorConfig::TemperatureSensorType::PSD_NTC,
                                                              std::make_shared<royale::config::NTCTemperatureSensorConfig> (6800.0f, 100000.0f, 25.0f, 4200.0f),
                                                              hal::IPsdTemperatureSensor::PseudoDataPhaseSync::SECOND };
 
@@ -98,5 +98,28 @@ namespace royale
             royale::config::ExternalConfigFileConfig::empty (),
             false
         };
+    }
+
+    /**
+     * Data for devices using PMD's USB dongles with IRS287xC imagers (M2457 imagers).
+     */
+    namespace pmdModule287x
+    {
+        static const royale::config::ImagerConfig imagerConfig = royale::config::ImagerConfig
+        {
+            royale::config::ImagerType::M2457_A11,
+            24000000,
+            {},
+            0.0,
+            royale::config::ImageDataTransferType::MIPI_2LANE,
+            royale::config::ImagerConfig::Trigger::I2C, royale::config::ImConnectedTemperatureSensor::NTC,
+            royale::config::ExternalConfigFileConfig::empty(),
+            false
+        };
+
+        static const royale::config::TemperatureSensorConfig tempsensorConfig = royale::config::TemperatureSensorConfig{ royale::config::TemperatureSensorConfig::TemperatureSensorType::PSD_NTC,
+                                                             std::make_shared<royale::config::NTCTemperatureSensorConfig> (6800.0f, 100000.0f, 25.0f, 4200.0f),
+                                                             hal::IPsdTemperatureSensor::PseudoDataPhaseSync::FIRST };
+
     }
 }

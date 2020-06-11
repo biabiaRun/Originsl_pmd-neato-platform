@@ -24,6 +24,16 @@ SET(ROYALE_INSTALL_MATLAB_DIR "matlab/+royale" CACHE PATH "Installation director
 SET(ROYALE_INSTALL_MATLAB_EXAMPLE_DIR matlab CACHE PATH "Installation directory for MATLAB wrapper")
 SET(ROYALE_INSTALL_PYTHON_DIR python CACHE PATH "Installation directory for PYTHON wrapper")
 
+if(ROYALE_DEB_PACKAGING)
+  set(ROYALE_INSTALL_DOC_DIR "share/doc/royale")
+  set(ROYALE_INSTALL_DRIVER_DIR "../etc/udev/rules.d")
+  set(ROYALE_INSTALL_SAMPLES_DIR "share/royale/samples")
+  set(ROYALE_INSTALL_ROYALECONFIG_DIR "share/royale")
+  set(ROYALE_INSTALL_MATLAB_DIR "share/royale/matlab/+royale")
+  set(ROYALE_INSTALL_MATLAB_EXAMPLE_DIR "share/royale/matlab")
+  set(ROYALE_INSTALL_PYTHON_DIR "share/royale/python")
+endif()
+
 FUNCTION(ROYALE_SUBDIRLIST result curdir)
     FILE(GLOB children RELATIVE ${curdir} ${curdir}/*)
     SET(dirlist "")
@@ -108,7 +118,7 @@ FUNCTION(CREATE_PDF_FROM_MARKDOWN filename title subtitle version confidential o
         #FILE(COPY "${filename}" DESTINATION "${PANDOC_OUT_PATH}")
         ADD_CUSTOM_COMMAND(
             COMMAND ${PANDOC_EXECUTABLE}
-            ARGS --latex-engine-opt=-shell-escape --listings --template=pandoc_template.tex ${filename} -o ${MD_FILE}.pdf
+            ARGS ${Pandoc_LATEX_ENGINE_ARG} --listings --template=pandoc_template.tex ${filename} -o ${MD_FILE}.pdf
             WORKING_DIRECTORY "${PANDOC_OUT_PATH}"
             DEPENDS "${PANDOC_OUT_PATH}/${filename}"
             OUTPUT "${PANDOC_OUT_PATH}/${MD_FILE}.pdf"
@@ -132,8 +142,6 @@ FUNCTION(INSTALL_MARKDOWN_FILE filename title subtitle version confidential inst
         INSTALL(FILES "${filename}" DESTINATION "${installfolder}")
     ENDIF()
 ENDFUNCTION()
-
-SET(ROYALE_COVERAGE_GCOVR "OFF" CACHE STRING "If test coverage build is enabled, by default a lcov code coverage report will be produced, setting this flag to ON a gcovr code coverage report will be created")
 
 macro( ROYALE_FIND_HOST_PACKAGE )
     IF(CMAKE_CROSSCOMPILING)

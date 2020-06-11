@@ -17,9 +17,13 @@
 %module(directors="1", threads="1") roypy
 
 %{
-    #include <royale.hpp>
-    #include <royale/IReplay.hpp>
-    using namespace royale;
+#ifdef ROYALE_ACTIVATE_NUMPY
+#define SWIG_FILE_WITH_INIT
+#endif
+
+#include <royale.hpp>
+#include <royale/IReplay.hpp>
+using namespace royale;
 %}
 
 %include <std_vector.i>
@@ -27,6 +31,17 @@
 %include <std_map.i>
 %include <std_string.i>
 %include <std_pair.i>
+
+
+#ifdef ROYALE_ACTIVATE_NUMPY
+%include "numpy.i"
+
+%init %{
+    import_array();
+%}
+%apply (double* ARGOUT_ARRAY1, int DIM1) {(double* p, int n)};
+#endif
+
 
 namespace std
 {
@@ -119,6 +134,15 @@ namespace std
     $1 = static_cast<uint16_t> (PyLong_AsLong($input));
 }
 
+// Python microseconds time -> std::chrono::microseconds
+// used for Royale timestamps
+%typemap(in) const std::chrono::microseconds& (std::chrono::microseconds tmp) %{
+    $1 = std::chrono::microseconds ($input);
+
+%}
+%typemap(out) std::chrono::microseconds %{
+    $result = PyLong_FromUnsignedLongLong ($1.count());
+%}
 
 namespace royale
 {
@@ -128,6 +152,7 @@ namespace royale
 // Vector
 WRAP_VECTOR(String, royale::String);
 WRAP_VECTOR(Point, royale::DepthPoint);
+WRAP_VECTOR(InterPoint, royale::IntermediatePoint);
 WRAP_VECTOR(StreamVec, royale::StreamId);
 WRAP_VECTOR(Uint8Vec, uint8_t);
 WRAP_VECTOR(Uint32Vec, uint32_t);
@@ -199,6 +224,68 @@ WRAP_VECTOR_ARG(uint32_t);
 }
 %ignore royale::DepthData::points;
 
+// Access to points member in IntermediateData struct
+%extend royale::IntermediateData {
+    std::vector<royale::IntermediatePoint> points() {
+        return $self->points.toStdVector();
+    }
+}
+%ignore royale::IntermediateData::points;
+
+// Access to points member in IntermediateData struct
+%extend royale::IntermediateData {
+    float getDistance(size_t idx) {
+        return $self->points[idx].distance;
+        }
+    float getAmplitude(size_t idx) {
+        return $self->points[idx].amplitude;
+        }
+    float getIntensity(size_t idx) {
+        return $self->points[idx].intensity;
+        }
+    uint32_t getFlags(size_t idx) {
+        return $self->points[idx].flags;
+        }
+    size_t getNumPoints() {
+        return $self->points.size ();
+        }
+}
+%ignore royale::IntermediateData::points;
+
+
+
+#ifdef ROYALE_ACTIVATE_NUMPY
+%extend royale::DepthData {
+    void fastPoints (double * p, int n) {
+        for (auto i = 0; i < n; i+=6) {
+            p[i] = $self->points[i/6].x;
+            p[i+1] = $self->points[i/6].y;
+            p[i+2] = $self->points[i/6].z;
+            p[i+3] = $self->points[i/6].noise;
+            p[i+4] = $self->points[i/6].grayValue;
+            p[i+5] = $self->points[i/6].depthConfidence;
+        }
+    }
+  
+    %pythoncode %{
+def npoints (self):
+    return self.fastPoints(self.width * self.height * 6).reshape(-1,self.width,6)
+%}
+}
+#else
+%extend royale::DepthData {
+    void fastPoints (double * p, int n) {
+    }
+  
+    %pythoncode %{
+def npoints (self):
+    print('Roypy was compiled without numpy support!')
+    raise RuntimeError('Roypy was compiled without numpy support!')
+%}
+}
+#endif
+
+
 // Access to points member in DepthData struct
 %extend royale::DepthData {
     float getX(size_t idx) {
@@ -251,76 +338,94 @@ WRAP_VECTOR_ARG(uint32_t);
 }
 %typemap(argout) royale::ProcessingParameterVector & {
     auto dict = PyDict_New();
-    for (const auto &e : *$1) {
-        auto key = PyLong_FromLong(static_cast<long>(e.first));
+    for (const auto &e : *$1)
+    {
+        // gets the flag name in C
+        auto cKeyName = royale::getProcessingFlagName (static_cast<royale::ProcessingFlag> (e.first));
+        // converts to python readable format
+        auto keyName = PyUnicode_DecodeLatin1 (cKeyName.data(), cKeyName.length(), nullptr);
+
+        // determine the value
         PyObject *val = nullptr;
-        switch(e.second.variantType()) {
-        case royale::VariantType::Int:
-            val = PyLong_FromLong(e.second.getInt());
-            break;
-        case royale::VariantType::Float:
-            val = PyFloat_FromDouble(e.second.getFloat());
-            break;
-        case royale::VariantType::Bool:
-            val = PyBool_FromLong(e.second.getBool() ? 1 : 0);
-            break;
-        default:
-            SWIG_exception(SWIG_RuntimeError, "Invalid Variant found");
+        switch (e.second.variantType())
+        {
+            case royale::VariantType::Int:
+                val = PyLong_FromLong (e.second.getInt());
+                break;
+            case royale::VariantType::Float:
+                val = PyFloat_FromDouble (e.second.getFloat());
+                break;
+            case royale::VariantType::Bool:
+                val = PyBool_FromLong (e.second.getBool() ? 1 : 0);
+                break;
+            default:
+                SWIG_exception (SWIG_RuntimeError, "Invalid Variant found");
         }
 
-        PyDict_SetItem (dict, key, val);
-        Py_DECREF(key);
-        Py_DECREF(val);
+        PyDict_SetItem (dict, keyName, val);
+        Py_DECREF (keyName);
+        Py_DECREF (val);
     }
 
     $result = dict;
 }
-%typemap(in) (const royale::ProcessingParameterVector &) (royale::ProcessingParameterVector vec) {
+%typemap(in) (const royale::ProcessingParameterVector &) (royale::ProcessingParameterVector vec)
+{
     bool err = true;
-    if (PyMapping_Check($input))
+    if (PyMapping_Check ($input))
     {
         err = false;
-        auto size = PyMapping_Length($input);
-        auto keys = PyMapping_Keys($input);
-        auto values = PyMapping_Values($input);
+        auto size = PyMapping_Length ($input);
+        auto keys = PyMapping_Keys ($input);
+        auto values = PyMapping_Values ($input);
         for (auto i = 0; i < size; i++)
         {
-            auto pyFlag = PySequence_GetItem(keys, i);
-            auto val = PySequence_GetItem(values, i);
-            auto flagInt = PyLong_AsLong(pyFlag);
+            auto namePyFlag = PySequence_GetItem (keys, i);
 
-            if (flagInt < static_cast<long>(royale::ProcessingFlag::NUM_FLAGS))
+            // current flag in python readable format
+            PyObject *temp_bytes = PyUnicode_AsEncodedString (namePyFlag, "UTF-8", "strict");
+
+            // convert it back so we can parse and get the correct key in p
+            const char *s = PyString_AsString (temp_bytes);
+            ProcessingFlag p;
+            royale::parseProcessingFlagName (s, p);
+
+            auto pyFlag = PyLong_FromLong (static_cast<long> (p));
+
+            auto val = PySequence_GetItem (values, i);
+
+            if (p < royale::ProcessingFlag::NUM_FLAGS)
             {
                 royale::Variant var;
-                if (PyBool_Check(val))
+                if (PyBool_Check (val))
                 {
-                    var.setBool(PyLong_AsLong(val) > 0);
+                    var.setBool (PyLong_AsLong (val) > 0);
                 }
-                else if (PyLong_Check(val))
+                else if (PyLong_Check (val))
                 {
-                    var.setInt(static_cast<int>(PyLong_AsLong(val)));
+                    var.setInt (static_cast<int> (PyLong_AsLong (val)));
                 }
-                else if(PyFloat_Check(val))
+                else if (PyFloat_Check (val))
                 {
-                    var.setFloat(static_cast<float>(PyFloat_AsDouble(val)));
+                    var.setFloat (static_cast<float> (PyFloat_AsDouble (val)));
                 }
                 else
                 {
                     err = true;
                 }
-                vec.push_back(royale::royale_pair(static_cast<royale::ProcessingFlag>(flagInt), std::move(var)));
+                vec.push_back (royale::Pair<royale::ProcessingFlag, royale::Variant> (p, std::move (var)));
             }
 
-            Py_DECREF(pyFlag);
-            Py_DECREF(val);
+            Py_DECREF (pyFlag);
+            Py_DECREF (val);
         }
-        Py_DECREF(keys);
-        Py_DECREF(values);
+        Py_DECREF (keys);
+        Py_DECREF (values);
     }
 
     if (err)
     {
-        SWIG_exception(SWIG_RuntimeError, "Could not map value to a valid ProcessingFlag");
+        SWIG_exception (SWIG_RuntimeError, "Could not map value to a valid ProcessingFlag");
     }
 
     $1 = &vec;
@@ -517,6 +622,22 @@ ICameraDevicePtr.getLensCenter = getLensCenter
     }
 }
 
+%ignore royale::ICameraDevice::setCalibrationData (const royale::String &filename);
+%extend royale::ICameraDevice {
+    void setCalibrationDataFromFile (const royale::String &filename)
+    {
+        $self->setCalibrationData (filename);
+    }
+}
+
+%ignore royale::ICameraDevice::setCalibrationData (const royale::Vector<uint8_t> &data);
+%extend royale::ICameraDevice {
+    void setCalibrationDataFromBuffer (const std::vector<uint8_t> &data)
+    {
+        $self->setCalibrationData (royale::Vector<uint8_t>::fromStdVector (data));
+    }
+}
+
 // Wrapped Royale headers
 %include <royale/Definitions.hpp>
 %include <royale.hpp>
@@ -544,6 +665,9 @@ ICameraDevicePtr.getLensCenter = getLensCenter
         return royale::Vector<uint16_t>{};
     }
 }
+
+%ignore royale::IntermediateData::operator= (const IntermediateData &dd);
+%ignore royale::DepthData::operator= (const DepthData &dd);
 
 %include <royale/IntermediateData.hpp>
 %feature("director") royale::IExtendedDataListener;

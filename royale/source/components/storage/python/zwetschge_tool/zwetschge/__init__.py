@@ -2,3 +2,4 @@
 from . import data_types
 from . import validator
 from . import writer
+from . import reader

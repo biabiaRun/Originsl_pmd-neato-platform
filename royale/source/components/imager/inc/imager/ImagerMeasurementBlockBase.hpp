@@ -163,6 +163,11 @@ namespace royale
             */
             uint32_t getMaxSafeReconfigTimeMilliseconds (const ImagerUseCaseDefinition &useCase) const;
 
+            /**
+            * Determines if the raw frame in the list with the given index is a so called first frame having different timings in execution
+            */
+            virtual bool isFirstFrame (const std::vector<ImagerRawFrame> &rfList, size_t index) const = 0;
+
             const size_t m_defaultMeasurementBlockCount;    //!< The imager's natively supported measurement block count
             const size_t m_defaultMeasurementBlockCapacity; //!< The imager's natively supported measurement block capacity
 

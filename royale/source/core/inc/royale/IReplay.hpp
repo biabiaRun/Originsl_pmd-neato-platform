@@ -76,6 +76,36 @@ namespace royale
         *  Retrieves the version of the file that was opened
         */
         virtual uint16_t getFileVersion() = 0;
-    };
 
+        /**
+        *  Retrieves the build of royale that created this file
+        */
+        virtual uint32_t getMajorVersion() = 0;
+
+        /**
+        *  Retrieves the build of royale that created this file
+        */
+        virtual uint32_t getMinorVersion() = 0;
+
+        /**
+        *  Retrieves the build of royale that created this file
+        */
+        virtual uint32_t getPatchVersion() = 0;
+
+        /**
+        *  Retrieves the build of royale that created this file
+        */
+        virtual uint32_t getBuildVersion() = 0;
+
+        /**
+        *  Sets the playback range
+        */
+        virtual royale::CameraStatus setPlaybackRange (uint32_t first, uint32_t last) = 0;
+
+        /**
+        *  Retrieves the playback range
+        */
+        virtual void getPlaybackRange (uint32_t &first, uint32_t &last) = 0;
+
+    };
 }

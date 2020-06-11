@@ -15,6 +15,7 @@
 
 #include <config/ImagerType.hpp>
 #include <record/FileWriter.hpp>
+#include <royale/IEvent.hpp>
 #include <royale/IRecordStopListener.hpp>
 #include <royale/String.hpp>
 #include <royale/IRecord.hpp>
@@ -63,6 +64,11 @@ namespace royale
             ROYALE_API void stopRecord() override;
             ROYALE_API bool setFrameCaptureListener (royale::collector::IFrameCaptureListener *captureListener) override;
 
+            ROYALE_API void registerEventListener (royale::IEventListener *listener) override;
+            ROYALE_API void unregisterEventListener() override;
+
+            ROYALE_API operator bool() const override;
+
         private:
 
             void putFrame (const std::vector<royale::common::ICapturedRawFrame *> &frames,
@@ -71,6 +77,7 @@ namespace royale
                            const royale::collector::CapturedUseCase &capturedCase,
                            const royale::ProcessingParameterMap &parameterMap);
 
+            void sendEvent (const royale::EventSeverity &severity, const royale::String &description);
 
             /**
             * Listener called by the callback after the frame is written.
@@ -143,6 +150,10 @@ namespace royale
             * Capture releaser;
             */
             royale::collector::IFrameCaptureReleaser *m_releaser;
+
+            // Listener for recording events
+            royale::IEventListener *m_eventListener;
+            std::mutex m_eventMutex;
         };
     }
 }

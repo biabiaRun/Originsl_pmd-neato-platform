@@ -25,6 +25,7 @@
 #include <QOpenGLTexture>
 #include <QtMath>
 
+template<class T> void ignore (const T &) { }
 
 using namespace royale;
 
@@ -62,7 +63,7 @@ struct ThreeDViewProperties
         downY = -1.f;
         axis = new Axis;
         arcBall = new ArcBall (10.0f, 10.0f);
-        frustum = new Frustum ();
+        frustum = new Frustum();
 
 #if defined (ROYALE_S7_WORKAROUND) && defined(TARGET_PLATFORM_ANDROID)
         bool samsungS7found = false;
@@ -74,12 +75,12 @@ struct ThreeDViewProperties
             std::fseek (defaultprop, 0, SEEK_END);
             std::vector<char> buf (ftell (defaultprop) + 1);
             std::fseek (defaultprop, 0, SEEK_SET);
-            std::fread (buf.data (), buf.size (), 1, defaultprop);
+            std::fread (buf.data(), buf.size(), 1, defaultprop);
             std::fclose (defaultprop);
 
-            buf[buf.size () - 1] = 0;
+            buf[buf.size() - 1] = 0;
 
-            std::string propStr = buf.data ();
+            std::string propStr = buf.data();
             samsungS7found = std::string::npos != propStr.find ("herolte");
         }
 
@@ -127,9 +128,13 @@ ThreeDView::ThreeDView (ColorHelper *colorHelper, QMutex *dataMutex, QWidget *pa
       m_isRotating (false),
       m_isFollowing (false)
 {
+    static auto id = qRegisterMetaType<royale::LensParameters>();
+    ignore (id);
     // setSizePolicy (QSizePolicy::Fixed, QSizePolicy::Fixed);
     QObject::connect (this, SIGNAL (newData (const royale::DepthData *, const royale::IntermediateData *)),
                       this, SLOT (onNewData (const royale::DepthData *, const royale::IntermediateData *)), Qt::QueuedConnection);
+    connect (this, SIGNAL (lensParametersChanged (royale::LensParameters, uint16_t, uint16_t)),
+             this, SLOT (updateLensParametersSlot (royale::LensParameters, uint16_t, uint16_t)));
 
     QTimer *timer = new QTimer (this);
     connect (timer, SIGNAL (timeout()), this, SLOT (onAutoRotation()));
@@ -247,7 +252,7 @@ const QImage &ThreeDView::currentImage()
     return m_image;
 }
 
-void ThreeDView::paintGL ()
+void ThreeDView::paintGL()
 {
     // prevent app from crashing
     if (!m_isInit)
@@ -257,8 +262,19 @@ void ThreeDView::paintGL ()
     glClearColor (0.0f, 0.0f, 0.0f, 1.0f);
     glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable (GL_BLEND);
-    glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glEnable (GL_DEPTH_TEST);
+
+    if (m_p->depth3d->isGray())
+    {
+        // since all our points are transparent in the first render we can blend them this way to make them transparent
+        glBlendFunc (GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA);
+        glDisable (GL_DEPTH_TEST);
+    }
+    else
+    {
+        // in this case we don't have transparency and can do depth tests as normally
+        glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glEnable (GL_DEPTH_TEST);
+    }
 
     m_p->finalModelViewMatrix.setToIdentity();
     m_p->finalModelViewMatrix = m_p->modelViewMatrix * m_p->rotationMatrix;
@@ -269,6 +285,18 @@ void ThreeDView::paintGL ()
     m_p->depth3d->render (m_p->finalModelViewMatrix, m_p->projectionMatrix, m_p->globalModelTransformation);
     if (m_p->showFrustum)
     {
+        if (m_p->depth3d->isGray())
+        {
+            // we need to blend the frustum and the axis correctly
+            glBlendFunc (GL_SRC_COLOR, GL_SRC_ALPHA);
+        }
+        else
+        {
+            glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        }
+
+        glEnable (GL_DEPTH_TEST);
+
         m_p->axis->render (m_p->finalModelViewMatrix, m_p->projectionMatrix, m_p->globalModelTransformation);
         m_p->frustum->render (m_p->finalModelViewMatrix, m_p->projectionMatrix, m_p->globalModelTransformation);
     }
@@ -355,7 +383,7 @@ void ThreeDView::mouseMoveEvent (QMouseEvent *event)
 
         if (m_p->downX > -1)
         {
-            float factor =  180.0f;
+            float factor = 180.0f;
             float curDownX = static_cast<float> (event->x());
             float curDownY = static_cast<float> (event->y());
             translate ( (curDownX - m_p->downX) / factor, -1.f * (curDownY - m_p->downY) / factor, 0.f);
@@ -453,7 +481,7 @@ bool ThreeDView::event (QEvent *event)
                     // translation
                     else if (applyTranslation)
                     {
-                        float factor =  180.0f;
+                        float factor = 180.0f;
                         translate (static_cast<float> (curCenterX - prevCenterX) / factor, -1.f * static_cast<float> (curCenterY - prevCenterY) / factor, 0.f);
                     }
                     m_allowRotation = false;
@@ -469,12 +497,20 @@ bool ThreeDView::event (QEvent *event)
 
 void ThreeDView::updateLensParameters (royale::LensParameters lensParam, uint16_t width, uint16_t height)
 {
+    emit lensParametersChanged (lensParam, width, height);
+}
+
+void ThreeDView::updateLensParametersSlot (const LensParameters &lensParam, uint16_t width, uint16_t height)
+{
     m_lensParam = lensParam;
 
-    m_p->fovx = qRadiansToDegrees (2.0f * atanf (static_cast<float> (width) / (2.0f * lensParam.focalLength.first)));
-    m_p->fovy = qRadiansToDegrees (2.0f * atanf (static_cast<float> (height) / (2.0f * lensParam.focalLength.second)));
+    //m_p->fovx = qRadiansToDegrees (2.0f * atanf (static_cast<float> (width) / (2.0f * lensParam.focalLength.first)));
+    //m_p->fovy = qRadiansToDegrees (2.0f * atanf (static_cast<float> (height) / (2.0f * lensParam.focalLength.second)));
+    // This is only a workaround because Spectre does not deliver the correct lens parameters for binned images
+    m_p->fovx = qRadiansToDegrees (2.0f * atanf (lensParam.principalPoint.first / lensParam.focalLength.first));
+    m_p->fovy = qRadiansToDegrees (2.0f * atanf (lensParam.principalPoint.second / lensParam.focalLength.second));
 
-    m_p->depth3d->updateLensParameters (lensParam);
+    m_p->depth3d->updateLensParameters (m_lensParam);
     m_p->frustum->updateFov (m_p->fovx, m_p->fovy);
 
     if (m_isInit)
@@ -567,12 +603,17 @@ void ThreeDView::setRotatingSpeed (float speed, bool sync)
     }
 }
 
-void ThreeDView::setRotatingCenter (float center)
+void ThreeDView::setRotatingCenter (float center, bool sync)
 {
     m_rCenter = center;
     m_p->globalModelTransformation.setToIdentity();
     m_p->globalModelTransformation.translate (0.f, 0.f, m_rCenter);
     update();
+
+    if (m_lockView && sync)
+    {
+        emit rotatingCenterChanged (m_rCenter);
+    }
 }
 
 void ThreeDView::setFilterMinMax (float filterMin, float filterMax, bool cameraStart)
@@ -640,11 +681,11 @@ void ThreeDView::switchToGrayBuffer (bool uniform)
     update();
 }
 
-void ThreeDView::switchToOverlay ()
+void ThreeDView::switchToOverlay()
 {
     if (m_p->depth3d)
     {
-        m_p->depth3d->switchToOverlay ();
+        m_p->depth3d->switchToOverlay();
     }
     update();
 }

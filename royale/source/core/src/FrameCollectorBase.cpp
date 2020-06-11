@@ -13,6 +13,7 @@
 #include <common/exceptions/LogicError.hpp>
 #include <common/events/EventCaptureStream.hpp>
 #include <common/events/EventEyeSafety.hpp>
+#include <common/events/EventFrameDropped.hpp>
 #include <common/events/EventRawFrameStats.hpp>
 #include <common/MakeUnique.hpp>
 #include <common/NarrowCast.hpp>
@@ -156,9 +157,8 @@ namespace
         {
             if (m_buffer->getPixelCount() < m_pixelsPerFrame * frameCount)
             {
-		    LOG (DEBUG) << __func__ << " pix " << m_buffer->getPixelCount() << " pix per f " << m_pixelsPerFrame << " frame cnt " << frameCount;
-
-                throw LogicError ("out of bounds trying to create more frames than there are pixels");
+               LOG (DEBUG) << __func__ << " pix " << m_buffer->getPixelCount() << " pix per f " << m_pixelsPerFrame << " frame cnt " << frameCount;
+               throw LogicError ("out of bounds trying to create more frames than there are pixels");
             }
         }
 
@@ -258,7 +258,8 @@ FrameCollectorBase::FrameCollectorBase (std::unique_ptr<IPseudoDataInterpreter> 
     m_nFrameAccepts (0),
     m_lastFrameNumberSeen (0),
     m_nFramesPerEvent (1),
-    m_eventForwarder()
+    m_eventForwarder(),
+    m_pauseCallback (false)
 {
     // Setting m_useCaseFrameCount to zero means there will be a warning if collectFrames is called
     // without calling executeUseCase first.  Initialising m_frameNumberOfSequenceBase isn't necessary.
@@ -285,8 +286,11 @@ FrameCollectorBase::~FrameCollectorBase()
 
 void FrameCollectorBase::setCaptureListener (IFrameCaptureListener *listener)
 {
+    m_pauseCallback = true;
     std::lock_guard<std::recursive_mutex> callbackLock (m_callbackLock);
     m_captureListener = listener;
+    m_pauseCallback = false;
+    m_conveyanceCV.notify_all();
 }
 
 void FrameCollectorBase::setTemperatureSensor (std::shared_ptr<ITemperatureSensor> sensor)
@@ -546,11 +550,17 @@ void FrameCollectorBase::updateFrameNumber (uint16_t frameNumber, std::size_t co
     if (dist > 1)
     {
         m_nFrameDropsBridge += dist - 1;
+        m_eventForwarder.event<event::EventFrameDropped> (dist - 1);
     }
 }
 
 void FrameCollectorBase::updateStats (size_t nDiscarded, size_t nAccepted)
 {
+    if (nDiscarded)
+    {
+        m_eventForwarder.event<event::EventFrameDropped> (static_cast<unsigned> (nDiscarded));
+    }
+
     m_nFrameDrops   += nDiscarded;
     m_nFrameAccepts += nAccepted;
     if (m_nFrameAccepts + m_nFrameDrops + m_nFrameDropsBridge >= m_nFramesPerEvent)
@@ -616,7 +626,7 @@ void FrameCollectorBase::conveyanceFunction()
         // scope for the lock
         {
             std::unique_lock<std::mutex> lock (m_bufferLock);
-            m_conveyanceCV.wait (lock, [this] { return (m_releaseAllBuffers || m_stopConveyance || !m_conveyanceQueue.empty()); });
+            m_conveyanceCV.wait (lock, [this] { return ( (m_releaseAllBuffers || m_stopConveyance || !m_conveyanceQueue.empty()) && !m_pauseCallback); });
             if (m_conveyanceQueue.empty())
             {
                 if (m_releaseAllBuffers)
@@ -749,7 +759,8 @@ void FrameCollectorBase::bufferCallback (royale::hal::ICapturedBuffer *buffer)
         const auto expectedFrame = m_pseudoDataInterpreter->getFollowingFrameNumber (m_frameNumberOfSequenceBase, sequence);
         if (frameNumber != expectedFrame)
         {
-            const auto expectedStartOfNextSequence = m_pseudoDataInterpreter->getFollowingFrameNumber (m_frameNumberOfSequenceBase, static_cast<uint16_t> (m_useCaseFrameCount));
+            const auto expectedStartOfNextSequence = m_pseudoDataInterpreter->getFollowingFrameNumber (m_frameNumberOfSequenceBase,
+                    static_cast<uint16_t> (m_bufferActionMap[sequence].mapping.size()));
             if (m_pseudoDataInterpreter->isGreaterFrame (frameNumber, expectedStartOfNextSequence))
             {
                 // The frame number suggests that we're still in the same sequence, but the sequence
@@ -935,6 +946,25 @@ void FrameCollectorBase::processReadyGroups (const decltype (BufferAction::ready
             callback->definition = m_useCaseDefinition;
             callback->streamId = expectation.streamId;
             callback->capturedCase = std::move (cuc);
+
+            // Throw away old frames
+            std::queue<CallbackData *> tmpQueue;
+            while (!m_conveyanceQueue.empty())
+            {
+                auto tmpcallback = m_conveyanceQueue.front();
+                m_conveyanceQueue.pop();
+                if (tmpcallback->streamId == callback->streamId)
+                {
+                    releaseCapturedFrames (tmpcallback->frames);
+                    delete tmpcallback;
+                }
+                else
+                {
+                    tmpQueue.push (tmpcallback);
+                }
+            }
+
+            m_conveyanceQueue.swap (tmpQueue);
             m_conveyanceQueue.push (callback);
             m_conveyanceCV.notify_one();
         }

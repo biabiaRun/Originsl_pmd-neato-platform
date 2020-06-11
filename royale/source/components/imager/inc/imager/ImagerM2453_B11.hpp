@@ -33,12 +33,11 @@ namespace royale
             ~ImagerM2453_B11() override = default;
 
             std::unique_ptr<common::IPseudoDataInterpreter> createPseudoDataInterpreter() override;
-            void reconfigureTargetFrameRate (uint16_t targetFrameRate, uint16_t &reconfigIndex) override;
-
-            void initialize() override;
 
         protected:
             std::vector < uint16_t > getSerialRegisters() override;
+            void doFlashToImagerUseCaseTransfer (const IImagerExternalConfig::UseCaseData &useCaseData) override;
+            DesignStepInfo getDesignStepInfo() override;
         };
     }
 }

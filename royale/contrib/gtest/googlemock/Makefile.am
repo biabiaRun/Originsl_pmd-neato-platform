@@ -1,4 +1,9 @@
+# Note: automake support is community-based. The maintainers do not use automake
+# internally.
+
 # Automake file
+
+ACLOCAL_AMFLAGS = -I m4
 
 # Nonstandard package files for distribution.
 EXTRA_DIST = LICENSE
@@ -28,21 +33,22 @@ lib_libgmock_la_SOURCES = src/gmock-all.cc
 pkginclude_HEADERS = \
   include/gmock/gmock-actions.h \
   include/gmock/gmock-cardinalities.h \
+  include/gmock/gmock-function-mocker.h \
   include/gmock/gmock-generated-actions.h \
   include/gmock/gmock-generated-function-mockers.h \
   include/gmock/gmock-generated-matchers.h \
-  include/gmock/gmock-generated-nice-strict.h \
   include/gmock/gmock-matchers.h \
   include/gmock/gmock-more-actions.h \
   include/gmock/gmock-more-matchers.h \
+  include/gmock/gmock-nice-strict.h \
   include/gmock/gmock-spec-builders.h \
   include/gmock/gmock.h
 
 pkginclude_internaldir = $(pkgincludedir)/internal
 pkginclude_internal_HEADERS = \
-  include/gmock/internal/gmock-generated-internal-utils.h \
   include/gmock/internal/gmock-internal-utils.h \
   include/gmock/internal/gmock-port.h \
+  include/gmock/internal/gmock-pp.h \
   include/gmock/internal/custom/gmock-generated-actions.h \
   include/gmock/internal/custom/gmock-matchers.h \
   include/gmock/internal/custom/gmock-port.h
@@ -107,8 +113,8 @@ EXTRA_DIST += \
   test/gmock-cardinalities_test.cc \
   test/gmock_ex_test.cc \
   test/gmock-generated-actions_test.cc \
+  test/gmock-function-mocker_test.cc \
   test/gmock-generated-function-mockers_test.cc \
-  test/gmock-generated-internal-utils_test.cc \
   test/gmock-generated-matchers_test.cc \
   test/gmock-internal-utils_test.cc \
   test/gmock-matchers_test.cc \
@@ -128,18 +134,14 @@ EXTRA_DIST += \
 
 # Nonstandard package files for distribution.
 EXTRA_DIST += \
-  CHANGES \
   CONTRIBUTORS \
   make/Makefile
 
 # Pump scripts for generating Google Mock headers.
-# TODO(chandlerc@google.com): automate the generation of *.h from *.h.pump.
 EXTRA_DIST += \
   include/gmock/gmock-generated-actions.h.pump \
   include/gmock/gmock-generated-function-mockers.h.pump \
   include/gmock/gmock-generated-matchers.h.pump \
-  include/gmock/gmock-generated-nice-strict.h.pump \
-  include/gmock/internal/gmock-generated-internal-utils.h.pump \
   include/gmock/internal/custom/gmock-generated-actions.h.pump
 
 # Script for fusing Google Mock and Google Test source files.
@@ -157,10 +159,6 @@ EXTRA_DIST += \
   scripts/generator/cpp/tokenize.py \
   scripts/generator/cpp/utils.py \
   scripts/generator/gmock_gen.py
-
-# Script for diagnosing compiler errors in programs that use Google
-# Mock.
-EXTRA_DIST += scripts/gmock_doctor.py
 
 # CMake scripts.
 EXTRA_DIST += \
@@ -190,7 +188,6 @@ if HAVE_PYTHON
 # generated.
 $(test_gmock_fused_test_SOURCES): fused-gmock-internal
 
-# TODO(vladl@google.com): Find a way to add Google Tests's sources here.
 fused-gmock-internal: $(pkginclude_HEADERS) $(pkginclude_internal_HEADERS) \
                       $(lib_libgmock_la_SOURCES) $(GMOCK_SOURCE_INGLUDES) \
                       $(lib_libgmock_main_la_SOURCES) \

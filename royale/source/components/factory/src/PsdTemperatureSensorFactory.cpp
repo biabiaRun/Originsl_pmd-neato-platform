@@ -14,6 +14,7 @@
 #include <common/MakeUnique.hpp>
 #include <factory/PsdTemperatureSensorFactory.hpp>
 #include <temperature/PsdTemperatureSensorNtc.hpp>
+#include <temperature/PsdTemperatureSensorIc.hpp>
 #include <device/PsdTemperatureSensorFilter.hpp>
 
 using namespace royale::factory;
@@ -24,7 +25,7 @@ std::unique_ptr<royale::hal::IPsdTemperatureSensor> PsdTemperatureSensorFactory:
     royale::hal::IImager &imager,
     const royale::config::TemperatureSensorConfig &sensorConfig)
 {
-    if (sensorConfig.type == TemperatureSensorConfig::TemperatureSensorType::PSEUDODATA)
+    if (sensorConfig.type == TemperatureSensorConfig::TemperatureSensorType::PSD_NTC)
     {
         auto  pdi = imager.createPseudoDataInterpreter();
         auto ntc = makeUnique<royale::common::NtcTempAlgo> (
@@ -35,6 +36,12 @@ std::unique_ptr<royale::hal::IPsdTemperatureSensor> PsdTemperatureSensorFactory:
         auto sensor = makeUnique<royale::sensors::PsdTemperatureSensorNtc> (std::move (pdi), std::move (ntc), sensorConfig.phaseSyncConfig);
         std::unique_ptr<royale::hal::IPsdTemperatureSensor> filter = makeUnique<royale::device::PsdTemperatureSensorFilter> (std::move (sensor));
         return filter;
+    }
+    else if (sensorConfig.type == TemperatureSensorConfig::TemperatureSensorType::PSD_SIC)
+    {
+        auto  pdi = imager.createPseudoDataInterpreter();
+        std::unique_ptr<royale::hal::IPsdTemperatureSensor> sensor = makeUnique<royale::sensors::PsdTemperatureSensorIc>(std::move (pdi));
+        return sensor;
     }
     else
     {

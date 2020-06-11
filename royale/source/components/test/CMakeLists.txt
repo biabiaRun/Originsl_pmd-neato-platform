@@ -91,17 +91,19 @@ if(${ROYALE_TARGET_PLATFORM} STREQUAL ANDROID)
 endif()
 
 if(ROYALE_ENABLE_COV)
+    SET(COVERAGE_LCOV_EXCLUDES '/usr/include/*' '${ROYALE_SOURCE_DIR}/contrib/*' '${ROYALE_SOURCE_DIR}/spectre/*' '${ROYALE_SOURCE_DIR}/source/core/*' '*/test/*')
+
     if(ROYALE_COVERAGE_GCOVR)
-        SETUP_TARGET_FOR_COVERAGE_COBERTURA(
-            coverage_components
-            test_components
-            coverage_royale
+        SETUP_TARGET_FOR_COVERAGE_GCOVR_XML(
+            NAME coverage_components
+            EXECUTABLE test_components
+            DEPENDENCIES test_components
             )
     else()
-        SETUP_TARGET_FOR_COVERAGE(
-            coverage_components
-            test_components
-            coverage_components
+        SETUP_TARGET_FOR_COVERAGE_LCOV(
+            NAME coverage_components
+            EXECUTABLE test_components
+            DEPENDENCIES test_components
             )
     endif()
 

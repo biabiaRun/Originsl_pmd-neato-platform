@@ -1,3 +1,7 @@
+include_directories(SYSTEM 
+    ${PROCESSING_SPECTRE_HEADER_DIR}
+    )
+
 IF(${ROYALE_USE_SPECTRE})
     set (PROCESSING_SPECTRE_SOURCES
         "src/ProcessingSpectre.cpp"

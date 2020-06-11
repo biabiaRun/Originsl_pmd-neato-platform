@@ -3,8 +3,6 @@ include_directories(
    "${CMAKE_CURRENT_BINARY_DIR}"
    )
 
-DEPENDS_ON_ROYALE_VERSION_H("${CMAKE_CURRENT_SOURCE_DIR}/../src/FileWriter.cpp")
-
 # RRF Writer library
 
 set (RRFWRITERLIB_SOURCES

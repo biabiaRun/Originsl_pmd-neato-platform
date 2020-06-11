@@ -18,7 +18,8 @@ ModuleConfigFactoryFixed::ModuleConfigFactoryFixed (const royale::config::Module
 }
 
 std::shared_ptr<const royale::config::ModuleConfig>
-ModuleConfigFactoryFixed::probeAndCreate (royale::factory::IBridgeFactory &) const
+ModuleConfigFactoryFixed::probeAndCreate (royale::factory::IBridgeFactory &,
+        royale::CameraAccessLevel) const
 {
     return m_moduleConfig;
 }

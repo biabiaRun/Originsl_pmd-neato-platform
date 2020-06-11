@@ -100,7 +100,7 @@ const std::vector < double > ImagerMeasurementBlockBase::generateRawFrameTimings
                     double tPrevRF = 0.0;
                     calcRawFrameRateTime (useCase, rfList[idx - 1].exposureTime,
                                           rfList[idx - 1].modulationFrequency,
-                                          rfList[idx - 1].isStartOfLinkedRawFrames,
+                                          isFirstFrame (rfList, idx - 1),
                                           tPrevRF);
                     rawFrameTimes[idx] = rawFrameTimes[idx - 1] - tPrevRF;
                     rawFrameTimes[idx - 1] = tPrevRF;
@@ -131,7 +131,7 @@ const std::vector < double > ImagerMeasurementBlockBase::generateRawFrameTimings
                     calcRawFrameRateTime (useCase,
                                           rfList[idx].exposureTime,
                                           rfList[idx].modulationFrequency,
-                                          rfList[idx].isStartOfLinkedRawFrames,
+                                          isFirstFrame (rfList, idx),
                                           tThisRF);
                     rawFrameTimes[idx] = tThisRF;
 

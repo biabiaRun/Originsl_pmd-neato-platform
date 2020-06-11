@@ -9,7 +9,7 @@ Class = PMD Devices
 ClassGuid={59158dd2-ecf1-4018-b1e6-334eb625e50f}
 provider=%CYUSB3_Provider%
 CatalogFile=CYUSB3.cat
-DriverVer=01/31/2019,1.6.14.00
+DriverVer=08/08/2019,1.6.16.00
 
 [SourceDisksNames]
 1=%CYUSB3_Install%,,,
@@ -69,6 +69,9 @@ HKR,,Icon,,-1
 %VID_1C28&PID_C034.DeviceDesc%=CyUsb3, USB\VID_1C28&PID_C034
 %VID_1C28&PID_C035.DeviceDesc%=CyUsb3, USB\VID_1C28&PID_C035
 %VID_1C28&PID_C036.DeviceDesc%=CyUsb3, USB\VID_1C28&PID_C036
+%VID_1C28&PID_C037.DeviceDesc%=CyUsb3, USB\VID_1C28&PID_C037
+%VID_1C28&PID_C039.DeviceDesc%=CyUsb3, USB\VID_1C28&PID_C039
+%VID_1C28&PID_C03A.DeviceDesc%=CyUsb3, USB\VID_1C28&PID_C03A
 
 [CYUSB3.NTamd64]
 CopyFiles=CYUSB3.Files.Ext
@@ -162,5 +165,8 @@ VID_1C28&PID_C033.DeviceDesc="Pmd Module"
 VID_1C28&PID_C034.DeviceDesc="Gaia"
 VID_1C28&PID_C035.DeviceDesc="Byt"
 VID_1C28&PID_C036.DeviceDesc="Holkin"
+VID_1C28&PID_C037.DeviceDesc="Ambient"
+VID_1C28&PID_C039.DeviceDesc="pmd modules 277x"
+VID_1C28&PID_C03A.DeviceDesc="x1.1"
 CYUSB3.GUID="{2C2B212B-BC84-4319-B465-367604F4F8FF}"
 CYUSB3_Unused      = "."

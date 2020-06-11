@@ -204,7 +204,7 @@ std::size_t BridgeAmundsenCommon::executeUseCase (int imageWidth, int imageHeigh
     // it while receiving the data.  For the data that we copy to the buffer, the protocol overhead
     // is omitted, so the only data in the buffer is the pixels.
     const size_t pixelOffset = 0;
-    const size_t pixelCount = imageWidth * imageHeight;
+    const size_t pixelCount = static_cast<size_t> (imageWidth * imageHeight);
     const size_t bufferSize = pixelCount * sizeof (uint16_t);
 
     m_rawDataSize = BufferUtils::maxRawSize (pixelCount, m_transferFormat);

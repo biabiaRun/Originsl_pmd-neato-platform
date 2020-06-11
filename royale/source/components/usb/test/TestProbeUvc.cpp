@@ -46,7 +46,8 @@ namespace   // anonymous
     {
     public:
         std::shared_ptr<const royale::config::ModuleConfig>
-        probeAndCreate (royale::factory::IBridgeFactory &) const override
+        probeAndCreate (royale::factory::IBridgeFactory &,
+                        royale::CameraAccessLevel) const override
         {
             throw std::logic_error ("not supposed to happen");
         }

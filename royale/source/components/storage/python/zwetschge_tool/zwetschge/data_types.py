@@ -11,6 +11,8 @@
 
 from enum import IntEnum
 
+FLASH_OFFSET = 0x2000
+
 def _lenOrNone (x):
     """Helper fuction for printing lists"""
     if x is None:
@@ -37,7 +39,7 @@ class TableOfRegisterMaps:
 
     SequentialRegisterBlocks are currently not supported.
     """
-    def __init__ (self, init, fwPage1, fwPage2, fwStart, start, stop):
+    def __init__ (self, init=None, fwPage1=None, fwPage2=None, fwStart=None, start=None, stop=None):
         self.init = init
         self.fwPage1 = fwPage1
         self.fwPage2 = fwPage2
@@ -62,27 +64,78 @@ class UseCase:
     microseconds) tuples. For 2-item tuples, the delay is assumed to be zero.
     """
 
-    def __init__ (self, name, guid, *, imageSize, imagerFrequencies, streamIds, startFps, fpsLimits, processingParams, waitTime, accessLevel, measurementBlocks, exposureGroups, rawFrameSets, timedRegList=None, seqRegBlock=None):
+    def __init__ (self, name=None, guid=None, *, imageSize=None, imagerFrequencies=None, streamIds=None, startFps=None,
+                  fpsLimits=None, processingParams=None, waitTime=None, accessLevel=None, measurementBlocks=None,
+                  exposureGroups=None, rawFrameSets=None, timedRegList=None, seqRegBlock=None, reservedBlock=bytes(),
+                  seqRegBlockAddress=None, seqRegBlockLen=None, seqRegBlockImagerAddress=None):
         self.name = name
         self.timedRegList = timedRegList
         self.seqRegBlock = seqRegBlock
         self.guid = guid
+        if imageSize is None:
+            imageSize = []
         self.imageSize = imageSize
+        if imagerFrequencies is None:
+            imagerFrequencies = []
         self.imagerFrequencies = imagerFrequencies
+        if streamIds is None:
+            streamIds = []
         self.streamIds = streamIds
         self.startFps = startFps
+        if fpsLimits is None:
+            fpsLimits = []
         self.fpsLimits = fpsLimits
         self.processingParams = processingParams
         self.waitTime = waitTime
         self.accessLevel = accessLevel
+        if measurementBlocks is None:
+            measurementBlocks = []
         self.measurementBlocks = measurementBlocks
+        if exposureGroups is None:
+            exposureGroups = []
         self.exposureGroups = exposureGroups
+        if rawFrameSets is None:
+            rawFrameSets = []
         self.rawFrameSets = rawFrameSets
-        self.reservedBlock = bytes () #empty
+        self.reservedBlock = reservedBlock
+        self.seqRegBlockAddress = seqRegBlockAddress
+        self.seqRegBlockLen = seqRegBlockLen
+        self.seqRegBlockImagerAddress = seqRegBlockImagerAddress
 
     def __str__ (self):
-        return 'UseCase (name="{name}", guid={guid}, timedRegList={timedRegList}, seqRegBlock={seqRegBlock})'.format (
-            name=self.name, guid=self.guid, timedRegList=_lenOrNone (self.timedRegList), seqRegBlock=self.seqRegBlock)
+        streamlist = [str(hex(x)) for x in self.streamIds]
+        return 'UseCase ( \n \
+                         name="{name}", \n \
+                         guid={guid}, \n \
+                         timedRegList={timedRegList}, \n \
+                         seqRegBlock={seqRegBlock}, \n \
+                         imageSize={imageSize}, \n \
+                         imagerFrequencies={imagerFrequencies}, \n \
+                         streamIds={streamIds}, \n \
+                         startFps={startFps}, \n \
+                         fpsLimits={fpsLimits}, \n \
+                         processingParams={processingParams}, \n \
+                         waitTime={waitTime}, \n \
+                         accessLevel={accessLevel}, \n \
+                         measurementBlocks={measurementBlocks}, \n \
+                         exposureGroups={exposureGroups}, \n \
+                         rawFrameSets={rawFrameSets} \n \
+                         )'.format (
+            name=self.name, guid=self.guid, timedRegList=_lenOrNone (self.timedRegList), seqRegBlock=self.seqRegBlock,
+            imageSize=self.imageSize, imagerFrequencies=self.imagerFrequencies, streamIds=streamlist,
+            startFps=self.startFps, fpsLimits=self.fpsLimits, processingParams=self.processingParams.bytes, waitTime=self.waitTime,
+            accessLevel=str(AccessLevel(self.accessLevel)), measurementBlocks=self.measurementBlocks, exposureGroups=self.exposureGroups,
+            rawFrameSets=self.rawFrameSets)
+
+
+    def get_config(self, zwetschge_data):
+        """
+        Get the register settings stored in the Zwetschge Data for the Use Case
+
+        :param zwetschge_data: Binary data of full Zwetschge File
+        :return:
+        """
+        self.seqRegBlock = zwetschge_data[self.seqRegBlockAddress - FLASH_OFFSET:self.seqRegBlockAddress + self.seqRegBlockLen - FLASH_OFFSET]
 
 class DeviceData:
     def __init__ (self, name, *, productIssuer, productCode, systemFrequency=0, useCases=None, torm=None):
@@ -110,7 +163,15 @@ class DeviceData:
         self.useCases.append (usecase)
 
     def __str__ (self):
-        s = 'DeviceData (name="{name}" torm={torm}")'.format (name=self.name, torm=self.torm)
+        s = 'DeviceData ( \n \
+                         name="{name}" \n \
+                         torm={torm}" \n \
+                         productIssuer={productIssuer}, \n \
+                         productCode={productCode}, \n \
+                         systemFrequency={systemFrequency}, \n \
+                         )'.format (name=self.name, torm=self.torm,
+                         productIssuer=self.productIssuer, productCode=self.productCode, 
+                         systemFrequency=self.systemFrequency)
         for uc in self.useCases:
             s += "\n    " + str (uc)
         return s

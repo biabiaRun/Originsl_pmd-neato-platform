@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include <imager/IImagerComponent.hpp>
+#include <imager/FlashDefinedImagerComponent.hpp>
 #include <imager/ImagerRegisterAccess.hpp>
 #include <hal/IImager.hpp>
 
@@ -20,9 +20,9 @@ namespace royale
     {
         /**
          * This class implements an adapter for converting calls to a royale::hal::IImager
-         * object to calls to a royale::imager::IFlashDefinedImagerComponent object.
+         * object to calls to a royale::imager::FlashDefinedImagerComponent object.
          * Please note that different forks of Royale may have different royale::hal::IImager implementations,
-         * but as long-term goal there should only be one common version of royale::imager::IFlashDefinedImagerComponent
+         * but as long-term goal there should only be one common version of royale::imager::FlashDefinedImagerComponent
          * shared by all forks of Royale.
          *
          * Please not that until \todo ROYAL-2874 is resolved a work-around is used that loads
@@ -34,11 +34,11 @@ namespace royale
         class FlashDefinedImagerInterfaceAdapter : public royale::hal::IImager
         {
         public:
-            ROYALE_API explicit FlashDefinedImagerInterfaceAdapter (std::shared_ptr<royale::imager::IFlashDefinedImagerComponent> imager,
+            ROYALE_API explicit FlashDefinedImagerInterfaceAdapter (std::shared_ptr<royale::imager::FlashDefinedImagerComponent> imager,
                     std::shared_ptr<royale::imager::ImagerRegisterAccess> directAccess);
             ROYALE_API virtual ~FlashDefinedImagerInterfaceAdapter() = default;
 
-            static std::shared_ptr<royale::hal::IImager> createImager (std::shared_ptr<royale::imager::IFlashDefinedImagerComponent> imager,
+            static std::shared_ptr<royale::hal::IImager> createImager (std::shared_ptr<royale::imager::FlashDefinedImagerComponent> imager,
                     std::shared_ptr<royale::imager::ImagerRegisterAccess> directAccess);
 
             ROYALE_API std::unique_ptr<common::IPseudoDataInterpreter> createPseudoDataInterpreter() override;
@@ -65,7 +65,7 @@ namespace royale
             ROYALE_API void readRegisters (royale::Vector<royale::Pair<royale::String, uint64_t>> &registers) override;
 
         private:
-            std::shared_ptr<royale::imager::IFlashDefinedImagerComponent> m_imager;
+            std::shared_ptr<royale::imager::FlashDefinedImagerComponent> m_imager;
             std::shared_ptr<royale::imager::ImagerRegisterAccess> m_directAccess;
             royale::usecase::UseCaseDefinition m_executingUcd;
         };

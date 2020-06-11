@@ -1,3 +1,4 @@
+project(royale_components)
 
 include_directories(
     ${ROYALE_BINARY_DIR}/
@@ -12,7 +13,6 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/usb/inc
     ${CMAKE_CURRENT_SOURCE_DIR}/buffer/inc
     ${CMAKE_CURRENT_SOURCE_DIR}/storage/inc
-    ${PROCESSING_SPECTRE_HEADER_DIR}
     )
 
 if (ROYALE_USE_V4L)

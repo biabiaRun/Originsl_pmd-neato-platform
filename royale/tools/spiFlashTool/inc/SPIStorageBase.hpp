@@ -70,6 +70,15 @@ namespace spiFlashTool
             void writeStorage (const std::vector<uint8_t> &buffer) override = 0;
 
             virtual royale::Vector<royale::Pair<royale::String, uint64_t>> getEFuseRegisters() = 0;
+
+            static royale::String toHex (uint16_t value)
+            {
+                const uint8_t bufSize = 8;
+                char buffer[bufSize];
+                snprintf(buffer, bufSize, "0x%04x", value);
+                return royale::String(buffer);
+            };
+
         protected:
             /**
             * This is never empty, if nullptr was passed to the constructor then it contains a

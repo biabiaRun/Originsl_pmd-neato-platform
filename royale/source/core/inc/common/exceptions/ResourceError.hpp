@@ -23,7 +23,7 @@ namespace royale
         class ResourceError : public Exception
         {
         public:
-            ResourceError (std::string dt = "ressource error", std::string du = "", royale::CameraStatus s = royale::CameraStatus::RESOURCE_ERROR) : Exception (dt, du, s)
+            ResourceError (std::string dt = "resource error", std::string du = "", royale::CameraStatus s = royale::CameraStatus::RESOURCE_ERROR) : Exception (dt, du, s)
             {
             }
 

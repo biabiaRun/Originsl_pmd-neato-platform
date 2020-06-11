@@ -33,7 +33,7 @@ namespace
                               {
                                   FlashMemoryConfig::FlashMemoryType::ZWETSCHGE
                               }
-                              .setImageSize (128 * 1024 * 2)
+                              .setImageSize (128 * 1024 * 4)
                               .setPageSize (256)
                               .setAccessOffset (0)
                               .setUseCaching (true);

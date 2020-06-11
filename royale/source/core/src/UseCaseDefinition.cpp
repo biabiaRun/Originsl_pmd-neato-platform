@@ -262,11 +262,17 @@ void UseCaseDefinition::setExposureTime (uint32_t exposureTime, StreamId s)
 {
     for (const auto setIdx : getRawFrameSetIndices (s, 0u))
     {
-        if (m_rawFrameSet.at (setIdx).isModulated())
+        auto newExpo = exposureTime;
+        auto &group = m_exposureGroups.at (m_rawFrameSet.at (setIdx).exposureGroupIdx);
+        if (newExpo < group.m_exposureLimits.first)
         {
-            auto &group = m_exposureGroups.at (m_rawFrameSet.at (setIdx).exposureGroupIdx);
-            group.m_exposureTime = exposureTime;
+            newExpo = group.m_exposureLimits.first;
         }
+        if (newExpo > group.m_exposureLimits.second)
+        {
+            newExpo = group.m_exposureLimits.second;
+        }
+        group.m_exposureTime = newExpo;
     }
 }
 
@@ -317,6 +323,13 @@ const royale::Pair<uint32_t, uint32_t> UseCaseDefinition::getExposureLimits (Str
             limits.first = std::max (limits.first, group.m_exposureLimits.first);
             limits.second = std::min (limits.second, group.m_exposureLimits.second);
         }
+    }
+
+    if (limits.second == std::numeric_limits<uint32_t>::max())
+    {
+        const auto &group = m_exposureGroups.at (m_rawFrameSet.at (0).exposureGroupIdx);
+        limits.first = std::max (limits.first, group.m_exposureLimits.first);
+        limits.second = std::min (limits.second, group.m_exposureLimits.second);
     }
 
     if (limits.first > limits.second)

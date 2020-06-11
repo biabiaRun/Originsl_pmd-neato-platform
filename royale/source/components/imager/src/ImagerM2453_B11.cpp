@@ -12,12 +12,9 @@
 #include <imager/M2453/ImagerRegisters.hpp>
 #include <imager/M2453/PseudoDataInterpreter_B11.hpp>
 
-#include <common/exceptions/LogicError.hpp>
 #include <common/exceptions/RuntimeError.hpp>
-#include <common/exceptions/WrongState.hpp>
 
 using namespace royale::imager;
-using namespace royale::imager::M2453_B11;
 using namespace royale::common;
 
 
@@ -33,37 +30,6 @@ std::unique_ptr<IPseudoDataInterpreter> ImagerM2453_B11::createPseudoDataInterpr
     return pseudoDataInter;
 }
 
-void ImagerM2453_B11::reconfigureTargetFrameRate (uint16_t targetFrameRate, uint16_t &reconfigIndex)
-{
-    if (ImagerState::Capturing != m_imagerState)
-    {
-        throw WrongState();
-    }
-
-    if (m_systemFrequency == 0)
-    {
-        throw LogicError ("Imager does not support frame rate changes!");
-    }
-
-    // Prevent exposure changes if there is still a change pending.
-    // (we might also block here)
-    if (configChangePending())
-    {
-        throw RuntimeError ("Can't update exposure times while config change is still pending");
-    }
-
-    auto frametime = m_systemFrequency / (static_cast<uint32_t> (targetFrameRate) * 512);
-
-    if (frametime > std::numeric_limits<uint16_t>::max())
-    {
-        throw RuntimeError ("Frame rate too low!");
-    }
-
-    m_bridge->writeImagerRegister (M2453_B11::MB0_FRAMETIME, static_cast<uint16_t> (frametime));
-
-    reconfigIndex = triggerUseCaseChange();
-}
-
 std::vector < uint16_t > ImagerM2453_B11::getSerialRegisters()
 {
     std::vector < uint16_t > efuseValues (4);
@@ -71,18 +37,64 @@ std::vector < uint16_t > ImagerM2453_B11::getSerialRegisters()
     return efuseValues;
 }
 
-void ImagerM2453_B11::initialize()
+DesignStepInfo ImagerM2453_B11::getDesignStepInfo()
 {
+    DesignStepInfo info;
+    info.ANAIP_DESIGNSTEP_Address = M2453::ANAIP_DESIGNSTEP;
+    info.designSteps.push_back (0x0B11);
+    info.designSteps.push_back (0x0B12);
+    return info;
+}
 
-    uint16_t regDs = 0;
+void ImagerM2453_B11::doFlashToImagerUseCaseTransfer (const IImagerExternalConfig::UseCaseData &useCaseData)
+{
+    uint16_t lowerAddress, upperAddress;
 
-    m_bridge->readImagerRegister (M2453::ANAIP_DESIGNSTEP, regDs);
+    // Lower the SPI clock to make the transfer more reliable
+    const auto spiEnable = 1u << 14;
+    const auto spiClockDiv8 = 2u;
+    m_bridge->writeImagerRegister (M2453::SPICFG, static_cast<uint16_t> (spiEnable | spiClockDiv8));
 
-    if (0x0B11 != regDs &&
-            0x0B12 != regDs)
+    upperAddress = static_cast<uint16_t> ( (useCaseData.sequentialRegisterHeader.flashConfigAddress & 0xFF0000) >> 16);
+    lowerAddress = static_cast<uint16_t> (useCaseData.sequentialRegisterHeader.flashConfigAddress & 0x00FFFF);
+
+    // Tell the imager where the config can be found
+    m_bridge->writeImagerRegister (M2453_B11::SFR_CFGCNT_GENERIC_FW_PARAM_0, lowerAddress);
+    m_bridge->writeImagerRegister (M2453_B11::SFR_CFGCNT_GENERIC_FW_PARAM_1, upperAddress);
+
+    // Enable the correct iSM function
+    m_bridge->writeImagerRegister (M2453_B11::FUNCNUM, 0x0007);
+
+    // Set the restart vector
+    m_bridge->writeImagerRegister (M2453_B11::RESTARTV_EN, 0x0004);
+
+    // Start the iSM function
+    m_bridge->writeImagerRegister (M2453_B11::ISM_CTRL, 0x0008);
+    m_bridge->sleepFor (std::chrono::milliseconds (10));
+
+    // Read the status of the function
+    uint16_t status = 0x0000u;
+    m_bridge->readImagerRegister (M2453_B11::SFR_CFGCNT_TESTRES, status);
+
+    if (status == 0xAAAA)
     {
-        throw Exception ("wrong design step");
+        // The function worked as expected
     }
-
-    ImagerM2453::initialize();
+    else if (status == 0x5555)
+    {
+        throw RuntimeError ("LoadConfigurationFromFlash error : CRC");
+    }
+    else if (status == 0x0055)
+    {
+        throw RuntimeError ("LoadConfigurationFromFlash error : Start address not page aligned");
+    }
+    else if (status == 0x00AA)
+    {
+        throw RuntimeError ("LoadConfigurationFromFlash error : Flash is busy");
+    }
+    else
+    {
+        LOG (ERROR) << "LoadConfigurationFromFlash error : Unknown status code : " << status;
+        throw RuntimeError ("LoadConfigurationFromFlash error : Unknown status code");
+    }
 }

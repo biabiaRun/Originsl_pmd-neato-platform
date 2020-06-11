@@ -11,7 +11,7 @@
 #include <royale/Variant.hpp>
 
 #include <string.h>
-
+#include <math.h>
 #include <common/exceptions/LogicError.hpp>
 #include <common/exceptions/OutOfBounds.hpp>
 
@@ -239,7 +239,7 @@ bool Variant::operator== (const Variant &v) const
                 }
             case VariantType::Float:
                 {
-                    if (v.getFloat() == getFloat())
+                    if (fabsf (v.getFloat() - getFloat()) <= std::numeric_limits<float>::epsilon() * fmaxf (fabsf (v.getFloat()), fabsf (getFloat())))
                     {
                         return true;
                     }

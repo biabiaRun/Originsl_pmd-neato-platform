@@ -55,16 +55,28 @@ namespace
         0x0000, 0x0001, 0x0001, 0x0109, 0x0103, 0x0000, 0x0000, 0x0000,
         0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
         0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
-        //roi
-        0x0000, 0x00DF, 0x0000, 0x00AB
+        //roi (starting at pixel 22)
+        0x0000, 0x00DF, 0x0000, 0x00AB,
+        //any data (starting at pixel 26)
+        0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+        0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+        0x0000, 0x0000, 0x0000, 0x0000,
+        //raw temperature values (starting at pixel 46)
+        0x0024, 0x0021, 0x0048, 0x0042
     };
     const std::vector<uint16_t> SAMPLE_B11 =
     {
         0x0000, 0x0001, 0x0001, 0x0109, 0x0000, 0x0103, 0x0000, 0x0000,
         0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
-        0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
-        //roi
-        0x0000, 0x0000, 0x00DF, 0x0000, 0x00AB
+        0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+        //roi (starting at pixel 23)
+        0x0000, 0x00DF, 0x0000, 0x00AB,
+        //any data (starting at pixel 27)
+        0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+        0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+        0x0000, 0x0000, 0x0000, 0x0000,
+        //raw temperature values (starting at pixel 47)
+        0x0024, 0x0021, 0x0048, 0x0042
     };
 }
 
@@ -78,6 +90,17 @@ TEST (TestPseudoDataInterpreterM2453, M2453_A11_PD)
     EXPECT_THAT (interpreter.getHorizontalSize (sample), Eq (224));
     EXPECT_THAT (interpreter.getVerticalSize (sample), Eq (172));
     EXPECT_THAT (interpreter.getBinning (sample), Eq (1));
+
+    //Test raw temperature values reading
+    auto values = interpreter.getTemperatureRawValues (sample);
+    uint16_t &vRef1 = values[0];
+    uint16_t &vRef2 = values[1];
+    uint16_t &vNtc1 = values[2];
+    uint16_t &vNtc2 = values[3];
+    EXPECT_THAT (vRef1, Eq (0x0021));
+    EXPECT_THAT (vNtc1, Eq (0x0042));
+    EXPECT_THAT (vRef2, Eq (0x0024));
+    EXPECT_THAT (vNtc2, Eq (0x0048));
 }
 
 TEST (TestPseudoDataInterpreterM2453, M2453_B11_PD)
@@ -90,4 +113,16 @@ TEST (TestPseudoDataInterpreterM2453, M2453_B11_PD)
     EXPECT_THAT (interpreter.getHorizontalSize (sample), Eq (224));
     EXPECT_THAT (interpreter.getVerticalSize (sample), Eq (172));
     EXPECT_THAT (interpreter.getBinning (sample), Eq (1));
+
+    //Test raw temperature values reading
+    auto values = interpreter.getTemperatureRawValues (sample);
+    ASSERT_THAT (static_cast<int> (values.size()), Eq(4));
+    uint16_t &vRef1 = values[0];
+    uint16_t &vRef2 = values[1];
+    uint16_t &vNtc1 = values[2];
+    uint16_t &vNtc2 = values[3];
+    EXPECT_THAT (vRef1, Eq (0x0021));
+    EXPECT_THAT (vNtc1, Eq (0x0042));
+    EXPECT_THAT (vRef2, Eq (0x0024));
+    EXPECT_THAT (vNtc2, Eq (0x0048));
 }

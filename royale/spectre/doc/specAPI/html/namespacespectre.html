@@ -33,7 +33,7 @@
   <td id="projectlogo"><img alt="Logo" src="pmdlogo.png"/></td>
   <td style="padding-left: 0.5em;">
    <div id="projectname">Spectre API Documentation
-   &#160;<span id="projectnumber">4.1.0.222</span>
+   &#160;<span id="projectnumber">4.7.0.319</span>
    </div>
    <div id="projectbrief">Time-Of-Flight reference implementation</div>
   </td>
@@ -99,19 +99,19 @@ Data Structures</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="typedef-members"></a>
 Typedefs</h2></td></tr>
-<tr class="memitem:aae7990cda09b463e5d15df4805747ae6"><td class="memTemplParams" colspan="2">template&lt;common::ParameterKey P, typename R &gt; </td></tr>
-<tr class="memitem:aae7990cda09b463e5d15df4805747ae6"><td class="memTemplItemLeft" align="right" valign="top">using&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacespectre.html#aae7990cda09b463e5d15df4805747ae6">IsFrequencyParameter</a> = typename std::enable_if&lt; P==common::ParameterKey::FREQUENCY_1||P==common::ParameterKey::FREQUENCY_2, R &gt;::type</td></tr>
-<tr class="memdesc:aae7990cda09b463e5d15df4805747ae6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Evaluates to the type R if the ParameterKey P identifies a frequency.  <a href="#aae7990cda09b463e5d15df4805747ae6">More...</a><br/></td></tr>
-<tr class="separator:aae7990cda09b463e5d15df4805747ae6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a47d216705cec2810cd1152d0d156170f"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a47d216705cec2810cd1152d0d156170f"></a>
-using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacespectre.html#a47d216705cec2810cd1152d0d156170f">ParameterVariant</a> = <a class="el" href="classspectre_1_1common_1_1Variant.html">common::Variant</a>&lt; <a class="el" href="namespacespectre.html#af5ff44e2f927b7773216a612528ea27aa36674370e4387f1df33f29dd1255dba1">FLOAT_PARAMETER</a>, <a class="el" href="namespacespectre.html#af5ff44e2f927b7773216a612528ea27aa7d325d155bc72f6d92a7d6a2cf85b491">UINT32_PARAMETER</a>, <a class="el" href="namespacespectre.html#af5ff44e2f927b7773216a612528ea27aaf308581d941e7955b275b419de7f472a">BOOL_PARAMETER</a>, <a class="el" href="namespacespectre.html#af5ff44e2f927b7773216a612528ea27aacf536e17443fa6ad720f48e206ca8580">INT32_PARAMETER</a>(SPECTRE_CREATE_TLIST) uintptr_t &gt;</td></tr>
-<tr class="memdesc:a47d216705cec2810cd1152d0d156170f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Instantiation of Variant template used for Parameters. <br/></td></tr>
-<tr class="separator:a47d216705cec2810cd1152d0d156170f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad3e020f359d7f3339c83698f002128d5"><td class="memTemplParams" colspan="2"><a class="anchor" id="ad3e020f359d7f3339c83698f002128d5"></a>
+<tr class="memitem:a38343c9e2f05cfed1f36b16ba28cb60f"><td class="memTemplParams" colspan="2">template&lt;common::ParameterKey P, typename R &gt; </td></tr>
+<tr class="memitem:a38343c9e2f05cfed1f36b16ba28cb60f"><td class="memTemplItemLeft" align="right" valign="top">using&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacespectre.html#a38343c9e2f05cfed1f36b16ba28cb60f">IsFrequencyParameter</a> = typename std::enable_if&lt; P==common::ParameterKey::FREQUENCY_1||P==common::ParameterKey::FREQUENCY_2, R &gt;::type</td></tr>
+<tr class="memdesc:a38343c9e2f05cfed1f36b16ba28cb60f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Evaluates to the type R if the ParameterKey P identifies a frequency.  <a href="#a38343c9e2f05cfed1f36b16ba28cb60f">More...</a><br/></td></tr>
+<tr class="separator:a38343c9e2f05cfed1f36b16ba28cb60f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a151a6e42afb546c96052a170514b1828"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a151a6e42afb546c96052a170514b1828"></a>
+using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacespectre.html#a151a6e42afb546c96052a170514b1828">ParameterVariant</a> = <a class="el" href="classspectre_1_1common_1_1Variant.html">common::Variant</a>&lt; <a class="el" href="namespacespectre.html#af5ff44e2f927b7773216a612528ea27aa36674370e4387f1df33f29dd1255dba1">FLOAT_PARAMETER</a>, <a class="el" href="namespacespectre.html#af5ff44e2f927b7773216a612528ea27aa7d325d155bc72f6d92a7d6a2cf85b491">UINT32_PARAMETER</a>, <a class="el" href="namespacespectre.html#af5ff44e2f927b7773216a612528ea27aaf308581d941e7955b275b419de7f472a">BOOL_PARAMETER</a>, <a class="el" href="namespacespectre.html#af5ff44e2f927b7773216a612528ea27aacf536e17443fa6ad720f48e206ca8580">INT32_PARAMETER</a>(SPECTRE_CREATE_TLIST) uintptr_t, spectre::common::ProcessingType &gt;</td></tr>
+<tr class="memdesc:a151a6e42afb546c96052a170514b1828"><td class="mdescLeft">&#160;</td><td class="mdescRight">Instantiation of Variant template used for Parameters. <br/></td></tr>
+<tr class="separator:a151a6e42afb546c96052a170514b1828"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa5c9a69e15d0e8d8b0631e90ea5bda52"><td class="memTemplParams" colspan="2"><a class="anchor" id="aa5c9a69e15d0e8d8b0631e90ea5bda52"></a>
 template&lt;ResultType R&gt; </td></tr>
-<tr class="memitem:ad3e020f359d7f3339c83698f002128d5"><td class="memTemplItemLeft" align="right" valign="top">using&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacespectre.html#ad3e020f359d7f3339c83698f002128d5">ResultTypeType</a> = typename std::enable_if&lt; R!=ResultType::NUM_ENTRIES, typename std::conditional&lt; (R==ResultType::FLAGS||R==ResultType::EXPOSURE_TIMES), uint32_t, float &gt;::type &gt;::type</td></tr>
-<tr class="memdesc:ad3e020f359d7f3339c83698f002128d5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Data type returned by the depth-processing for a ResultType value. <br/></td></tr>
-<tr class="separator:ad3e020f359d7f3339c83698f002128d5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa5c9a69e15d0e8d8b0631e90ea5bda52"><td class="memTemplItemLeft" align="right" valign="top">using&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacespectre.html#aa5c9a69e15d0e8d8b0631e90ea5bda52">ResultTypeType</a> = typename std::enable_if&lt; R!=ResultType::NUM_ENTRIES, typename std::conditional&lt;(R==ResultType::FLAGS||R==ResultType::EXPOSURE_TIMES), uint32_t, float &gt;::type &gt;::type</td></tr>
+<tr class="memdesc:aa5c9a69e15d0e8d8b0631e90ea5bda52"><td class="mdescLeft">&#160;</td><td class="mdescRight">Data type returned by the depth-processing for a ResultType value. <br/></td></tr>
+<tr class="separator:aa5c9a69e15d0e8d8b0631e90ea5bda52"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="enum-members"></a>
 Enumerations</h2></td></tr>
@@ -126,7 +126,7 @@ Enumerations</h2></td></tr>
 <a class="el" href="namespacespectre.html#af5ff44e2f927b7773216a612528ea27aacf536e17443fa6ad720f48e206ca8580">INT32_PARAMETER</a> =(SPECTRE_CREATE_TLIST)
  }</td></tr>
 <tr class="separator:af5ff44e2f927b7773216a612528ea27a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0e7af6ad974c85248e62d9ee24ea386a"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacespectre.html#a0e7af6ad974c85248e62d9ee24ea386a">ResultType</a> { <a class="el" href="namespacespectre.html#a0e7af6ad974c85248e62d9ee24ea386aa1918283186cbbf64b959188f29515239">SPECTRE_ENUM_NAME</a> =(COORDINATES) SPECTRE_ENUM_NAME (AMPLITUDES) SPECTRE_ENUM_NAME (FLAGS) SPECTRE_ENUM_NAME (DISTANCE_NOISES) SPECTRE_ENUM_NAME (INTENSITIES) SPECTRE_ENUM_NAME (DISTANCES) EXPOSURE_TIMES, 
+<tr class="memitem:a0e7af6ad974c85248e62d9ee24ea386a"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacespectre.html#a0e7af6ad974c85248e62d9ee24ea386a">ResultType</a> { <a class="el" href="namespacespectre.html#a0e7af6ad974c85248e62d9ee24ea386aa1918283186cbbf64b959188f29515239">SPECTRE_ENUM_NAME</a> =(COORDINATES) SPECTRE_ENUM_NAME ( AMPLITUDES) SPECTRE_ENUM_NAME (FLAGS) SPECTRE_ENUM_NAME ( DISTANCE_NOISES) SPECTRE_ENUM_NAME (INTENSITIES) SPECTRE_ENUM_NAME (DISTANCES) EXPOSURE_TIMES, 
 <b>NUM_ENTRIES</b>
  }</td></tr>
 <tr class="separator:a0e7af6ad974c85248e62d9ee24ea386a"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -162,14 +162,14 @@ common::ArrayHolder&lt; uint8_t &gt;&#160;</td><td class="memItemRight" valign="
 <p>The public interface of libspectre provides functionalities to read calibration files, compute depth-data from the sensor's raw data, and retrieve the results. It's main interface is available in the header <a class="el" href="ISpectre_8hpp_source.html">spectre/ISpectre.hpp</a>. An instance of <a class="el" href="classspectre_1_1ISpectre.html" title="ISpectre is Spectre&#39;s main entry point, encapsulating calibration handling, and depth-data processing...">ISpectre</a> suitable for a specific device can be obtained through the <a class="el" href="namespacespectre.html#ad6a87b732b81c5bffb8bc4644461cd79" title="Creates a new ISpectre instance.">spectre::getSpectre</a> method if calibration data is available.</p>
 <p>A high-level overview on libspectre, its architecture, and relation to libcalibration / libprocessing can be found in the Sect. </p>
 </div><h2 class="groupheader">Typedef Documentation</h2>
-<a class="anchor" id="aae7990cda09b463e5d15df4805747ae6"></a>
+<a class="anchor" id="a38343c9e2f05cfed1f36b16ba28cb60f"></a>
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
 template&lt;common::ParameterKey P, typename R &gt; </div>
       <table class="memname">
         <tr>
-          <td class="memname">using <a class="el" href="namespacespectre.html#aae7990cda09b463e5d15df4805747ae6">spectre::IsFrequencyParameter</a> = typedef typename std::enable_if &lt; P == common::ParameterKey::FREQUENCY_1 || P == common::ParameterKey::FREQUENCY_2, R &gt;::type</td>
+          <td class="memname">using <a class="el" href="namespacespectre.html#a38343c9e2f05cfed1f36b16ba28cb60f">spectre::IsFrequencyParameter</a> = typedef typename std::enable_if&lt;P == common::ParameterKey::FREQUENCY_1 || P == common::ParameterKey::FREQUENCY_2, R&gt;::type</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -183,7 +183,7 @@ template&lt;common::ParameterKey P, typename R &gt; </div>
   </dd>
 </dl>
 
-<p>Definition at line <a class="el" href="Parameter_8hpp_source.html#l00028">28</a> of file <a class="el" href="Parameter_8hpp_source.html">Parameter.hpp</a>.</p>
+<p>Definition at line <a class="el" href="Parameter_8hpp_source.html#l00033">33</a> of file <a class="el" href="Parameter_8hpp_source.html">Parameter.hpp</a>.</p>
 
 </div>
 </div>
@@ -205,7 +205,7 @@ template&lt;common::ParameterKey P, typename R &gt; </div>
 </td></tr>
 </table>
 
-<p>Definition at line <a class="el" href="ISpectre_8hpp_source.html#l00046">46</a> of file <a class="el" href="ISpectre_8hpp_source.html">ISpectre.hpp</a>.</p>
+<p>Definition at line <a class="el" href="ISpectre_8hpp_source.html#l00050">50</a> of file <a class="el" href="ISpectre_8hpp_source.html">ISpectre.hpp</a>.</p>
 
 </div>
 </div>
@@ -233,7 +233,7 @@ template&lt;common::ParameterKey P, typename R &gt; </div>
 </td></tr>
 </table>
 
-<p>Definition at line <a class="el" href="Parameter_8hpp_source.html#l00048">48</a> of file <a class="el" href="Parameter_8hpp_source.html">Parameter.hpp</a>.</p>
+<p>Definition at line <a class="el" href="Parameter_8hpp_source.html#l00057">57</a> of file <a class="el" href="Parameter_8hpp_source.html">Parameter.hpp</a>.</p>
 
 </div>
 </div>
@@ -248,11 +248,11 @@ template&lt;common::ParameterKey P, typename R &gt; </div>
 </div><div class="memdoc">
 <table class="fieldtable">
 <tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><em><a class="anchor" id="a0e7af6ad974c85248e62d9ee24ea386aa1918283186cbbf64b959188f29515239"></a>SPECTRE_ENUM_NAME</em>&nbsp;</td><td class="fielddoc">
-<p>3D coordinates with confidence (in x1,y1,z1,c1,...,xn,yn,zn,cn format) </p>
+<p>3D coordinates with confidence (in x1,y1,z1,c1,...,xn,yn,zn,cn \ * format) </p>
 </td></tr>
 </table>
 
-<p>Definition at line <a class="el" href="ResultType_8hpp_source.html#l00028">28</a> of file <a class="el" href="ResultType_8hpp_source.html">ResultType.hpp</a>.</p>
+<p>Definition at line <a class="el" href="ResultType_8hpp_source.html#l00031">31</a> of file <a class="el" href="ResultType_8hpp_source.html">ResultType.hpp</a>.</p>
 
 </div>
 </div>
@@ -276,7 +276,7 @@ template&lt;common::ParameterKey P, typename R &gt; </div>
 </td></tr>
 </table>
 
-<p>Definition at line <a class="el" href="ISpectre_8hpp_source.html#l00077">77</a> of file <a class="el" href="ISpectre_8hpp_source.html">ISpectre.hpp</a>.</p>
+<p>Definition at line <a class="el" href="ISpectre_8hpp_source.html#l00081">81</a> of file <a class="el" href="ISpectre_8hpp_source.html">ISpectre.hpp</a>.</p>
 
 </div>
 </div>
@@ -487,7 +487,7 @@ template&lt;common::ParameterKey P, typename R &gt; </div>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Tue Mar 26 2019 15:04:18 for Spectre API Documentation by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Thu Mar 19 2020 15:57:03 for Spectre API Documentation by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.3.1
 </small></address>

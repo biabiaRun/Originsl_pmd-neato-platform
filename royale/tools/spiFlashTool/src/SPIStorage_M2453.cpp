@@ -12,6 +12,7 @@
 
 #include <common/exceptions/RuntimeError.hpp>
 #include <storage/SpiBusMasterM2453.hpp>
+#include <imager/M2453/ImagerRegisters.hpp>
 
 #include <common/RoyaleLogger.hpp>
 
@@ -23,17 +24,9 @@ using namespace spiFlashTool::storage;
 
 namespace
 {
-    /**
-     * The M2455 A11's PRODUCT_CODE register wasn't updated from the M2453, so PRODUCT_CODE can't
-     * be used for recognising which device is connected. This register is checked instead of the
-     * product code.
-     */
-    const uint16_t ANAIP_PLL_RAMP_TIME = 0xA037;
-    const uint16_t DESIGNSTEP = 0xA0A5;
-
     std::shared_ptr<royale::pal::ISpiBusAccess> createSpiAccess (const std::shared_ptr<BridgeImagerL4> &access)
     {
-        return std::make_shared<SpiBusMasterM2453> (access, royale::config::ImagerAsBridgeType::M2453_SPI);
+        return std::make_shared<SpiBusMasterM2453> (access);
     }
 
     const auto BUS_ADDRESS = SensorRoutingConfigSpi
@@ -61,8 +54,13 @@ SPIStorage_M2453::SPIStorage_M2453 (std::shared_ptr<royale::ICameraDevice> camer
 
 royale::Vector<royale::Pair<royale::String, uint64_t>> SPIStorage_M2453::getEFuseRegisters()
 {
+    /**
+     * The M2455 A11's PRODUCT_CODE register wasn't updated from the M2453, so PRODUCT_CODE can't
+     * be used for recognising which device is connected. This register is checked instead of the
+     * product code.
+     */
     uint16_t rampTime;
-    m_access->readImagerRegister (ANAIP_PLL_RAMP_TIME, rampTime);
+    m_access->readImagerRegister (imager::M2453::ANAIP_PLL_RAMP_TIME, rampTime);
     switch (rampTime)
     {
         case 0x0108:
@@ -78,26 +76,26 @@ royale::Vector<royale::Pair<royale::String, uint64_t>> SPIStorage_M2453::getEFus
     }
 
     uint16_t designStep;
-    m_access->readImagerRegister (DESIGNSTEP, designStep);
+    m_access->readImagerRegister (imager::M2453::ANAIP_DESIGNSTEP, designStep);
     switch (designStep)
     {
         case 0xA11:
         case 0xA12:
             return
             {
-                { "0xa096", 0u },
-                { "0xa097", 0u },
-                { "0xa098", 0u },
-                { "0xa099", 0u }
+                { toHex (imager::M2453_A11::ANAIP_EFUSEVAL1), 0u },
+                { toHex (imager::M2453_A11::ANAIP_EFUSEVAL2), 0u },
+                { toHex (imager::M2453_A11::ANAIP_EFUSEVAL3), 0u },
+                { toHex (imager::M2453_A11::ANAIP_EFUSEVAL4), 0u }
             };
         case 0xB11:
         case 0xB12:
             return
             {
-                { "0xa097", 0u },
-                { "0xa098", 0u },
-                { "0xa099", 0u },
-                { "0xa09A", 0u }
+                { toHex (imager::M2453_B11::ANAIP_EFUSEVAL1), 0u },
+                { toHex (imager::M2453_B11::ANAIP_EFUSEVAL2), 0u },
+                { toHex (imager::M2453_B11::ANAIP_EFUSEVAL3), 0u },
+                { toHex (imager::M2453_B11::ANAIP_EFUSEVAL4), 0u }
             };
         default:
             throw RuntimeError ("Design step not supported");

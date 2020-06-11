@@ -23,6 +23,7 @@
 #include <royale/IIRImageListener.hpp>
 #include <royale/ISparsePointCloudListener.hpp>
 #include <royale/IDepthImageListener.hpp>
+#include <royale/IDepthIRImageListener.hpp>
 
 #include <atomic>
 #include <chrono>
@@ -244,6 +245,23 @@ public:
     }
 
     void onNewData (const royale::DepthImage *data) override
+    {
+        m_count++;
+        pulse();
+    }
+
+    int m_count;
+};
+
+class DepthIRImageListener : public MonitorableListener, public royale::IDepthIRImageListener
+{
+public:
+    DepthIRImageListener() :
+        m_count (0)
+    {
+    }
+
+    void onNewData (const royale::DepthIRImage *data) override
     {
         m_count++;
         pulse();

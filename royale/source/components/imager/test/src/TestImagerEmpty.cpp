@@ -33,7 +33,7 @@ protected:
 
     }
 
-    virtual void SetUp()
+    virtual void SetUp() override
     {
         std::unique_ptr <M2450_A12::PseudoDataInterpreter> pdi;
         m_simImager.reset (new SimImagerM2452 (0xA11));
@@ -57,7 +57,7 @@ protected:
         m_logCount++;
     }
 
-    virtual void TearDown()
+    virtual void TearDown() override
     {
         m_simImager.reset();
         m_bridge.reset();

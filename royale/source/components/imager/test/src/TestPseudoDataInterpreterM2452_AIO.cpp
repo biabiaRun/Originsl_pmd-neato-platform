@@ -76,10 +76,13 @@ TEST_F (TestPseudoDataInterpreterM2452_AIO, VerifyTemperatureRawData)
 {
     royale::imager::M2452::PseudoDataInterpreter_AIO interpreter;
     TpdiCapturedRawFrame sample {SAMPLE};
-    uint16_t vRef1 = 0, vRef2 = 0, vNtc1 = 0, vNtc2 = 0, offset = 0;
 
-    interpreter.getTemperatureRawValues (sample, vRef1, vNtc1, vRef2, vNtc2, offset);
+    auto values = interpreter.getTemperatureRawValues (sample);
 
+    uint16_t &vRef1 = values[0];
+    uint16_t &vRef2 = values[1];
+    uint16_t &vNtc1 = values[2];
+    uint16_t &vNtc2 = values[3];
     ASSERT_THAT (vRef1, Eq (SAMPLE[vRef1I]));
     ASSERT_THAT (vRef2, Eq (SAMPLE[vRef2I]));
     ASSERT_THAT (vNtc1, Eq (SAMPLE[vNtc1I]));
@@ -99,10 +102,13 @@ TEST_F (TestPseudoDataInterpreterM2452_AIO, Verify12Bit)
     pseudoData[vNtc1I] = highBits | ntc1Gold;
     pseudoData[vNtc2I] = highBits | ntc2Gold;
     TpdiCapturedRawFrame sample {pseudoData};
-    uint16_t vRef1 = 0, vRef2 = 0, vNtc1 = 0, vNtc2 = 0, offset = 0;
 
-    interpreter.getTemperatureRawValues (sample, vRef1, vNtc1, vRef2, vNtc2, offset);
-
+    auto values = interpreter.getTemperatureRawValues (sample);
+    ASSERT_THAT (static_cast<int> (values.size()), Eq(4));
+    uint16_t &vRef1 = values[0];
+    uint16_t &vRef2 = values[1];
+    uint16_t &vNtc1 = values[2];
+    uint16_t &vNtc2 = values[3];
     ASSERT_THAT (vRef1, Eq (ref1Gold));
     ASSERT_THAT (vRef2, Eq (ref2Gold));
     ASSERT_THAT (vNtc1, Eq (ntc1Gold));
@@ -117,9 +123,8 @@ TEST_F (TestPseudoDataInterpreterM2452_AIO, ThrowsOnInvalidRefData)
     pseudoData[vNtc1I] = 5;
     pseudoData[vNtc2I] = 4;
     TpdiCapturedRawFrame sample {pseudoData};
-    uint16_t vRef1 = 0, vRef2 = 0, vNtc1 = 0, vNtc2 = 0, offset = 0;
 
-    ASSERT_THROW (interpreter.getTemperatureRawValues (sample, vRef1, vNtc1, vRef2, vNtc2, offset), royale::common::InvalidValue);
+    ASSERT_THROW (interpreter.getTemperatureRawValues (sample), royale::common::InvalidValue);
 }
 
 TEST_F (TestPseudoDataInterpreterM2452_AIO, ThrowsOnInvalidNtcData)
@@ -130,7 +135,6 @@ TEST_F (TestPseudoDataInterpreterM2452_AIO, ThrowsOnInvalidNtcData)
     pseudoData[vNtc1I] = 4;
     pseudoData[vNtc2I] = 5;
     TpdiCapturedRawFrame sample {pseudoData};
-    uint16_t vRef1 = 0, vRef2 = 0, vNtc1 = 0, vNtc2 = 0, offset = 0;
 
-    ASSERT_THROW (interpreter.getTemperatureRawValues (sample, vRef1, vNtc1, vRef2, vNtc2, offset), royale::common::InvalidValue);
+    ASSERT_THROW (interpreter.getTemperatureRawValues (sample), royale::common::InvalidValue);
 }

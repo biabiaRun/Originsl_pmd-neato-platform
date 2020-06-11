@@ -175,9 +175,9 @@ namespace royale
                 {
                     if (isWrapped())
                     {
-                        return (m_receiveBufferEnd - m_startOfFrame + m_currentBuffer - start()) / BridgeAmundsenCommon::AMUNDSEN_STRIDE_SIZE;
+                        return (static_cast<size_t>(m_receiveBufferEnd - m_startOfFrame + m_currentBuffer - start()) / BridgeAmundsenCommon::AMUNDSEN_STRIDE_SIZE);
                     }
-                    return (m_currentBuffer - m_startOfFrame) / BridgeAmundsenCommon::AMUNDSEN_STRIDE_SIZE;
+                    return (static_cast<size_t>(m_currentBuffer - m_startOfFrame) / BridgeAmundsenCommon::AMUNDSEN_STRIDE_SIZE);
                 }
 
             private:

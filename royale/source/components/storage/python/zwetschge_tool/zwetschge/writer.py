@@ -11,12 +11,13 @@ from math import ceil
 from struct import Struct
 from zlib import crc32
 
-def pack24 (i):
+def pack24 (i: int):
     """Pack a uint24_t in to three bytes, little endian"""
     if i >= 2**24:
         raise InvalidValue ("too big for 24-bit storage")
     if i < 0:
         raise InvalidValue ("unsigned numbers only")
+    i = int(i)
     return bytes ([i & 0xff, (i >> 8) & 0xff, (i >> 16) & 0xff])
 
 def pack24p24s (p, s):

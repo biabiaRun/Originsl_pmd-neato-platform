@@ -1,0 +1,16 @@
+/****************************************************************************\\
+* Copyright (C) 2019 pmdtechnologies ag
+*
+* THIS CODE AND INFORMATION ARE PROVIDED "AS IS" WITHOUT WARRANTY OF ANY
+* KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+* IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
+* PARTICULAR PURPOSE.
+*
+\\****************************************************************************/
+
+#pragma once
+
+#define ROYALE_VERSION_CUSTOMER_SUFFIX "${ROYALE_VERSION_CUSTOMER_SUFFIX}"
+#define ROYALE_VERSION_SCM "${ROYALE_GIT_REV}"
+#define ROYALE_VERSION_TAG "${ROYALE_GIT_TAG}"
+#define ROYALE_VERSION_BRANCH "${ROYALE_GIT_BRANCH}"

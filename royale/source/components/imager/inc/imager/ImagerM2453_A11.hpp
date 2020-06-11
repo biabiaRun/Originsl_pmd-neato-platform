@@ -34,11 +34,9 @@ namespace royale
 
             std::unique_ptr<common::IPseudoDataInterpreter> createPseudoDataInterpreter() override;
 
-            void initialize() override;
-
         protected:
-
             std::vector < uint16_t > getSerialRegisters() override;
+            DesignStepInfo getDesignStepInfo() override;
         };
     }
 }

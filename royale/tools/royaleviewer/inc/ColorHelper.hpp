@@ -22,17 +22,17 @@ typedef struct RgbColor
     /**
      * The r value defines the intensity of the red color as an integer between 0 and 255
      */
-    uint16_t r;
+    uint8_t r;
 
     /**
      * The g value defines the intensity of the green color as an integer between 0 and 255
      */
-    uint16_t g;
+    uint8_t g;
 
     /**
      * The b value defines the intensity of the blue color as an integer between 0 and 255
      */
-    uint16_t b;
+    uint8_t b;
 } RgbColor;
 
 // The value used for the SBI flag
@@ -51,7 +51,7 @@ namespace
          * to convert the h value to the real hue multiply it with 1.41176:
          * auto hue = static_cast<float> (h) * 1.41176;
          */
-        uint16_t h;
+        uint8_t h;
 
         /**
          * The s value defines the intensity of the saturation as an integer between 0 and 255.
@@ -59,7 +59,7 @@ namespace
          * to convert the s value to the real saturation multiply it with 0.00392157:
          * auto saturation = static_cast<float> (s) * 0.00392157;
          */
-        uint16_t s;
+        uint8_t s;
 
         /**
          * The v value defines the intensity of the value as an integer between 0 and 255.
@@ -67,7 +67,7 @@ namespace
          * to convert the v value to the real value multiply it with 0.00392157:
          * auto value = static_cast<float> (v) * 0.00392157;
          */
-        uint16_t v;
+        uint8_t v;
     } HsvColor;
 }
 
@@ -125,11 +125,16 @@ public:
     void setMaxVal (uint16_t val);
     uint16_t getMaxVal();
 
+    void enableGammaCorrection (bool enable);
+    void setGammaValue (float val);
+
 private:
     RgbColor HsvToRgb (const HsvColor &hsv);
 
     void calcSpanDist();
     void calcSpanVal();
+
+    void calcGrayLUT();
 
     /**
      * The min distance span is used to prevent a division by zero exception in the getColor method.
@@ -148,7 +153,7 @@ private:
      *
      * It is chosen to match the needed precision for the RoyaleViewer.
      */
-    static const uint16_t M_COLOR_LOOKUP_SIZE = 180;
+    static const uint8_t M_COLOR_LOOKUP_SIZE = 180u;
 
     /**
      * The length of the gray color lookup array.
@@ -157,7 +162,7 @@ private:
      *
      * It is chosen to match the needed precision for the RoyaleViewer.
      */
-    static const uint16_t M_GRAY_LOOKUP_SIZE = 256;
+    static const uint8_t M_GRAY_LOOKUP_SIZE = 255u;
 
     RgbColor m_colorLookup[M_COLOR_LOOKUP_SIZE];
     RgbColor m_grayLookup[M_GRAY_LOOKUP_SIZE];
@@ -189,8 +194,12 @@ private:
     float m_minDist;
     float m_maxDist;
     float m_spanDist;
+    float m_oneThroughSpanDist;
 
     uint16_t m_minVal;
     uint16_t m_maxVal;
     uint16_t m_spanVal;
+
+    bool  m_useGamma;
+    float m_gammaValue;
 };

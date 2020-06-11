@@ -53,5 +53,29 @@ namespace royale
         royale::Vector<uint32_t>                                    modulationFrequencies;  //!< modulation frequencies for each sequence
         royale::Vector<uint32_t>                                    exposureTimes;          //!< integration times for each sequence
         uint32_t                                                    numFrequencies;         //!< number of processed frequencies
+
+        IntermediateData &operator= (const IntermediateData &dd)
+        {
+            if (this != &dd)
+            {
+                this->version = dd.version;
+                this->timeStamp = dd.timeStamp;
+                this->streamId = dd.streamId;
+                this->width = dd.width;
+                this->height = dd.height;
+
+                this->points.resize (dd.points.size());
+                memcpy (&this->points[0], &dd.points[0], dd.points.size() * sizeof (royale::IntermediatePoint));
+
+                this->modulationFrequencies.resize (dd.modulationFrequencies.size());
+                memcpy (&this->modulationFrequencies[0], &dd.modulationFrequencies[0], dd.modulationFrequencies.size() * sizeof (uint32_t));
+
+                this->exposureTimes.resize (dd.exposureTimes.size());
+                memcpy (&this->exposureTimes[0], &dd.exposureTimes[0], dd.exposureTimes.size() * sizeof (uint32_t));
+
+                this->numFrequencies = dd.numFrequencies;
+            }
+            return *this;
+        }
     };
 }

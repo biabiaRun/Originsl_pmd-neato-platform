@@ -46,6 +46,8 @@ CameraPlayback::CameraPlayback (CameraAccessLevel level, const std::string &file
     m_oneShot (false),
     m_stopListener (nullptr),
     m_seeked (false),
+    m_rangeStart{},
+    m_rangeEnd{},
     m_eventForwarder()
 {
     m_supportedUseCaseNames.push_back ("MODE_PLAYBACK");
@@ -118,6 +120,15 @@ CameraStatus CameraPlayback::initialize()
 
     m_processing->setCameraName (m_cameraName);
 
+    if (m_callbackData == static_cast<uint16_t> (CallbackData::Raw))
+    {
+        m_processing->setProcessingActivated (false);
+    }
+    else
+    {
+        m_processing->setProcessingActivated (true);
+    }
+
     if (m_calibrationData.empty() &&
             m_reader.hasCalibrationData())
     {
@@ -149,7 +160,7 @@ CameraStatus CameraPlayback::initialize()
 
     m_isInitialized = true;
 
-    return seek (0);
+    return fillStreamParameters();
 }
 
 CameraStatus CameraPlayback::setUseCase (const String &name)
@@ -239,6 +250,15 @@ CameraStatus CameraPlayback::setCallbackData (uint16_t cbData)
         m_seeked = true;
     }
 
+    if (m_callbackData == static_cast<uint16_t> (CallbackData::Raw))
+    {
+        m_processing->setProcessingActivated (false);
+    }
+    else
+    {
+        m_processing->setProcessingActivated (true);
+    }
+
     setupListeners();
 
     return CameraStatus::SUCCESS;
@@ -278,7 +298,11 @@ CameraStatus CameraPlayback::seek (const uint32_t frameNumber)
     {
         try
         {
-            aquisitionFunction();
+            auto ret = aquisitionFunction();
+            if (ret != CameraStatus::SUCCESS)
+            {
+                return ret;
+            }
         }
         catch (Exception &e)
         {
@@ -344,6 +368,26 @@ void CameraPlayback::pause()
 
 }
 
+CameraStatus CameraPlayback::setPlaybackRange (uint32_t first, uint32_t last)
+{
+    if (last <= m_reader.numFrames() && first < last)
+    {
+        m_rangeEnd = last;
+        m_rangeStart = first;
+        return CameraStatus::SUCCESS;
+    }
+    else
+    {
+        return CameraStatus::RUNTIME_ERROR;
+    }
+}
+
+void CameraPlayback::getPlaybackRange (uint32_t &first, uint32_t &last)
+{
+    first = m_rangeStart;
+    last = m_rangeEnd;
+}
+
 void CameraPlayback::resume()
 {
     std::lock_guard<std::mutex> lck (m_playbackMutex);
@@ -370,7 +414,7 @@ namespace
     // \todo needs the v3 recording format
 }
 
-void CameraPlayback::aquisitionFunction()
+CameraStatus CameraPlayback::aquisitionFunction()
 {
     bool firstFrame = true;
     std::vector<std::vector<uint16_t>> frames;
@@ -385,6 +429,7 @@ void CameraPlayback::aquisitionFunction()
     std::vector<std::pair<std::string, std::vector<uint8_t>>> additionalData;
     StreamId streamId = 0;
     std::map<StreamId, bool> parametersSetForStream;
+
     while (true)
     {
         bool loop = true;
@@ -394,7 +439,7 @@ void CameraPlayback::aquisitionFunction()
             std::lock_guard<std::mutex> lck (m_playbackMutex);
             if (!m_isCapturing && !m_oneShot)
             {
-                return;
+                return CameraStatus::SUCCESS;
             }
 
             if (m_seeked)
@@ -411,7 +456,8 @@ void CameraPlayback::aquisitionFunction()
         readFrame (frames, definition, currentTimestampRecording, illuminationTemperature, m_capturedExposureTimes,
                    parameterMap, additionalData, streamId);
 
-        if (!oldDefinition || *oldDefinition != *definition || firstFrame)
+        if (!m_ignoreUseCaseChange &&
+                (!oldDefinition || *oldDefinition != *definition || firstFrame))
         {
             {
                 std::lock_guard<std::recursive_mutex> lckIds (m_currentUseCaseMutex);
@@ -451,20 +497,10 @@ void CameraPlayback::aquisitionFunction()
         {
             std::unique_lock<std::mutex> lck (m_playbackMutex);
             const auto &userParameters = m_userParameters.find (streamId);
+            royale::ProcessingParameterMap params;
             if (userParameters == m_userParameters.end() || userParameters->second.empty())
             {
-                try
-                {
-                    m_processing->setProcessingParameters (parameterMap, streamId);
-                }
-                catch (Exception &e)
-                {
-                    lck.unlock();
-                    LOG (ERROR) << "Error setting processing parameters : " << e.what();
-                    m_eventForwarder.event<event::EventCaptureStream> (royale::EventSeverity::ROYALE_ERROR, "Error setting processing parameters");
-                    stopCapture();
-                    return;
-                }
+                params = parameterMap;
             }
             else
             {
@@ -473,21 +509,30 @@ void CameraPlayback::aquisitionFunction()
                 {
                     parameterMap[curUserParameter.first] = curUserParameter.second;
                 }
-                try
+                params = userParameters->second;
+            }
+
+            try
+            {
+                m_processing->setProcessingParameters (params, streamId);
+            }
+            catch (...)
+            {
+                for (auto curParam : params)
                 {
-                    m_processing->setProcessingParameters (userParameters->second, streamId);
-                }
-                catch (Exception &e)
-                {
-                    lck.unlock();
-                    LOG (ERROR) << "Error setting processing parameters : " << e.what();
-                    m_eventForwarder.event<event::EventCaptureStream> (royale::EventSeverity::ROYALE_ERROR, "Error setting processing parameters");
-                    stopCapture();
-                    return;
+                    try
+                    {
+                        m_processing->setProcessingParameters (ProcessingParameterMap{ {curParam.first, curParam.second} }, streamId);
+                    }
+                    catch (...)
+                    {
+                        LOG (ERROR) << "Error setting processing parameter : " << getProcessingFlagName (curParam.first);
+                    }
                 }
             }
 
             parametersSetForStream[streamId] = true;
+            m_startParametersSet[streamId] = true;
         }
 
         if (firstFrame)
@@ -540,18 +585,19 @@ void CameraPlayback::aquisitionFunction()
             LOG (ERROR) << "Frame too small, stopping...";
             m_eventForwarder.event<event::EventCaptureStream> (royale::EventSeverity::ROYALE_ERROR, "Frame too small, recording is possibly broken");
             stopCapture();
-            return;
+            return CameraStatus::OUT_OF_BOUNDS;
         }
 
         if (!m_oneShot)
         {
             uint32_t currentFrame = this->currentFrame();
             currentFrame++;
-            if (currentFrame >= numFrames)
+
+            if (currentFrame == m_rangeEnd || currentFrame >= numFrames)
             {
                 if (loop)
                 {
-                    currentFrame = 0;
+                    currentFrame = m_rangeStart;
                     firstFrame = true;
                     m_reader.seek (currentFrame);
                 }
@@ -566,12 +612,13 @@ void CameraPlayback::aquisitionFunction()
                 m_reader.seek (currentFrame);
             }
         }
-
         if (m_oneShot)
         {
             m_oneShot = false;
         }
     }
+
+    return CameraStatus::SUCCESS;
 }
 
 void CameraPlayback::internalCallback (std::vector<ICapturedRawFrame *> &frames,
@@ -784,6 +831,26 @@ uint16_t CameraPlayback::getFileVersion()
     return m_reader.getFileVersion();
 }
 
+ROYALE_API uint32_t CameraPlayback::getMajorVersion()
+{
+    return m_reader.royaleMajor();
+}
+
+ROYALE_API uint32_t CameraPlayback::getMinorVersion()
+{
+    return m_reader.royaleMinor();
+}
+
+ROYALE_API uint32_t CameraPlayback::getPatchVersion()
+{
+    return m_reader.royalePatch();
+}
+
+ROYALE_API uint32_t CameraPlayback::getBuildVersion()
+{
+    return m_reader.royaleBuild();
+}
+
 void CameraPlayback::readFrame (std::vector<std::vector<uint16_t>> &frames,
                                 std::unique_ptr<royale::usecase::UseCaseDefinition> &definition,
                                 std::chrono::milliseconds &timestamp,
@@ -917,3 +984,51 @@ CameraStatus CameraPlayback::getProcessingParameters (royale::ProcessingParamete
 }
 ROYALE_API_EXCEPTION_SAFE_END
 
+royale::CameraStatus CameraPlayback::fillStreamParameters()
+{
+    auto tmpCaptureListener = m_captureListener;
+    m_captureListener = nullptr;
+
+    m_startParametersSet.clear();
+    m_ignoreUseCaseChange = false;
+
+    auto ret = seek (0);
+    if (ret != CameraStatus::SUCCESS)
+    {
+        return ret;
+    }
+
+    m_ignoreUseCaseChange = true;
+
+    // Make sure that we have the information from all streams
+    for (auto i = 1u; i < m_reader.numFrames(); ++i)
+    {
+        bool allSet = true;
+        for (auto curStream : m_streamIds)
+        {
+            if (m_startParametersSet.count (curStream) == 0 ||
+                    (m_startParametersSet.count (curStream) == 1 &&
+                     m_startParametersSet[curStream] == false))
+            {
+                allSet = false;
+            }
+        }
+
+        if (allSet)
+        {
+            break;
+        }
+        ret = seek (static_cast<uint32_t> (i));
+        if (ret != CameraStatus::SUCCESS)
+        {
+            return ret;
+        }
+    }
+
+    m_captureListener = tmpCaptureListener;
+    m_ignoreUseCaseChange = false;
+
+    m_reader.seek (0);
+
+    return CameraStatus::SUCCESS;
+}

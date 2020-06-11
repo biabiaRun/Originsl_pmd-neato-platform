@@ -23,9 +23,12 @@
 #include <common/RoyaleLogger.hpp>
 
 #include <processing/ProcessingParameterId.hpp>
-#include <usecase/UseCaseDefFactoryProcessingOnly.hpp>
+#include <storage/ZwetschgeUseCaseFactory.hpp>
 #include <usecase/UseCaseIdentifier.hpp>
 #include <imager/ImagerUseCaseIdentifier.hpp>
+
+#include <usecase/ExposureGroup.hpp>
+#include <usecase/RawFrameSet.hpp>
 
 #include <algorithm>
 #include <array>
@@ -767,23 +770,33 @@ StorageFormatZwetschge::UseCasePartOfConfig StorageFormatZwetschge::getUseCaseLi
         auto streamIds = bufferToHostVector16<std::vector<StreamId>> (dataStart, streamCount);
         dataStart += 2 * streamCount;
 
-        royale::Vector<UseCaseDefFactoryProcessingOnly::ProcOnlyExpo> expoGroups;
+        royale::Vector<ExposureGroup> expoGroups;
         for (auto i = std::size_t {0u}; i < expoGroupCount; i++)
         {
-            auto expoStart = bufferToHost16 (dataStart);
-            auto expoMin = uint32_t {bufferToHost16 (dataStart + 2) };
-            auto expoMax = uint32_t {bufferToHost16 (dataStart + 4) };
-            expoGroups.push_back (UseCaseDefFactoryProcessingOnly::ProcOnlyExpo {{expoMin, expoMax}, expoStart});
+            ExposureGroup expoGroup;
+            expoGroup.m_exposureTime = bufferToHost16 (dataStart);
+            expoGroup.m_exposureLimits.first = uint32_t{ bufferToHost16 (dataStart + 2) };
+            expoGroup.m_exposureLimits.second = uint32_t{ bufferToHost16 (dataStart + 4) };
+
+            expoGroups.push_back (expoGroup);
             dataStart += 6;
         }
 
-        royale::Vector<UseCaseDefFactoryProcessingOnly::ProcOnlyRFS> rfses;
+        royale::Vector<RawFrameSet> rfses;
         for (auto i = std::size_t {0u}; i < rfsCount; i++)
         {
-            auto frameCount = dataStart[0];
+            auto phaseDef = dataStart[0] == 1 ?
+                            RawFrameSet::PhaseDefinition::GRAYSCALE : RawFrameSet::PhaseDefinition::MODULATED_4PH_CW;
             auto frequency = bufferToHost32 (dataStart + 1);
             auto expoGroupIdx = dataStart[5];
-            rfses.push_back (UseCaseDefFactoryProcessingOnly::ProcOnlyRFS {frameCount, frequency, expoGroupIdx});
+
+            RawFrameSet rfs (
+                frequency,
+                phaseDef,
+                RawFrameSet::DutyCycle::DC_AUTO, // duty cycle information is not supported by Zwetschge at the moment
+                expoGroupIdx);
+
+            rfses.push_back (rfs);
             dataStart += 6;
         }
 
@@ -827,8 +840,12 @@ StorageFormatZwetschge::UseCasePartOfConfig StorageFormatZwetschge::getUseCaseLi
         }
 
         {
-
-            auto ucd = UseCaseDefFactoryProcessingOnly::createUcd (ucGuid, Pair<uint16_t, uint16_t> {imageWidth, imageHeight}, Pair<uint16_t, uint16_t> {fpsMin, fpsMax}, fpsStart, expoGroups, rfses);
+            std::shared_ptr<UseCaseDefinition> ucd = ZwetschgeUseCaseFactory::createUcd (ucGuid,
+                    Pair<uint16_t, uint16_t> {imageWidth, imageHeight},
+                    Pair<uint16_t, uint16_t> {fpsMin, fpsMax},
+                    fpsStart,
+                    expoGroups,
+                    rfses);
             auto uc = UseCase {name, std::move (ucd), ppGuid, levelToCallbackData (accessLevel), levelToCameraAccessLevel (accessLevel) };
             royaleUseCaseList.push_back (std::move (uc));
         }

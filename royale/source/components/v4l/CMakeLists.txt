@@ -4,6 +4,7 @@ set (V4L_SOURCES
 
 set (V4L_HEADERS
     "inc/royalev4l/bridge/BridgeV4l.hpp"
+    "inc/royalev4l/PixelFormat.hpp"
     )
 
 add_library (component_v4l OBJECT ${V4L_SOURCES} ${V4L_HEADERS})

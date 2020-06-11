@@ -76,13 +76,15 @@ private:
     void hideStatusBox();
     void updateStatusBox (const QString &message);
 
+    void showCameraInfo();
+
     void readSerial();
 
     void loadZwetschgeData (std::shared_ptr<royale::pal::IStorageReadRandom> storageAccess);
     void loadProtectedArea (std::shared_ptr<royale::pal::IStorageReadRandom> storageAccess);
 
     void writeZwetschge();
-    void readZwetschge(QString filename);
+    void readZwetschge (QString filename);
 
 private:
 

@@ -515,7 +515,7 @@ std::size_t BridgeAmundsenLibUsb::receivePayload (uint8_t *first, std::atomic<bo
         throw RuntimeError ("Unknown USB IO error");
     }
     // The amount transferred may be less than the size of the buffer, that is OK.
-    return transferred;
+    return static_cast<size_t> (transferred);
 }
 
 royale::usb::config::UvcExtensionType BridgeAmundsenLibUsb::getVendorExtensionType() const

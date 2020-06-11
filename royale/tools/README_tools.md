@@ -17,6 +17,11 @@ It works by opening all of the cameras using using the normal Royale API, thus t
 access to all of them.  One by one it releases each camera, runs the application once, and then
 takes control of the camera again.  A command-line option allows selecting a subset of the cameras.
 
+raw2rrf
+-------
+
+GUI tool that can be used to convert raw files and a calibration into an RRF recording.
+
 rawviewer
 ---------
 
@@ -52,7 +57,8 @@ This uses the rrfReader and rrfWriter C libraries.
 rrftool
 -------
 
-Shows information about recorded RRF files, and can convert old recordings to a later RRF format.
+Shows information about recorded RRF files, can convert old recordings to a later RRF format and
+exports raw data from an RRF file.
 
 This uses the rrfReader and rrfWriter C libraries.
 
@@ -177,9 +183,3 @@ plausibility test for the depth values.
 
 *todo* Is this still used? I can't see a reason to use it instead of RoyaleViewer or the R&D team's
 calibration scripts.
-
-releaseanalyzer
----------------
-
-This was an automated testing tool.  Although it is still in the source it is neither used nor
-maintained.

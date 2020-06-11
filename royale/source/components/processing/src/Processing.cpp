@@ -10,8 +10,10 @@
 
 #include <processing/Processing.hpp>
 #include <common/NarrowCast.hpp>
+#include <common/events/EventProcessing.hpp>
 #include <common/exceptions/CalibrationDataNotFound.hpp>
 #include <common/exceptions/RuntimeError.hpp>
+#include <common/MakeUnique.hpp>
 #include <common/RoyaleLogger.hpp>
 
 #include <algorithm>
@@ -27,7 +29,9 @@ Processing::Processing (IFrameCaptureReleaser *releaser,
                         IRefineExposureTime *refineExposureTime)
     : m_exposureListener (nullptr),
       m_releaser (releaser),
-      m_refineExposureTime (refineExposureTime)
+      m_refineExposureTime (refineExposureTime),
+      m_eventListener (nullptr),
+      m_processingActivated (true)
 {
 }
 
@@ -46,6 +50,7 @@ void Processing::captureCallback (std::vector<ICapturedRawFrame *> &frames,
             !m_listeners.depthImageListener &&
             !m_listeners.sparsePointCloudListener &&
             !m_listeners.irImageListener &&
+            !m_listeners.depthIrImageListener &&
             !m_listeners.extendedListener)
     {
         m_releaser->releaseCapturedFrames (frames);
@@ -130,7 +135,7 @@ void Processing::captureCallback (std::vector<ICapturedRawFrame *> &frames,
     std::vector<uint32_t> newExposureTimes;
 
     bool dataWasProcessed = false;
-    if (isReadyToProcessDepthData())
+    if (isReadyToProcessDepthData() && m_processingActivated)
     {
         std::lock_guard<std::mutex> lock (m_calcMutex);
         try
@@ -180,6 +185,10 @@ void Processing::captureCallback (std::vector<ICapturedRawFrame *> &frames,
                 if (m_listeners.irImageListener)
                 {
                     m_listeners.irImageListener->onNewData (m_depthDataBuffer.irImage.get());
+                }
+                if (m_listeners.depthIrImageListener)
+                {
+                    m_listeners.depthIrImageListener->onNewData (m_depthDataBuffer.depthIrImage.get());
                 }
             }
         }
@@ -297,6 +306,10 @@ void Processing::setUseCase (const UseCaseDefinition &useCase)
             }
             ++idx;
         }
+        if (!expoIndexSet)
+        {
+            m_exposureTimeIndex[streamId] = 0u;
+        }
         m_exposureLimits[streamId] = useCase.getExposureLimits (streamId);
     }
 }
@@ -327,4 +340,36 @@ royale::Vector<royale::Pair<royale::String, royale::String>> Processing::getProc
     procInfo.emplace_back (std::make_pair ("PROCESSING_VERSION", getProcessingVersion()));
 
     return procInfo;
+}
+
+void Processing::sendEvent (const royale::EventSeverity &severity, const royale::String &description)
+{
+    std::lock_guard<std::mutex> lock (m_eventMutex);
+    if (m_eventListener)
+    {
+        auto event = common::makeUnique<event::EventProcessing> (severity, description);
+        m_eventListener->onEvent (std::move (event));
+    }
+}
+
+void Processing::registerEventListener (royale::IEventListener *listener)
+{
+    std::lock_guard<std::mutex> lock (m_eventMutex);
+    m_eventListener = listener;
+}
+
+void Processing::unregisterEventListener()
+{
+    std::lock_guard<std::mutex> lock (m_eventMutex);
+    m_eventListener = nullptr;
+}
+
+void Processing::setProcessingActivated (bool activated)
+{
+    m_processingActivated = activated;
+}
+
+bool Processing::getProcessingActivated()
+{
+    return m_processingActivated;
 }

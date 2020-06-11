@@ -546,6 +546,8 @@ namespace royale
 
             /** Event source */
             royale::EventForwarder m_eventForwarder;
+
+            bool m_pauseCallback;
         };
     }
 }

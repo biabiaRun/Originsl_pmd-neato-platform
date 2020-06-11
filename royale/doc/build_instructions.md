@@ -3,8 +3,9 @@
 
 ## Requirements independent of platform
 - CMake >= 3.3
-- Python 3.6
-- Qt 5.5.1
+- Python 3.x (version depends on operating system)
+  - Numpy for the Python wrapper
+- Qt 5.x (version depends on operating system)
 - Git
 - Doxygen
 - Graphviz
@@ -13,10 +14,12 @@
 ## Windows
 ### Requirements
 - Windows >= 7
-- Visual Studio 2013 Update 5 or Visual Studio 2015
+- Visual Studio 2017 (Version 15.9.13)
+- Qt 5.12
+- Python 3.7
 
 ### Steps
-- Set the environment variable QTDIR to your Qt VS2013 lib folder, e.g. Qt/5.5/msvc2013_64/lib/cmake
+- Set the environment variable QTDIR to your Qt VS2017 lib folder, e.g. Qt/5.12/msvc2017_64/lib/cmake
 - Start the CMake GUI
 - Select the Royale folder and a build folder
 - Hit configure and select your MSVC compiler
@@ -50,6 +53,7 @@ To build the Python wrapper:
 - Install SWIG
 - Install Python for Windows
 - After this hit configure again in CMake and the SWIG and Python variables should show up
+- To use the Numpy optimizations that were introduced you have to install the Numpy package in Python
 
 To view the markdown documentation in HTML:
 
@@ -78,8 +82,8 @@ Depending on the CMake variable JENKINS_BUILD_TYPE, Windows builds will display 
 - Install Freeglut (sudo apt-get install freeglut3-dev)
 - Install additional Glut libraries (sudo apt-get install libxmu-dev libxi-dev)
 - Install additional libusb libraries (sudo apt-get install libusb-1.0.0-dev)
-- Install Qt 5.5 (http://www.qt.io/download-open-source/ )
-- Set the environment variable QTDIR to point to your Qt libs, e.g. Qt/5.5/gcc64/lib/cmake
+- Install Qt (sudo apt-get install qt5-default)
+- Install Python3 (sudo apt-get install libpython3-dev)
 - Create a build folder
 - Inside this build folder call CMake
     - cmake path_to_royale
@@ -100,6 +104,7 @@ To build the Python wrapper:
 - Install SWIG (sudo apt-get install swig3.0)
 - Install Python and libs (sudo apt-get install python3 libpython3-dev)
 - After this the SWIG and Python variables should be set by CMake on the next run
+- To use the Numpy optimizations that were introduced you have to install the Numpy package in Python
 
 The Cypress SDK is not needed on non-Windows platforms, as Royale uses libusb instead.
 

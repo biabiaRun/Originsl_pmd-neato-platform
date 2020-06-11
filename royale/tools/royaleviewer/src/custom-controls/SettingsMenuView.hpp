@@ -26,13 +26,14 @@ class SettingsMenuView : public PMDView
     Q_OBJECT
 
 public:
-    explicit SettingsMenuView (royale::CameraAccessLevel accessLevel, QWidget *parent = 0);
+    explicit SettingsMenuView (royale::CameraAccessLevel accessLevel, QWidget *parent = nullptr);
     void setDelegate (ISettingsMenu *obj)
     {
         delegate = obj;
     }
 
     void deselect();
+    void resetCheckboxes();
     void updateToolEntries (bool cameraAvailable, bool mode2D, bool modeMixed, bool playBack);
     void disableRRFRecording (bool val);
     bool singleFrameRecordingEnabled (bool playBack);
@@ -46,38 +47,39 @@ signals:
     void enableShowStreamId (bool enabled);
     void enableShowValidPixelsNumber (bool enabled);
     void enableSingleFrameRecording (bool enabled);
+    void enableRangeSpecifier (bool enabled);
 
 protected slots:
-    void settingSelected (QListWidgetItem *item);
 
+    void showView (QPushButton *btn, const char *settingsView);
+
+    void showColorRangeView();
+    void showUseCaseView();
+    void showExposureView();
+    void showFiterLevelView();
+    void showParametersView();
+    void showCameraPresetsView();
+    void showAutoRotationView();
+    void showFilterMinMaxView();
+    void showDataView();
+    void showLoadFileView();
+
+    void updateShowFrustrum (int);
+    void updateLockView (int);
+    void updateFlipVertical (int);
+    void updateFlipHorizontal (int);
+    void updateShowFPS (int);
+    void updateShowStreamID (int);
+    void updateShowNumberOfValidPixels (int);
+    void updateSingleFrameRecording (int);
+    void updateShowRangeSpecifier (int);
 
 protected:
     Ui::SettingsMenuView ui;
     ISettingsMenu *delegate;
+
     QPixmap *m_background;
 
 private:
-    QListWidgetItem *selectedItem;
-    std::vector<std::string> m_entries;
     royale::CameraAccessLevel m_accessLevel;
-
-    typedef void (SettingsMenuView::*SignalFunction) (bool);
-    struct CheckBoxStruct
-    {
-        CheckBoxStruct (SettingsMenuView::SignalFunction _func, bool _checkState = false, bool _visible = true) :
-            signalFunction (_func),
-            checkState (_checkState),
-            visible (_visible)
-        {}
-        CheckBoxStruct() :
-            checkState (false),
-            visible (false)
-        {}
-
-        SettingsMenuView::SignalFunction signalFunction;
-        bool checkState;
-        bool visible;
-    };
-
-    std::map<std::string, struct CheckBoxStruct> m_checkboxes;
 };

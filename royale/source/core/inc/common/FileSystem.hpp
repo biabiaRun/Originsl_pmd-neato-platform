@@ -178,7 +178,7 @@ namespace royale
                 return 0;
             }
 
-            f.write ( (char *) &data[0], data.size() * sizeof (T));
+            f.write ( (char *) &data[0], static_cast<std::streamsize> (data.size() * sizeof (T)));
             f.close();
 
             return data.size() * sizeof (T);

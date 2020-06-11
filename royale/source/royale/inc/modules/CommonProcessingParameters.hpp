@@ -57,6 +57,7 @@ namespace royale
             royale::parameter::stdSmoothingFilterAlpha,
             royale::parameter::stdSmoothingFilterType,
             royale::parameter::stdUseHoleFilling,
+            { royale::ProcessingFlag::SpectreProcessingType_Int, royale::Variant (1, 1, 2) },
         };
 
         /**
@@ -94,6 +95,7 @@ namespace royale
             royale::parameter::stdSmoothingFilterAlpha,
             royale::parameter::stdSmoothingFilterType,
             royale::parameter::stdUseHoleFilling,
+            { royale::ProcessingFlag::SpectreProcessingType_Int, royale::Variant (1, 1, 2) },
         };
 
         /**
@@ -151,6 +153,7 @@ namespace royale
             { royale::ProcessingFlag::SmoothingFilterType_Int, royale::Variant (1, 1, 1) },
             { royale::ProcessingFlag::SmoothingAlpha_Float, royale::Variant (0.1f, 0.0f, 1.0f) },
             { royale::ProcessingFlag::UseHoleFilling_Bool, royale::Variant (true) },
+            { royale::ProcessingFlag::SpectreProcessingType_Int, royale::Variant (1, 1, 2) },
         };
 
         /**
@@ -188,6 +191,7 @@ namespace royale
             { royale::ProcessingFlag::SmoothingFilterType_Int, royale::Variant (1, 1, 1) },
             { royale::ProcessingFlag::SmoothingAlpha_Float, royale::Variant (0.15f, 0.0f, 1.0f) },
             { royale::ProcessingFlag::UseHoleFilling_Bool, royale::Variant (true) },
+            { royale::ProcessingFlag::SpectreProcessingType_Int, royale::Variant (1, 1, 2) },
         };
 
         /**
@@ -225,6 +229,7 @@ namespace royale
             { royale::ProcessingFlag::SmoothingFilterType_Int, royale::Variant (1, 1, 1) },
             { royale::ProcessingFlag::SmoothingAlpha_Float, royale::Variant (0.2f, 0.0f, 1.0f) },
             { royale::ProcessingFlag::UseHoleFilling_Bool, royale::Variant (true) },
+            { royale::ProcessingFlag::SpectreProcessingType_Int, royale::Variant (1, 1, 2) },
         };
 
         /**
@@ -262,6 +267,7 @@ namespace royale
             { royale::ProcessingFlag::SmoothingFilterType_Int, royale::Variant (1, 1, 1) },
             { royale::ProcessingFlag::SmoothingAlpha_Float, royale::Variant (0.15f, 0.0f, 1.0f) },
             { royale::ProcessingFlag::UseHoleFilling_Bool, royale::Variant (true) },
+            { royale::ProcessingFlag::SpectreProcessingType_Int, royale::Variant (1, 1, 2) },
         };
 
         /**
@@ -299,6 +305,7 @@ namespace royale
             { royale::ProcessingFlag::SmoothingFilterType_Int, royale::Variant (1, 1, 1) },
             { royale::ProcessingFlag::SmoothingAlpha_Float, royale::Variant (1.0f, 0.0f, 1.0f) },
             { royale::ProcessingFlag::UseHoleFilling_Bool, royale::Variant (true) },
+            { royale::ProcessingFlag::SpectreProcessingType_Int, royale::Variant (1, 1, 2) },
         };
 
         /**
@@ -336,6 +343,110 @@ namespace royale
             { royale::ProcessingFlag::SmoothingFilterType_Int, royale::Variant (1, 1, 1) },
             { royale::ProcessingFlag::SmoothingAlpha_Float, royale::Variant (1.0f, 0.0f, 1.0f) },
             { royale::ProcessingFlag::UseHoleFilling_Bool, royale::Variant (true) },
+            { royale::ProcessingFlag::SpectreProcessingType_Int, royale::Variant (1, 1, 2) },
+        };
+
+
+        // For OZT167
+
+        static const royale::processing::ProcessingParameterId CommonIdVideoExtendedCBF
+        {
+            royale::processing::ProcessingParameterId::datatype{ { 'V', 'i', 'd', 'e', 'o', 'E', 'x', 't', 'e', 'n', 'd', 'e', 'd', 'C', 'B', 'F' } }
+        };
+
+        static const royale::processing::ProcessingParameterId CommonIdVideoExtendedNG
+        {
+            royale::processing::ProcessingParameterId::datatype{ { 'V', 'i', 'd', 'e', 'o', 'E', 'x', 't', 'e', 'n', 'd', 'e', 'd', 'N', 'G', ' ' } }
+        };
+
+        static const royale::ProcessingParameterMap CommonProcessingParamsVideoExtendedNG
+        {
+            { royale::ProcessingFlag::LowerSaturationThreshold_Int, royale::Variant (400, 0, 600) },
+            { royale::ProcessingFlag::UpperSaturationThreshold_Int, royale::Variant (3750, 3500, 4095) },
+            { royale::ProcessingFlag::AutoExposureRefValue_Float, royale::Variant (1000.0f, 1.0f, 4095.0f) },
+            { royale::ProcessingFlag::SmoothingAlpha_Float, royale::Variant (0.25f, 0.0f, 1.0f) },
+            { royale::ProcessingFlag::AutoExpoMin_Int, royale::Variant (1, 1, 50000) },
+            { royale::ProcessingFlag::AutoExpoMax_Int, royale::Variant (1200, 1, 50000) },
+            { royale::ProcessingFlag::SpectreProcessingType_Int, royale::Variant (3, 1, 5) },
+            { royale::ProcessingFlag::NoiseFilterSigmaD_Float, royale::Variant (2.0f, 1.0f, 5.0f) },
+            { royale::ProcessingFlag::NoiseFilterIterations_Int, royale::Variant (3, 1, 10) },
+            { royale::ProcessingFlag::FlyingPixelAngleLimit_Float, royale::Variant (0.17f, 0.006f, 0.5f) },
+            { royale::ProcessingFlag::FlyingPixelAmpThreshold_Float, royale::Variant (1.0f, 0.0f, 64.0f) },
+            { royale::ProcessingFlag::FlyingPixelMinNeighbors_Int, royale::Variant (3, 0, 8) },
+            { royale::ProcessingFlag::FlyingPixelMaxNeighbors_Int, royale::Variant (6, 0, 8) },
+            { royale::ProcessingFlag::FlyingPixelNoiseRatioThresh_Float, royale::Variant (10.5f, 0.0f, 128.0f) },
+            { royale::ProcessingFlag::SmoothingFilterResetThreshold_Float, royale::Variant (8.0f, 0.0f, 64.0f) },
+            { royale::ProcessingFlag::CCThresh_Int, royale::Variant (42, 0, 16384) },
+            { royale::ProcessingFlag::PhaseNoiseThresh_Float, royale::Variant (0.0f, 0.0f, 10.0f) },
+            { royale::ProcessingFlag::UseAutoExposure_Bool, royale::Variant (true) },
+            { royale::ProcessingFlag::StraylightThreshold_Float, royale::Variant (4.0f, 0.0f, 10.0f) },
+        };
+
+        static const royale::processing::ProcessingParameterId CommonIdVideoExtendedNGB
+        {
+            royale::processing::ProcessingParameterId::datatype{ { 'V', 'i', 'd', 'e', 'o', 'E', 'x', 't', 'e', 'n', 'd', 'e', 'd', 'N', 'G', 'B' } }
+        };
+
+        static const royale::processing::ProcessingParameterId CommonIdVideoHalfCBF
+        {
+            royale::processing::ProcessingParameterId::datatype{ { 'V', 'i', 'd', 'e', 'o', 'H', 'a', 'l', 'f', 'C', 'B', 'F', ' ', ' ', ' ', ' ' } }
+        };
+
+        static const royale::processing::ProcessingParameterId CommonIdVideoHalfNG
+        {
+            royale::processing::ProcessingParameterId::datatype{ { 'V', 'i', 'd', 'e', 'o', 'H', 'a', 'l', 'f', 'N', 'G', ' ', ' ', ' ', ' ', ' ' } }
+        };
+
+        static const royale::ProcessingParameterMap CommonProcessingParamsVideoHalfNG
+        {
+            { royale::ProcessingFlag::LowerSaturationThreshold_Int, royale::Variant (400, 0, 600) },
+            { royale::ProcessingFlag::UpperSaturationThreshold_Int, royale::Variant (3750, 3500, 4095) },
+            { royale::ProcessingFlag::AutoExposureRefValue_Float, royale::Variant (1000.0f, 1.0f, 4095.0f) },
+            { royale::ProcessingFlag::SmoothingAlpha_Float, royale::Variant (0.25f, 0.0f, 1.0f) },
+            { royale::ProcessingFlag::AutoExpoMin_Int, royale::Variant (1, 1, 50000) },
+            { royale::ProcessingFlag::AutoExpoMax_Int, royale::Variant (1200, 1, 50000) },
+            { royale::ProcessingFlag::SpectreProcessingType_Int, royale::Variant (3, 1, 5) },
+            { royale::ProcessingFlag::NoiseFilterSigmaD_Float, royale::Variant (2.0f, 1.0f, 5.0f) },
+            { royale::ProcessingFlag::NoiseFilterIterations_Int, royale::Variant (3, 1, 10) },
+            { royale::ProcessingFlag::FlyingPixelAngleLimit_Float, royale::Variant (0.17f, 0.006f, 0.5f) },
+            { royale::ProcessingFlag::FlyingPixelAmpThreshold_Float, royale::Variant (1.0f, 0.0f, 64.0f) },
+            { royale::ProcessingFlag::FlyingPixelMinNeighbors_Int, royale::Variant (3, 0, 8) },
+            { royale::ProcessingFlag::FlyingPixelMaxNeighbors_Int, royale::Variant (6, 0, 8) },
+            { royale::ProcessingFlag::FlyingPixelNoiseRatioThresh_Float, royale::Variant (10.5f, 0.0f, 128.0f) },
+            { royale::ProcessingFlag::SmoothingFilterResetThreshold_Float, royale::Variant (8.0f, 0.0f, 64.0f) },
+            { royale::ProcessingFlag::CCThresh_Int, royale::Variant (42, 0, 16384) },
+            { royale::ProcessingFlag::PhaseNoiseThresh_Float, royale::Variant (0.0f, 0.0f, 10.0f) },
+        };
+
+        static const royale::processing::ProcessingParameterId CommonIdVideoHalfNGB
+        {
+            royale::processing::ProcessingParameterId::datatype{ { 'V', 'i', 'd', 'e', 'o', 'H', 'a', 'l', 'f', 'N', 'G', 'B', ' ', ' ', ' ', ' ' } }
+        };
+
+        static const royale::processing::ProcessingParameterId CommonIdAF
+        {
+            royale::processing::ProcessingParameterId::datatype{ { 'A', 'F', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ' } }
+        };
+
+        static const royale::processing::ProcessingParameterId CommonIdAR
+        {
+            royale::processing::ProcessingParameterId::datatype{ { 'A', 'R', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ' } }
+        };
+
+        static const royale::processing::ProcessingParameterId CommonIdIR
+        {
+            royale::processing::ProcessingParameterId::datatype{ { 'I', 'R', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ' } }
+        };
+
+        static const royale::ProcessingParameterMap CommonProcessingParamsIR
+        {
+            { royale::ProcessingFlag::SpectreProcessingType_Int, royale::Variant (6, 6, 6) },
+            { royale::ProcessingFlag::UseGrayImageFallbackAmplitude_Bool, royale::Variant (false) },
+        };
+
+        static const royale::processing::ProcessingParameterId CommonIdFaceID
+        {
+            royale::processing::ProcessingParameterId::datatype{ { 'F', 'a', 'c', 'e', 'I', 'D', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ' } }
         };
     }
 }

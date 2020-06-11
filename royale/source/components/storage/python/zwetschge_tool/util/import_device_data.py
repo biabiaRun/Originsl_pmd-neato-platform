@@ -4,7 +4,7 @@ import sys
 import os
 
 
-def importDeviceData (sourceFile):
+def importDeviceData(sourceFile):
     """This loads the data that is to be converted to a Zwetschge file.
 
     Currently the input format is itself an executable Python package directory, in which sourceFile
@@ -24,8 +24,8 @@ def importDeviceData (sourceFile):
     sys.modules["device_package"] = module
 
     # Now load the device file itself.
-    spec = importlib.util.spec_from_file_location ("device_package.device", sourceFile)
-    module = importlib.util.module_from_spec (spec)
-    spec.loader.exec_module (module)
+    spec = importlib.util.spec_from_file_location ("device_package.{}".format(os.path.splitext(os.path.splitext(os.path.split(sourceFile)[1])[0])[0]), sourceFile)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
 
     return module.getZwetschgeDeviceData()

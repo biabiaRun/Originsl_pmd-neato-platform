@@ -69,7 +69,11 @@ float PsdTemperatureSensorNtc::calcTemperature (const std::vector<ICapturedRawFr
             }
     }
 
-    uint16_t offset, vRef1, vRef2, vNtc1, vNtc2;
-    m_psdInterpreter->getTemperatureRawValues (*frameToUse, vRef1, vNtc1, vRef2, vNtc2, offset);
+    auto values = m_psdInterpreter->getTemperatureRawValues (*frameToUse);
+    uint16_t &vRef1 = values[0];
+    uint16_t &vRef2 = values[1];
+    uint16_t &vNtc1 = values[2];
+    uint16_t &vNtc2 = values[3];
+    uint16_t offset = 0u;
     return m_ntcAlgorithm->calcTemperature (vRef1, vNtc1, vRef2, vNtc2, offset);
 }

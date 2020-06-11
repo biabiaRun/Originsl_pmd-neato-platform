@@ -20,60 +20,58 @@ namespace spectre
      * @brief Class which holds heap-allocated objects
      *
      * The MemoryHolder is a smart-pointer like class which is used to transfer
-     * heap-allocated objects from the Spectre library to its users. The MemoryHolder
-     * owns the objects, and ensures that it is free'd using the appropriate free function
-     * from the Spectre library.
+     * heap-allocated objects from the Spectre library to its users. The
+     * MemoryHolder owns the objects, and ensures that it is free'd using the
+     * appropriate free function from the Spectre library.
      */
     template<typename T>
     class MemoryHolder
     {
     public:
-        explicit MemoryHolder (T *ptr)
-            : m_ptr (ptr) {}
-
-        MemoryHolder()
-            : m_ptr (nullptr)
+        explicit MemoryHolder (T *ptr) : m_ptr (ptr)
         {}
 
-        MemoryHolder (MemoryHolder &&other)
-            : MemoryHolder()
+        MemoryHolder () : m_ptr (nullptr)
+        {}
+
+        MemoryHolder (MemoryHolder &&other) : MemoryHolder ()
         {
             std::swap (m_ptr, other.m_ptr);
         }
 
-        ~MemoryHolder()
+        ~MemoryHolder ()
         {
             spectre::details::Deleter<T>::free (m_ptr);
         }
 
-        T &operator*()
+        T &operator* ()
         {
             return *m_ptr;
         };
-        T *operator->()
+        T *operator-> ()
         {
             return m_ptr;
         }
 
-        const T &operator*() const
+        const T &operator* () const
         {
             return *m_ptr;
         };
-        const T *operator->() const
+        const T *operator-> () const
         {
             return m_ptr;
         };
 
-        T *get()
+        T *get ()
         {
             return m_ptr;
         };
-        const T *get() const
+        const T *get () const
         {
             return m_ptr;
         }
 
-        T *release()
+        T *release ()
         {
             T *released = m_ptr;
             m_ptr = nullptr;
@@ -92,12 +90,12 @@ namespace spectre
         T *m_ptr;
     };
 
-    template<typename T, typename ...Args>
-    MemoryHolder<T> make_holder (Args &&...args)
+    template<typename T, typename... Args>
+    MemoryHolder<T> make_holder (Args &&... args)
     {
         return MemoryHolder<T> (new T (std::forward<Args> (args)...));
     }
 
-}  // spectre
+} // namespace spectre
 
 #endif /*__MEMORYHOLDER_HPP__*/

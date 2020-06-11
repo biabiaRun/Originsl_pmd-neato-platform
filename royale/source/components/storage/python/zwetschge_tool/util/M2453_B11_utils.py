@@ -1,3 +1,7 @@
+import sys
+import os
+import importlib
+import importlib.util
 from operator import xor
 from ..zwetschge.data_types import SequentialRegisterBlock
 
@@ -27,6 +31,37 @@ def baseCrc(C,D):
 
     return NewCRC
 
+def importFile (sourceFile):
+    spec = importlib.util.spec_from_file_location ("register_file", sourceFile)
+    if not spec:
+        raise Exception ("importFile : Either couldn't find the directory containing the sourceFile, or there is no __init__.py in that directory")
+    module = importlib.util.module_from_spec (spec)
+    try:
+        spec.loader.exec_module (module)
+    except:
+        raise Exception ("importFile : Couldn't loda the specified module")
+    if hasattr(module, 'full_cfg'):
+        return module.full_cfg
+    else:
+        raise Exception ("importFile : No configuration found")
+    
+def getInitMap(listOfFilenames, registerMapPath):
+    CRC_startaddress = 0x9000
+    CRC_stopaddress = 0x93FE
+
+    initmap = set()
+    usedfiles = []
+    
+    for file in listOfFilenames:
+        sourceFileAbsolute = os.path.join(registerMapPath, file)
+        regs = importFile(sourceFileAbsolute)
+        if len(regs) > 0:
+            for reg in regs:
+                if reg[0] < CRC_startaddress or reg[0] > CRC_stopaddress + 1:
+                    initmap.add(reg)
+
+    return initmap;
+    
 def genSeqRegisterBlock(registers):
     SPI_startaddress = 0x9000
     CRC_startaddress = 0x9000

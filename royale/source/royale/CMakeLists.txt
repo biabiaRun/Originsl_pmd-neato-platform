@@ -14,15 +14,20 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/../components/usb/inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../components/buffer/inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../components/storage/inc
-    ${PROCESSING_SPECTRE_HEADER_DIR}
     ${CMAKE_CURRENT_BINARY_DIR}
     ${ROYALE_BINARY_DIR}/source/components/imager/inc
     )
+    
+include_directories(SYSTEM 
+    ${PROCESSING_SPECTRE_HEADER_DIR}
+    )
+    
 if(ROYALE_USE_V4L)
     include_directories(
         ${CMAKE_CURRENT_SOURCE_DIR}/../components/v4l/inc
         )
 endif()
+
 
 link_directories(
     ${PROCESSING_SPECTRE_LIB_DIR}
@@ -36,25 +41,25 @@ if (${ROYALE_TARGET_PLATFORM} STREQUAL ANDROID)
 endif (${ROYALE_TARGET_PLATFORM} STREQUAL ANDROID)
 
 set(HEADERS_PRIVATE
+    "${CMAKE_BINARY_DIR}/royale-version.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/inc/DeviceFactory.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/inc/modules/imager/ImagerBaseConfigEvalboard.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/inc/modules/imager/ImagerBaseConfigPicoFlexx.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/inc/modules/imager/ImagerBaseConfigPicoMonstar.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/inc/modules/CommonProcessingParameters.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/inc/modules/ModuleConfigFactoryAnimatorBoard.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/inc/modules/ModuleConfigFactoryOrpheus.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/inc/modules/ModuleConfigFactoryPicoFlexx.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/inc/modules/ModuleConfigEuropaCommon.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/inc/modules/ModuleConfigFactoryEuropa.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/inc/modules/ModuleConfigFactoryPicoMonstar.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/inc/modules/ModuleConfigFactoryPmdModule238x.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/inc/modules/ModuleConfigFactoryPmdModule277x.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/inc/modules/ModuleConfigFactorySalome.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/inc/modules/ModuleConfigFactoryPmdModule287x.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/inc/modules/ModuleConfigFactorySelene.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/inc/modules/ModuleConfigOrpheusCommon.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/inc/modules/ModuleConfigFactoryX1.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/inc/modules/ModuleConfigPicoFlexxCommon.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/inc/modules/ModuleConfigPicoMonstarCommon.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/inc/modules/ModuleConfigPmdModuleCommon.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/inc/modules/ModuleConfigSalomeCommon.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/inc/modules/ModuleConfigSeleneCommon.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/inc/modules/ModuleConfigX1Common.hpp"
     )
 
 set(HEADERS_TOP
@@ -62,7 +67,7 @@ set(HEADERS_TOP
     )
 
 set(HEADERS_ROYALE
-    ${HEADERS_ROYALE_CORE}
+    ${ROYALECORE_HEADERS_MAIN}
     "${CMAKE_CURRENT_SOURCE_DIR}/inc/factory/BridgeController.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/inc/royale/CameraManager.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/inc/modules/CharacterizationHelper.hpp"
@@ -70,8 +75,6 @@ set(HEADERS_ROYALE
     "${CMAKE_CURRENT_SOURCE_DIR}/inc/royale/TriggerMode.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/inc/modules/UsbProbeDataListRoyale.hpp"
     )
-
-DEPENDS_ON_ROYALE_VERSION_H("${CMAKE_CURRENT_SOURCE_DIR}/src/royale.cpp")
 
 set(SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/BridgeController.cpp"
@@ -83,34 +86,27 @@ set(SOURCES
 
 set(MODULE_CONFIGURATION_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/CharacterizationHelper.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigDataAnimatorDefault.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigDataMTT016.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigDataOrat45.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigDataOrpheus.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigDataOrpheusDefault.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigDataEuropa2Full.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigDataEuropa2Half.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigDataEuropaDefault.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigDataPicoFlexxU6.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigDataPicoMonstar1.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigDataPicoMonstar2.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigDataPicoMonstar850nmGlass.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigDataPicoMonstar850nmGlass2.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigDataPicoMonstar940nm.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigDataPicoMonstarDefault.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigDataPmdModule238xDefault.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigDataPmdModule277xDefault.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigDataSalome940nm.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigDataSalome2Rev940nm.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigDataSalomeDefault.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigDataPmdModule287xDefault.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigDataSeleneDefault.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigDataSeleneIcm.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigDataX18502W.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigFactoryAnimatorBoard.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigFactoryOrpheus.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigFactoryPicoFlexx.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigDataX1.2.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigDataX1.18502W.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigDataX1Default.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigFactoryEuropa.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigFactoryPicoMonstar.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigFactoryPmdModule238x.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigFactoryPmdModule277x.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigFactorySalome.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigFactoryPmdModule287x.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigFactorySelene.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigFactoryX1.cpp"
     CACHE INTERNAL "" FORCE
     )
 
@@ -230,13 +226,21 @@ IF(${ROYALE_TARGET_PLATFORM} STREQUAL WINDOWS)
     ENDIF()
         
 ELSE()
-    INSTALL(TARGETS royale
-        RUNTIME DESTINATION ${ROYALE_INSTALL_BIN_DIR}
-        LIBRARY DESTINATION ${ROYALE_INSTALL_BIN_DIR}
-        ARCHIVE DESTINATION ${ROYALE_INSTALL_BIN_DIR}
-        )
+    if(ROYALE_DEB_PACKAGING)
+        install(TARGETS royale
+            RUNTIME DESTINATION ${ROYALE_INSTALL_BIN_DIR}
+            LIBRARY DESTINATION ${ROYALE_INSTALL_LIB_DIR}
+            ARCHIVE DESTINATION ${ROYALE_INSTALL_BIN_DIR}
+            )
+    else()
+        install(TARGETS royale
+            RUNTIME DESTINATION ${ROYALE_INSTALL_BIN_DIR}
+            LIBRARY DESTINATION ${ROYALE_INSTALL_BIN_DIR}
+            ARCHIVE DESTINATION ${ROYALE_INSTALL_BIN_DIR}
+            )
+    endif()
 ENDIF()
-        
+
 IF(UNIX AND
    NOT ${ROYALE_TARGET_PLATFORM} STREQUAL ANDROID)
     INSTALL(TARGETS royale
@@ -289,10 +293,18 @@ ENDIF()
 
 IF(${ROYALE_USE_SPECTRE})
     get_target_property(SPECTRE_LIB spectre IMPORTED_LOCATION)
-    INSTALL(FILES ${SPECTRE_LIB} DESTINATION ${ROYALE_INSTALL_BIN_DIR})
+    if(ROYALE_DEB_PACKAGING)
+        install(FILES ${SPECTRE_LIB} DESTINATION ${ROYALE_INSTALL_LIB_DIR})
+    else()
+        install(FILES ${SPECTRE_LIB} DESTINATION ${ROYALE_INSTALL_BIN_DIR})
+    endif()
 ENDIF()
 
-INSTALL(FILES ${HEADERS_ROYALE} DESTINATION "${ROYALE_INSTALL_INCLUDE_DIR}/royale")
+if(ROYALE_DEB_PACKAGING)
+    install(FILES ${HEADERS_ROYALE} DESTINATION "${ROYALE_INSTALL_INCLUDE_DIR}/royale/royale")
+else()
+    install(FILES ${HEADERS_ROYALE} DESTINATION "${ROYALE_INSTALL_INCLUDE_DIR}/royale")
+endif()
 INSTALL(FILES ${HEADERS_TOP}    DESTINATION "${ROYALE_INSTALL_INCLUDE_DIR}")
 
 IF(UNIX AND

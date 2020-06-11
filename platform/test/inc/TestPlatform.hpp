@@ -89,6 +89,7 @@ protected:
         {
             throw TestFixtureException ("initCamera failed", status);
         }
+        camera->setUseCase ("MODE_5_15FPS");
     }
 
     void switchToFastUseCasePicoFlexx()

@@ -49,7 +49,6 @@ int main (int argc, char **argv)
     // if non-null, choose this use case instead of the default
     unique_ptr<royale::String> commandLineUseCase;
 
-
     royale::common::LogSettings::getInstance ()->setLogFile ("log.txt");
     uint16_t logSettings = 0xf;
     royale::common::LogSettings::getInstance ()->setLogLevel (logSettings);//royale::common::LogSettings::ENABLE_ALL_LOGS);
@@ -59,12 +58,12 @@ int main (int argc, char **argv)
     if (argc > 1)
     {
         auto arg = std::unique_ptr<royale::String> (new royale::String (argv[1]));
-
-	cout << "Assuming command-line argument is the name of a use case" << endl;
-	commandLineUseCase = std::move (arg);
+        cout << "Assuming command-line argument is the name of a use case" << endl;
+        commandLineUseCase = std::move (arg);
     }
 
     cameraDevice = factory.createCamera();
+
     if (cameraDevice == nullptr)
     {
         cerr << "Cannot create the camera device" << endl;

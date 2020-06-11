@@ -518,7 +518,7 @@ protected:
 
     }
 
-    virtual void SetUp()
+    virtual void SetUp() override
     {
         // These point to the same class at the moment, and may separate later.
         // They're already separated so that the tests can be written to match the
@@ -532,7 +532,7 @@ protected:
         m_spiBusAccess = std::make_shared<royale::usb::pal::arctic::SpiBusAccessArctic> (uvcExtensionArctic);
     }
 
-    virtual void TearDown()
+    virtual void TearDown() override
     {
         m_i2cBusAccess.reset();
         m_bridgeImager.reset();

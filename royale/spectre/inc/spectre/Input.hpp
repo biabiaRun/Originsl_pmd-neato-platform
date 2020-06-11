@@ -26,23 +26,25 @@ namespace spectre
     /// Number of modulated frames per measurements expected by Spectre
 #define SPECTRE_FRAMES_PER_MOD_MEASUREMENTS 4
 
-
     /**
      * @brief Container class holding all data from a raw super frame.
      *
-     * Spectre needs several raw frames to calculate a single depth image. These raw frames,
-     * and associated meta-data (e.g., exposure times) are stored by the Input class.
-     * Depending on the use case the input class might hold one 4-phase raw frame set
-     * (consisting of 4 raw frames) or two 4-phase raw frame set (consisting of 2*4 raw frames).
-     * Additionally, Spectre always requires an intensity frame.
+     * Spectre needs several raw frames to calculate a single depth image. These
+     * raw frames, and associated meta-data (e.g., exposure times) are stored by
+     * the Input class. Depending on the use case the input class might hold one
+     * 4-phase raw frame set (consisting of 4 raw frames) or two 4-phase raw
+     * frame set (consisting of 2*4 raw frames). Additionally, Spectre always
+     * requires an intensity frame.
      *
-     * The class can be instantiated with an ArrayReference<uint16_t>, or an ArrayHolder<uint16_t>
-     * as template parameter. If ArrayReference<uint16_t> is used, the caller is responsible to ensure
-     * that the referenced memory locations are valid while the Input instance is used. The Input class
-     * will not copy any raw data by itself (but in case of ArrayHolder<uint16_t> the holder will take
-     * care of this).
+     * The class can be instantiated with an ArrayReference<uint16_t>, or an
+     * ArrayHolder<uint16_t> as template parameter. If ArrayReference<uint16_t>
+     * is used, the caller is responsible to ensure that the referenced memory
+     * locations are valid while the Input instance is used. The Input class
+     * will not copy any raw data by itself (but in case of
+     * ArrayHolder<uint16_t> the holder will take care of this).
      */
-    template<template<typename> class T, int MAX_MOD_GROUPS = SPECTRE_MAX_4_PHASE_RAW_FRAME_SETS>
+    template<template<typename> class T,
+             int MAX_MOD_GROUPS = SPECTRE_MAX_4_PHASE_RAW_FRAME_SETS>
     class Input
     {
     public:
@@ -71,7 +73,7 @@ namespace spectre
         }
 
         /**
-         * @brief Sets the intensity frame and its exposure time
+         * @brief Sets the unilluminated intensity frame and its exposure time
          *
          *
          * @param intensityFrame raw data of intensity frame
@@ -79,7 +81,8 @@ namespace spectre
          *
          * @return current instance of Input
          */
-        inline Input &setIntensityFrame (const T<uint16_t> &intensityFrame, unsigned exposureTime)
+        inline Input &setIntensityFrame (const T<uint16_t> &intensityFrame,
+                                         unsigned exposureTime)
         {
             m_intensity = intensityFrame;
             m_intensityExposure = exposureTime;
@@ -87,14 +90,34 @@ namespace spectre
         }
 
         /**
-         * @brief Sets the data for the modulated frames acquired for one modulation frequency (4-phase raw frame set).
+         * @brief Sets the illuminated intensity frame and its exposure time
          *
-         * The frames should be passed in the order of the expected frame order, which is 0, 90, 180, 270 degrees
-         * by default in Spectre.
          *
-         * Note: Only ParameterKey::FREQUENCY_i (i = 1,...,SPECTRE_MAX_4_PHASE_RAW_FRAME_SETS) is a valid
-         * value for the template parameter P. It is used to match the 4-phase raw frame set to the
-         * frequency used in the configuration of ISpectre.
+         * @param intensityFrame raw data of intensity frame
+         * @param exposureTime exposure time
+         *
+         * @return current instance of Input
+         */
+        inline Input &
+        setIlluminatedIntensityFrame (const T<uint16_t> &intensityFrame,
+                                      unsigned exposureTime)
+        {
+            m_illuIntensity = intensityFrame;
+            m_illuIntensityExposure = exposureTime;
+            return *this;
+        }
+
+        /**
+         * @brief Sets the data for the modulated frames acquired for one
+         * modulation frequency (4-phase raw frame set).
+         *
+         * The frames should be passed in the order of the expected frame order,
+         * which is 0, 90, 180, 270 degrees by default in Spectre.
+         *
+         * Note: Only ParameterKey::FREQUENCY_i (i =
+         * 1,...,SPECTRE_MAX_4_PHASE_RAW_FRAME_SETS) is a valid value for the
+         * template parameter P. It is used to match the 4-phase raw frame set
+         * to the frequency used in the configuration of ISpectre.
          *
          * @param P frequency identifier
          * @param frame1 first modulated frame
@@ -106,11 +129,11 @@ namespace spectre
          * @return current instance of Input
          */
         template<common::ParameterKey P>
-        inline IsFrequencyParameter<P, Input &> setModulatedFrames (const T<uint16_t> &frame1,
-                const T<uint16_t> &frame2,
-                const T<uint16_t> &frame3,
-                const T<uint16_t> &frame4,
-                unsigned exposureTime)
+        inline IsFrequencyParameter<P, Input &>
+        setModulatedFrames (const T<uint16_t> &frame1,
+                            const T<uint16_t> &frame2,
+                            const T<uint16_t> &frame3,
+                            const T<uint16_t> &frame4, unsigned exposureTime)
         {
             auto modFreqIdx = keyToIdx (P);
             m_modulatedGroups[modFreqIdx].fields[0] = frame1;
@@ -122,44 +145,62 @@ namespace spectre
         }
 
         /**
-        * @brief Gets the temperature
-        *
-        *
-        * @return temperature
-        */
-        inline float getTemperature() const
+         * @brief Gets the temperature
+         *
+         *
+         * @return temperature
+         */
+        inline float getTemperature () const
         {
             return m_temperature;
         }
 
         /**
-         * @brief Gets the exposure time set for intensity frame.
+         * @brief Gets the exposure time set for unilluminated intensity frame.
          *
          *
          * @return exposure time of intensity frame
          */
-        inline unsigned getIntensityExposure() const
+        inline unsigned getIntensityExposure () const
         {
             return m_intensityExposure;
         }
 
+        /**
+         * @brief Gets the exposure time set for illuminated intensity frame.
+         *
+         *
+         * @return exposure time of intensity frame
+         */
+        inline unsigned getIlluminatedIntensityExposure () const
+        {
+            return m_illuIntensityExposure;
+        }
 
         /**
-         * @brief Gets a reference to the raw data of the intensity frame
+         * @brief Gets a reference to the raw data of the intensity frame (not
+         * illuminated)
          *
          *
          * @return raw data of intensity frame
          */
-        inline const common::AbstractField<uint16_t> &getIntensityFrame() const
+        inline const common::AbstractField<uint16_t> &getIntensityFrame () const
         {
             return m_intensity;
         }
 
+        inline const common::AbstractField<uint16_t> &
+        getIlluminatedIntensityFrame () const
+        {
+            return m_illuIntensity;
+        }
         /**
-         * @brief Gets the exposure time of the frames acquired for the modulation frequency designated by P
+         * @brief Gets the exposure time of the frames acquired for the
+         * modulation frequency designated by P
          *
-         * Note: Only ParameterKey::FREQUENCY_i (i = 1,...,SPECTRE_MAX_4_PHASE_RAW_FRAME_SETS) is a valid
-         * value for the template parameter P
+         * Note: Only ParameterKey::FREQUENCY_i (i =
+         * 1,...,SPECTRE_MAX_4_PHASE_RAW_FRAME_SETS) is a valid value for the
+         * template parameter P
          *
          * @param P frequency identifier
          *
@@ -175,8 +216,9 @@ namespace spectre
         /**
          * @brief Gets a raw frame from a 4-phase raw frame set
          *
-         * Note: Only ParameterKey::FREQUENCY_i (i = 1,...,SPECTRE_MAX_4_PHASE_RAW_FRAME_SETS) is a valid
-         * value for the template parameter P
+         * Note: Only ParameterKey::FREQUENCY_i (i =
+         * 1,...,SPECTRE_MAX_4_PHASE_RAW_FRAME_SETS) is a valid value for the
+         * template parameter P
          *
          * @param P frequency identifier
          * @param frameIdx frame index
@@ -184,9 +226,11 @@ namespace spectre
          * @return reference to raw data
          */
         template<common::ParameterKey P>
-        inline IsFrequencyParameter<P, const common::AbstractField<uint16_t> &>getModulatedFrame (unsigned frameIdx) const
+        inline IsFrequencyParameter<P, const common::AbstractField<uint16_t> &>
+        getModulatedFrame (unsigned frameIdx) const
         {
-            SPECTRE_ASSERT (frameIdx < SPECTRE_FRAMES_PER_MOD_MEASUREMENTS, "Invalid frame index. Frame index must be less "
+            SPECTRE_ASSERT (frameIdx < SPECTRE_FRAMES_PER_MOD_MEASUREMENTS,
+                            "Invalid frame index. Frame index must be less "
                             " than SPECTRE_FRAMES_PER_MOD_MEASUREMENTS.");
             auto modFreqIdx = keyToIdx (P);
             return m_modulatedGroups[modFreqIdx].fields[frameIdx];
@@ -208,15 +252,20 @@ namespace spectre
         unsigned m_intensityExposure;
         T<uint16_t> m_intensity;
 
+        unsigned m_illuIntensityExposure;
+        T<uint16_t> m_illuIntensity;
+
         struct
         {
             T<uint16_t> fields[SPECTRE_FRAMES_PER_MOD_MEASUREMENTS];
             unsigned exposureTime;
         } m_modulatedGroups[MAX_MOD_GROUPS];
 
-        static_assert (std::is_base_of<common::AbstractField<uint16_t>, T<uint16_t> >::value, "Template parameter must be derivied "
+        static_assert (std::is_base_of<common::AbstractField<uint16_t>,
+                                       T<uint16_t>>::value,
+                       "Template parameter must be derivied "
                        "from AbstractField<uint16_t>.");
     };
-}
+} // namespace spectre
 
 #endif /*__INPUT_HPP__*/

@@ -69,7 +69,7 @@ namespace
             m_index {queryBuf.index},
             m_length {queryBuf.m.planes[0].length}
         {
-	    m_normalizedData = new uint16_t[pixelCount];
+          m_normalizedData = new uint16_t[pixelCount];
         }
 
         // The OffsetBasedCapturedBuffer class has already deleted the copy constructor and copy
@@ -90,8 +90,7 @@ namespace
                     LOG (ERROR) << "Error while munmapping buffer " << errno;
                 }
             }
-
-	    delete m_normalizedData;
+          delete m_normalizedData;
         }
 
         /**
@@ -102,7 +101,6 @@ namespace
         {
             return m_index;
         }
-
         ROYALE_API void normalizeData()
         {
             uint8_t *tmp = reinterpret_cast<uint8_t *> (OffsetBasedCapturedBuffer::getPixelData ());
@@ -282,7 +280,6 @@ std::size_t BridgeV4l::executeUseCase (int imageWidth, int imageHeight, std::siz
         openConnection();
     }
 
-//    imageHeight = 173;
     bool reallocBuffers = ! (m_width == imageWidth &&
                              m_height == imageHeight &&
                              m_currentBuffers.size() == bufferCount);
@@ -400,12 +397,13 @@ void BridgeV4l::acquisitionFunction()
         {
             0
         };
-	struct v4l2_plane plane;
+
+        struct v4l2_plane plane;
 
         ioctlBuffer.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
         ioctlBuffer.memory = V4L2_MEMORY_MMAP;
-	ioctlBuffer.m.planes = &plane;
-	ioctlBuffer.length = 1;
+        ioctlBuffer.m.planes = &plane;
+	      ioctlBuffer.length = 1;
 
 #ifdef ROYALE_LOGGING_VERBOSE_BRIDGE
         LOG (DEBUG) << "Trying to capture a frame";
@@ -575,14 +573,14 @@ void BridgeV4l::createAndQueueV4lBuffers (std::size_t bufferCount, std::size_t p
         {
             0
         };
-	struct v4l2_plane planes[1];
+        struct v4l2_plane planes[1];
 
         queryBuf.index = static_cast<__u32> (i);
         queryBuf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
         queryBuf.memory = V4L2_MEMORY_MMAP;
-	queryBuf.m.planes = planes;
-	queryBuf.length = 1;
-	//queryBuf.count = 1;
+        queryBuf.m.planes = planes;
+        queryBuf.length = 1;
+        //queryBuf.count = 1;
 
         err = ioctl (m_deviceHandle->fd, VIDIOC_QUERYBUF, &queryBuf);
         LOG (DEBUG) << "ioctl VIDIOC_QUERYBUF";
@@ -600,11 +598,11 @@ void BridgeV4l::createAndQueueV4lBuffers (std::size_t bufferCount, std::size_t p
 #endif
         if (queryBuf.m.planes[0].length < BufferUtils::expectedRawSize (pixelCount, m_transferFormat))
         {
-		LOG (ERROR) << "Buffer is too small to handle the expected image size " << queryBuf.m.planes[0].length;
+            LOG (ERROR) << "Buffer is too small to handle the expected image size " << queryBuf.m.planes[0].length;
         }
         // mmap only the size that's needed, assuming the driver does not use 24 bits per pixel.
         //queryBuf.length = static_cast<__u32> (BufferUtils::expectedRawSize (pixelCount, m_transferFormat));
-	LOG (ERROR) << "Buffer size " << queryBuf.m.planes[0].length << "off " << queryBuf.m.offset;
+	      LOG (ERROR) << "Buffer size " << queryBuf.m.planes[0].length << "off " << queryBuf.m.offset;
 
         // Here PROT_WRITE is requested because of the in-place data normalization in the
         // acquisitionFunction. If the driver is providing data that's already in the format for
@@ -616,7 +614,7 @@ void BridgeV4l::createAndQueueV4lBuffers (std::size_t bufferCount, std::size_t p
             throw NotImplemented ("TODO: Add error handling");
         }
 
-	memset(data, 0xff, queryBuf.m.planes[0].length);
+        memset(data, 0xff, queryBuf.m.planes[0].length);
 
         auto captureBuffer = common::makeUnique<CapturedV4lBuffer> (queryBuf, data, pixelCount);
         handles.push_back (std::move (captureBuffer));

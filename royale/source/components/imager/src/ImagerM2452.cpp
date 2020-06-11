@@ -332,7 +332,7 @@ void ImagerM2452::evaluatePostStartState()
     m_imagerState = ImagerState::Capturing;
 }
 
-void ImagerM2452::stopCapture()
+uint16_t ImagerM2452::stopCapture()
 {
     Imager::stopCapture();
 
@@ -349,6 +349,7 @@ void ImagerM2452::stopCapture()
     shutDownSequencer();
 
     m_imagerState = ImagerState::Ready;
+    return 0u;
 }
 
 void ImagerM2452::reconfigure (const ImagerUseCaseDefinition &useCase, uint16_t &reconfigIndex)
@@ -631,3 +632,13 @@ void ImagerM2452::adjustRowCount (uint16_t &row)
     // NoOp: pseudodata line is added to the data
 }
 
+bool ImagerM2452::isFirstFrame (const std::vector<ImagerRawFrame> &rfList, size_t index) const
+{
+    if (rfList.at (index).isStartOfLinkedRawFrames)
+    {
+        return true;
+    }
+
+    //all remaining cases
+    return false;
+}

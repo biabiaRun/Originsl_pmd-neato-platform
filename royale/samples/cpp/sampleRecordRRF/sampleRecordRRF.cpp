@@ -141,7 +141,8 @@ int main (int argc, char **argv)
         CHECKED_CAMERA_METHOD (cameraDevice->registerRecordListener (&myRecordListener));
 
         CHECKED_CAMERA_METHOD (cameraDevice->startCapture());
-        CHECKED_CAMERA_METHOD (cameraDevice->startRecording (file, numberOfFrames, framesToSkip, msToSkip));
+        CHECKED_CAMERA_METHOD (cameraDevice->startRecording (file, static_cast<uint32_t> (numberOfFrames),
+                                                             static_cast<uint32_t> (framesToSkip), msToSkip));
 
         // It is important not to close the main method before
         // the record stop callback was received!
@@ -165,7 +166,8 @@ int main (int argc, char **argv)
     else
     {
         CHECKED_CAMERA_METHOD (cameraDevice->startCapture());
-        CHECKED_CAMERA_METHOD (cameraDevice->startRecording (file, numberOfFrames, framesToSkip, msToSkip));
+        CHECKED_CAMERA_METHOD (cameraDevice->startRecording (file, static_cast<uint32_t> (numberOfFrames),
+                                                             static_cast<uint32_t> (framesToSkip), msToSkip));
 
         std::cout << "Press Enter to stop capture ..." << std::endl;
         std::cin.get();

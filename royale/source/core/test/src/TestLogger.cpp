@@ -9,13 +9,17 @@
 \****************************************************************************/
 
 #include <gtest/gtest.h>
+#include <gmock/gmock.h>
 
 #include <common/exceptions/Exception.hpp>
 #include <common/RoyaleLogger.hpp>
+#include <common/MakeUnique.hpp>
 
 #include <regex>
 #include <thread>
 
+using ::testing::AtLeast;
+using ::testing::_;
 namespace
 {
     void logFromThread (int tid)
@@ -152,4 +156,52 @@ TEST (TestLogger, LogAfterException)
 
     }
     LOG (WARN) << "Test";
+}
+
+TEST (TestLogger, LogBackend)
+{
+    std::unique_ptr<IlogBackend> backend;
+    std::vector<uint16_t> logLevels{ 0, 1, 2, 4, 8 };
+
+    ASSERT_EQ (backend->logLevToString (logLevels.at (0)), "NONE");
+    ASSERT_EQ (backend->logLevToString (logLevels.at (1)), "INFO");
+    ASSERT_EQ (backend->logLevToString (logLevels.at (2)), "DEBUG");
+    ASSERT_EQ (backend->logLevToString (logLevels.at (3)), "WARN");
+    ASSERT_EQ (backend->logLevToString (logLevels.at (4)), "ERROR");
+    ASSERT_EQ (backend->logLevToString (5), "UNKNOWN");
+
+}
+
+TEST (TestLogger, CommandLogger)
+{
+    std::unique_ptr<IlogBackend> backend = royale::common::makeUnique<CommandLog>();
+    std::streambuf *coutbuf = std::cout.rdbuf();
+    std::stringstream newOutStream;
+    std::cout.rdbuf (newOutStream.rdbuf());
+
+    backend->printLogLine (2, "test started");
+    std::regex logline ("(\\[.*?\\]\\s+DEBUG\\s+test\\s+started\n)");
+
+    ASSERT_TRUE (std::regex_match (newOutStream.str(), logline));
+
+    std::cout.rdbuf (coutbuf);
+}
+
+class MockLogBackend : public IlogBackend
+{
+public:
+    MOCK_METHOD2 (printLogLine, void (uint16_t loglevel, const std::string &logLine));
+};
+
+TEST (TestLogger, LogSettings)
+{
+    std::unique_ptr<MockLogBackend> backend = royale::common::makeUnique<MockLogBackend>();
+    royale::common::LogSettings *logsettings = royale::common::LogSettings::getInstance();
+
+    EXPECT_CALL (*backend, printLogLine (_, "test started"))
+    .Times (AtLeast (1));
+
+    std::unique_ptr<IlogBackend> defaultBackend = logsettings->swapLogBackend (std::move (backend));
+    logsettings->pushLogLine (2, "test started");
+    logsettings->swapLogBackend (std::move (defaultBackend));
 }

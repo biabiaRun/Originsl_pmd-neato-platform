@@ -142,5 +142,8 @@ namespace royale
         struct CameraManagerData;
         std::unique_ptr<CameraManagerData> m_data;
         royale::Vector<royale::String> m_cameraNames;
+        // m_usedCameraIDs stores all IDs we have found in case we want to use them again but don't have them in the m_data list
+        // in that case we call getConnectedCameraList() again.
+        royale::Vector<royale::String> m_usedCameraIds;
     };
 }

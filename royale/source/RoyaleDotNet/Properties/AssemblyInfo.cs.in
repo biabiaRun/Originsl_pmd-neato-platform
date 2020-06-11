@@ -8,9 +8,9 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("A Mono compatible .NET wrapper for the royale camera framework")]
 [assembly: AssemblyDescription("A Mono compatible .NET wrapper for the royale camera framework")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("pmd technologies ag & Infineon Technologies AG")]
+[assembly: AssemblyCompany("pmdtechnologies ag & Infineon Technologies AG")]
 [assembly: AssemblyProduct("RoyaleDotNet")]
-[assembly: AssemblyCopyright("pmd technologies ag & Infineon Technologies AG")]
+[assembly: AssemblyCopyright("pmdtechnologies ag & Infineon Technologies AG")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

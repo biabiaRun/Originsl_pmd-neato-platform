@@ -16,13 +16,11 @@ namespace royale
 {
     namespace imager
     {
-        using ImagerM2455Serial = ImagerSimpleHexSerialNumber;
-
         /**
-        * Support for the M2455, currently only the A11 design step.
+        * Support for the M2455 A14 design step.
         *
-        * The imager is similar to the M2453 with a higher image resolution. It's handled here as if
-        * it was another design step of the M2453.
+        * The imager is similar to the M2453 with a higher image resolution. It's handled here as a
+        * M2455_A11 only with design step A14.
         */
         class ImagerM2455_A14 : public ImagerM2455_A11
         {
@@ -36,7 +34,8 @@ namespace royale
             IMAGER_EXPORT explicit ImagerM2455_A14 (const ImagerParameters &params);
             ~ImagerM2455_A14() override = default;
 
-            void initialize() override;
+        protected:
+            DesignStepInfo getDesignStepInfo() override;
         };
     }
 }

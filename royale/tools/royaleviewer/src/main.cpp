@@ -15,11 +15,20 @@
 #include "qtviewer.hpp"
 #endif
 
+ADD_DEBUG_CONSOLE
+
 int main (int argc, char *argv[])
 {
     QApplication app (argc, argv);
     app.setOrganizationName ("pmdtechnologies ag & Infineon Technologies AG");
     app.setApplicationName ("Royale Viewer");
+#ifndef TARGET_PLATFORM_ANDROID
+    auto styleKeys = QStyleFactory::keys();
+    if (styleKeys.contains ("Windows"))
+    {
+        QApplication::setStyle (QStyleFactory::create ("Windows"));
+    }
+#endif
     QSurfaceFormat fmt;
     fmt.setVersion (4, 4);
     fmt.setDepthBufferSize (24);
@@ -33,6 +42,7 @@ int main (int argc, char *argv[])
     // add access code as positional argument (for backwards compatibility)
     parser.addPositionalArgument ("accessCode", "code to gain higher level access rights (this is deprecated, please use the 'code' parameter)");
     parser.addPositionalArgument ("path", "the path to a RRF-file");
+    parser.addPositionalArgument ("configPath", "the path to a Config-file");
 
     // add optional parameters
     parser.addOptions (
@@ -43,7 +53,9 @@ int main (int argc, char *argv[])
         { "mode", "use case", "defaultUseCase", "" },
         { "ae", "auto exposure", "", "" },
         { "slave", "open camera as slave", "", "" },
-        { "code", "access code", "code", "" }
+        { "code", "access code", "code", "" },
+        { "config", "cfg file to load filter settings", "configFile.cfg"},
+        { "gamma", "gamma correction value", "1.0f"}
     });
 
     // parse the command line
@@ -59,10 +71,14 @@ int main (int argc, char *argv[])
         {
             params.playbackFilename = arg.toLocal8Bit().constData();
         }
+        else if (arg.endsWith (".cfg"))
+        {
+            params.configFileName = arg;
+        }
         else
         {
             params.accessCode = arg.toStdString();
-            std::cout << "Warning: arguments that don't end with .rrf are treated as access codes, not filenames." << std::endl;
+            std::cout << "Warning: arguments that don't end with .rrf or .cfg are treated as access codes, not filenames." << std::endl;
             std::cout << "(If you intended it to be an access code, using the --code option will avoid this warning)" << std::endl;
         }
     }
@@ -73,6 +89,11 @@ int main (int argc, char *argv[])
     {
         params.playbackFilename = parser.value ("rrf").toLocal8Bit().constData();
     }
+    if (parser.isSet ("config") &&
+            params.configFileName.isEmpty())
+    {
+        params.configFileName = parser.value ("config");
+    }
     params.calibrationFileName = parser.value ("cal").toLocal8Bit().constData();
     params.autoConnect = parser.isSet ("ac");
     params.startUseCase = parser.value ("mode");
@@ -82,6 +103,18 @@ int main (int argc, char *argv[])
             params.accessCode.empty())
     {
         params.accessCode = parser.value ("code").toStdString();
+    }
+
+    params.gammaValue = 1.0f;
+    params.enableGamma = false;
+    if (parser.isSet ("gamma"))
+    {
+        auto gammaVal = parser.value ("gamma").toFloat();
+        if (gammaVal > 0.0f)
+        {
+            params.gammaValue = gammaVal;
+            params.enableGamma = true;
+        }
     }
 
     qRegisterMetaType<uint16_t> ("uint16_t");

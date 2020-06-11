@@ -26,6 +26,7 @@
 #include <NarrowCast.hpp>
 #include <common/exceptions/RuntimeError.hpp>
 #include <RoyaleLogger.hpp>
+#include <RoyaleTime.hpp>
 
 #include <FileSystem.hpp>
 
@@ -147,7 +148,8 @@ namespace
 ProcessingSpectre::ProcessingSpectre (IFrameCaptureReleaser *releaser)
     : Processing (releaser),
       m_currentUseCase (nullptr),
-      m_isReady (false)
+      m_isReady (false),
+      m_spectreBackend ("")
 {
     precalcLogLUT();
     m_ampMult = static_cast<float> (m_lutSize) / m_ampMax;
@@ -240,11 +242,31 @@ void ProcessingSpectre::setProcessingParameters (const ProcessingParameterMap &p
     std::lock_guard<std::recursive_mutex> lock (m_lock);
 
     auto &spectreInfo = getSpectreForStream (streamId);
+
+    auto spType = parameters.find (ProcessingFlag::SpectreProcessingType_Int);
+
+    auto spectreProcessingType = setSpectreProcessingType (parameters, streamId);
+
     auto config = spectreInfo.spectre->extendedConfiguration();
 
     if (applyRoyaleParameters (parameters, *config) && spectreInfo.spectre->reconfigure (*config))
     {
         m_parameters[streamId] = convertConfiguration (*config);
+        m_parameters[streamId][ProcessingFlag::SpectreProcessingType_Int] = spectreProcessingType;
+        if (spType != parameters.end())
+        {
+            // restore the min and max values
+            m_parameters[streamId][ProcessingFlag::SpectreProcessingType_Int] =
+                Variant (spectreProcessingType.getInt(), spType->second.getIntMin(), spType->second.getIntMax());
+        }
+        String spectreBackend = spectreInfo.spectre->backendId();
+
+        if (m_spectreBackend != spectreBackend)
+        {
+            m_spectreBackend = spectreBackend;
+            LOG (DEBUG) << "Spectre backend : " << m_spectreBackend;
+            sendEvent (EventSeverity::ROYALE_INFO, String ("Spectre backend : ") + m_spectreBackend);
+        }
     }
     else
     {
@@ -267,31 +289,45 @@ void ProcessingSpectre::processFrame (std::vector<ICapturedRawFrame *> &frames,
     auto numPixel = spectreInfo.spectre->getInputHeight() * spectreInfo.spectre->getInputWidth();
 
     Input<ArrayReference> input;
-    input.setIntensityFrame (ArrayReference<uint16_t> (frames[spectreInfo.frameIndices[0]]->getImageData(),
-                             numPixel), capturedTimes[spectreInfo.exposureIndices[0]]);
-    if (spectreInfo.frameIndices.size() > 1)
+
+    if (spectreInfo.irMode)
     {
-        input.setModulatedFrames<ParameterKey::FREQUENCY_1> (ArrayReference<uint16_t> (frames[spectreInfo.frameIndices[1] + 0]->getImageData(), numPixel),
-                ArrayReference<uint16_t> (frames[spectreInfo.frameIndices[1] + 1]->getImageData(), numPixel),
-                ArrayReference<uint16_t> (frames[spectreInfo.frameIndices[1] + 2]->getImageData(), numPixel),
-                ArrayReference<uint16_t> (frames[spectreInfo.frameIndices[1] + 3]->getImageData(), numPixel),
-                capturedTimes[spectreInfo.exposureIndices[1]]);
+        input.setIntensityFrame (ArrayReference<uint16_t> (frames[0]->getImageData(),
+                                 numPixel), capturedTimes[0]);
+        input.setIlluminatedIntensityFrame (ArrayReference<uint16_t> (frames[1]->getImageData(),
+                                            numPixel), capturedTimes[1]);
     }
-    if (spectreInfo.frameIndices.size() > 2)
+    else
     {
-        input.setModulatedFrames<ParameterKey::FREQUENCY_2> (ArrayReference<uint16_t> (frames[spectreInfo.frameIndices[2] + 0]->getImageData(), numPixel),
-                ArrayReference<uint16_t> (frames[spectreInfo.frameIndices[2] + 1]->getImageData(), numPixel),
-                ArrayReference<uint16_t> (frames[spectreInfo.frameIndices[2] + 2]->getImageData(), numPixel),
-                ArrayReference<uint16_t> (frames[spectreInfo.frameIndices[2] + 3]->getImageData(), numPixel),
-                capturedTimes[spectreInfo.exposureIndices[2]]);
+        input.setIntensityFrame (ArrayReference<uint16_t> (frames[spectreInfo.frameIndices[0]]->getImageData(),
+                                 numPixel), capturedTimes[spectreInfo.exposureIndices[0]]);
+        if (spectreInfo.frameIndices.size() > 1)
+        {
+            input.setModulatedFrames<ParameterKey::FREQUENCY_1> (ArrayReference<uint16_t> (frames[spectreInfo.frameIndices[1] + 0]->getImageData(), numPixel),
+                    ArrayReference<uint16_t> (frames[spectreInfo.frameIndices[1] + 1]->getImageData(), numPixel),
+                    ArrayReference<uint16_t> (frames[spectreInfo.frameIndices[1] + 2]->getImageData(), numPixel),
+                    ArrayReference<uint16_t> (frames[spectreInfo.frameIndices[1] + 3]->getImageData(), numPixel),
+                    capturedTimes[spectreInfo.exposureIndices[1]]);
+        }
+        if (spectreInfo.frameIndices.size() > 2)
+        {
+            input.setModulatedFrames<ParameterKey::FREQUENCY_2> (ArrayReference<uint16_t> (frames[spectreInfo.frameIndices[2] + 0]->getImageData(), numPixel),
+                    ArrayReference<uint16_t> (frames[spectreInfo.frameIndices[2] + 1]->getImageData(), numPixel),
+                    ArrayReference<uint16_t> (frames[spectreInfo.frameIndices[2] + 2]->getImageData(), numPixel),
+                    ArrayReference<uint16_t> (frames[spectreInfo.frameIndices[2] + 3]->getImageData(), numPixel),
+                    capturedTimes[spectreInfo.exposureIndices[2]]);
+        }
+        input.setTemperature (capturedCase->getIlluminationTemperature());
     }
-    input.setTemperature (capturedCase->getIlluminationTemperature());
 
     // Run Spectre
-    auto spectreStatus = spectreInfo.spectre->processWhole (input);
-    if (!spectreStatus)
     {
-        throw RuntimeError ("Error running Spectre");
+        ADD_TIME_MEASUREMENT (SpectreProcessing)
+        auto spectreStatus = spectreInfo.spectre->processWhole (input);
+        if (!spectreStatus)
+        {
+            throw RuntimeError ("Error running Spectre");
+        }
     }
     newExposureTimes = std::vector<uint32_t> (spectreInfo.spectre->results<ResultType::EXPOSURE_TIMES>().data(),
                        spectreInfo.spectre->results<ResultType::EXPOSURE_TIMES>().data() + spectreInfo.spectre->results<ResultType::EXPOSURE_TIMES>().size());
@@ -319,6 +355,10 @@ void ProcessingSpectre::processFrame (std::vector<ICapturedRawFrame *> &frames,
         if (m_listeners.irImageListener)
         {
             prepareIRImage (depthData.irImage.get(), depthData.streamId);
+        }
+        if (m_listeners.depthIrImageListener)
+        {
+            prepareDepthIRImage (depthData.depthIrImage.get(), depthData.streamId);
         }
     }
 }
@@ -386,30 +426,44 @@ void ProcessingSpectre::prepareSpectre (const UseCaseDefinition &useCase,
     const auto &indices = useCase.getRawFrameSetIndices (streamId, 0);
     auto config = info.spectre->basicConfiguration();
 
-    auto modGroupIdx = 0u;
-    info.frameIndices.resize (1);
-    info.exposureIndices.resize (1);
-    for (auto j = 0u, rawFrameIdx = 0u; j < indices.size(); j++)
+    if (indices.size() == 2 &&
+            rawFrameSets[indices[0]].isGrayscale() &&
+            rawFrameSets[indices[1]].isGrayscale())
     {
-        const auto &frameSet = rawFrameSets[indices[j]];
-        if (frameSet.isGrayscale())
+        info.irMode = true;
+        setParameterOrFail (*config, ParameterKey::PROCESSING_TYPE, ProcessingType::GRAY_IMAGE);
+    }
+    else
+    {
+        info.irMode = false;
+
+        auto modGroupIdx = 0u;
+        info.frameIndices.resize (1);
+        info.exposureIndices.resize (1);
+        for (auto j = 0u, rawFrameIdx = 0u; j < indices.size(); j++)
         {
-            info.frameIndices[0] = rawFrameIdx;
-            info.exposureIndices[0] = j;
-        }
-        else if (frameSet.isModulated() && frameSet.countRawFrames() == SPECTRE_FRAMES_PER_MOD_MEASUREMENTS
-                 && modGroupIdx < SPECTRE_MAX_4_PHASE_RAW_FRAME_SETS)
-        {
-            auto freqKey = modGroupIdx++ ? ParameterKey::FREQUENCY_2 : ParameterKey::FREQUENCY_1;
-            info.frameIndices.push_back (rawFrameIdx);
-            info.exposureIndices.push_back (j);
-            setParameterOrFail (*config, freqKey, frameSet.modulationFrequency);
+            const auto &frameSet = rawFrameSets[indices[j]];
+            if (frameSet.isGrayscale())
+            {
+                info.frameIndices[0] = rawFrameIdx;
+                info.exposureIndices[0] = j;
+            }
+            else if (frameSet.isModulated() && frameSet.countRawFrames() == SPECTRE_FRAMES_PER_MOD_MEASUREMENTS
+                     && modGroupIdx < SPECTRE_MAX_4_PHASE_RAW_FRAME_SETS)
+            {
+                auto freqKey = modGroupIdx++ ? ParameterKey::FREQUENCY_2 : ParameterKey::FREQUENCY_1;
+                info.frameIndices.push_back (rawFrameIdx);
+                info.exposureIndices.push_back (j);
+                setParameterOrFail (*config, freqKey, frameSet.modulationFrequency);
+            }
+
+            rawFrameIdx += narrow_cast<unsigned> (frameSet.countRawFrames());
         }
 
-        rawFrameIdx += narrow_cast<unsigned> (frameSet.countRawFrames());
+        setParameterOrFail (*config, ParameterKey::NUM_FREQUENCIES, modGroupIdx);
+        setParameterOrFail (*config, ParameterKey::PROCESSING_TYPE, ProcessingType::AUTO);
     }
 
-    setParameterOrFail (*config, ParameterKey::NUM_FREQUENCIES, modGroupIdx);
     auto res = info.spectre->reconfigure (*config);
 
     if (!res)
@@ -422,6 +476,18 @@ void ProcessingSpectre::prepareSpectre (const UseCaseDefinition &useCase,
 
     auto extConf (info.spectre->extendedConfiguration());
     setParameterOrFail (*extConf, ParameterKey::USE_AUTO_EXPOSURE, false);
+
+    // Change the auto exposure limits to be persistent
+    // so that changing a Spectre parameter will not change
+    // those values back to the standard ones
+    auto expoLower = extConf->getParameterByKey (ParameterKey::LOWER_EXPOSURE_LIMIT);
+    expoLower.setPersistent (true);
+    extConf->setParameter (expoLower);
+
+    auto expoUpper = extConf->getParameterByKey (ParameterKey::UPPER_EXPOSURE_LIMIT);
+    expoUpper.setPersistent (true);
+    extConf->setParameter (expoUpper);
+
     auto resExtReconf = info.spectre->reconfigure (*extConf);
     if (!resExtReconf)
     {
@@ -469,6 +535,40 @@ VerificationStatus ProcessingSpectre::verifyUseCase (const UseCaseDefinition &us
         if (status != VerificationStatus::SUCCESS)
         {
             return status;
+        }
+    }
+
+    if (rawFrameSets.size() < 2)
+    {
+        return VerificationStatus::PHASE;
+    }
+    else
+    {
+        if (rawFrameSets.size() == 2)
+        {
+            if (!rawFrameSets[0].isGrayscale())
+            {
+                return VerificationStatus::PHASE;
+            }
+        }
+        else if (rawFrameSets.size() == 3)
+        {
+            if (!rawFrameSets[0].isGrayscale() ||
+                    !rawFrameSets[1].isModulated() ||
+                    !rawFrameSets[2].isModulated())
+            {
+                return VerificationStatus::PHASE;
+            }
+        }
+        else if (rawFrameSets.size() == 4)
+        {
+            if (!rawFrameSets[0].isGrayscale() ||
+                    !rawFrameSets[1].isGrayscale() ||
+                    !rawFrameSets[2].isGrayscale() ||
+                    !rawFrameSets[3].isModulated())
+            {
+                return VerificationStatus::PHASE;
+            }
         }
     }
 
@@ -556,19 +656,17 @@ void ProcessingSpectre::prepareDepthDataOutput (DepthData *target, const royale:
     uint32_t numPixels = target->height * target->width;
     target->points.resize (numPixels);
 
+    DepthPoint *targetPoint = &target->points[0];
     size_t idx = 0;
-    for (auto i = 0u; i < numPixels; ++i, idx += 4)
+    for (auto i = 0u; i < numPixels; ++i, idx += 4, ++targetPoint)
     {
-        DepthPoint &targetPoint = target->points[i];
+        targetPoint->x = outCoord3d[idx + 0];
+        targetPoint->y = outCoord3d[idx + 1];
+        targetPoint->z = outCoord3d[idx + 2];
 
-        targetPoint.x = outCoord3d[idx + 0];
-        targetPoint.y = outCoord3d[idx + 1];
-        targetPoint.z = outCoord3d[idx + 2];
-
-        targetPoint.grayValue = (uint16_t) outAmplitude[i];
-        targetPoint.noise = outDistanceNoise[i];
-        auto tempDepthConfidence = static_cast<unsigned int> (outCoord3d[idx + 3] * 256);
-        targetPoint.depthConfidence = static_cast<uint8_t> (tempDepthConfidence == 256 ? 255 : tempDepthConfidence);
+        targetPoint->grayValue = (uint16_t) outAmplitude[i];
+        targetPoint->noise = outDistanceNoise[i];
+        targetPoint->depthConfidence = outCoord3d[idx + 3] < 1.0f ? static_cast<uint8_t> (outCoord3d[idx + 3] * 255.0f) : 255;
     }
 }
 
@@ -586,19 +684,27 @@ void ProcessingSpectre::prepareIntermediateOutput (IntermediateData *intermediat
     intermediateData->width = narrow_cast<uint16_t> (spectre.getOutputWidth());
     intermediateData->height = narrow_cast<uint16_t> (spectre.getOutputHeight());
     intermediateData->timeStamp = m_timeStamp;
-    intermediateData->numFrequencies = narrow_cast<uint32_t> (spectreInfo.frameIndices.size() - 1u);
+    if (spectreInfo.irMode)
+    {
+        intermediateData->numFrequencies = 1;
+    }
+    else
+    {
+        intermediateData->numFrequencies = narrow_cast<uint32_t> (spectreInfo.frameIndices.size() - 1u);
+    }
+
     uint32_t numPixels = intermediateData->height * intermediateData->width;
 
     intermediateData->points.resize (numPixels);
 
-    for (auto i = 0u; i < numPixels; ++i)
-    {
-        IntermediatePoint  &targetPoint = intermediateData->points[i];
+    IntermediatePoint *targetPoint = &intermediateData->points[0];
 
-        targetPoint.intensity = outIntensity[i];
-        targetPoint.distance = outDistance[i];
-        targetPoint.amplitude = outAmplitude[i];
-        targetPoint.flags = outFlags[i];
+    for (auto i = 0u; i < numPixels; ++i, ++targetPoint)
+    {
+        targetPoint->intensity = outIntensity[i];
+        targetPoint->distance = outDistance[i];
+        targetPoint->amplitude = outAmplitude[i];
+        targetPoint->flags = outFlags[i];
     }
 }
 
@@ -615,11 +721,11 @@ inline uint16_t noiseToConfidence (const float noise, const float threshold)
 
 void ProcessingSpectre::doPrepareDepthImage (const ArrayReference<float> &outCoord3d, const ArrayReference<float> &outNoise,
         const float noiseThreshold, const ArrayReference<uint32_t> &outFlags,
-        royale::DepthImage *target, StreamId streamId)
+        royale::Vector<uint16_t> &data, StreamId streamId)
 {
     const uint16_t invalidPixel = (1 << 13);
-    target->cdData.clear();
-    target->cdData.reserve (outFlags.size());
+    data.clear();
+    data.reserve (outFlags.size());
 
     bool validImage = useValidateImageActivated (streamId);
 
@@ -627,13 +733,13 @@ void ProcessingSpectre::doPrepareDepthImage (const ArrayReference<float> &outCoo
     {
         if (outFlags[i] == 0 || !validImage)
         {
-            target->cdData.push_back (static_cast<uint16_t> (
-                                          (static_cast<uint16_t> (outCoord3d[4 * i + 2] * 1000.0f + 0.5f) & 0x1fff) // It's supposed to be a Z image, not a distance image
-                                          | ( (noiseToConfidence (outNoise[i], noiseThreshold) << 13) & 0xe000)));
+            data.push_back (static_cast<uint16_t> (
+                                (static_cast<uint16_t> (outCoord3d[4 * i + 2] * 1000.0f + 0.5f) & 0x1fff) // It's supposed to be a Z image, not a distance image
+                                | ( (noiseToConfidence (outNoise[i], noiseThreshold) << 13) & 0xe000)));
         }
         else
         {
-            target->cdData.push_back (invalidPixel);
+            data.push_back (invalidPixel);
         }
     }
 }
@@ -655,7 +761,7 @@ void ProcessingSpectre::prepareDepthImage (royale::DepthImage *target, const roy
     target->streamId = streamId;
     target->timestamp = m_timeStamp.count();
 
-    doPrepareDepthImage (outCoord3d, outNoise, noiseThreshold, outFlags, target, streamId);
+    doPrepareDepthImage (outCoord3d, outNoise, noiseThreshold, outFlags, target->cdData, streamId);
 }
 
 void ProcessingSpectre::prepareSparsePointCloud (royale::SparsePointCloud *target, const royale::StreamId streamId)
@@ -694,13 +800,13 @@ inline uint8_t ProcessingSpectre::amplitudeToIRValue (float a)
     return m_logLUT[idx];
 }
 
-void ProcessingSpectre::doPrepareIRImage (const ArrayReference<float> &outAmplitude, royale::IRImage *target)
+void ProcessingSpectre::doPrepareIRImage (const ArrayReference<float> &outAmplitude, royale::Vector<uint8_t> &data)
 {
-    target->data.clear();
-    target->data.resize (outAmplitude.size());
+    data.clear();
+    data.resize (outAmplitude.size());
     for (auto i = 0u; i < outAmplitude.size(); ++i)
     {
-        target->data[i] = amplitudeToIRValue (outAmplitude[i]);
+        data[i] = amplitudeToIRValue (outAmplitude[i]);
     }
 }
 
@@ -714,7 +820,28 @@ void ProcessingSpectre::prepareIRImage (royale::IRImage *target, const royale::S
     target->streamId = streamId;
     target->timestamp = m_timeStamp.count();
 
-    doPrepareIRImage (outAmplitude, target);
+    doPrepareIRImage (outAmplitude, target->data);
+}
+
+void ProcessingSpectre::prepareDepthIRImage (royale::DepthIRImage *target, const royale::StreamId streamId)
+{
+    auto &spectre = *getSpectreForStream (streamId).spectre;
+    auto outCoord3d = spectre.results<ResultType::COORDINATES>();
+    auto outFlags = spectre.results<ResultType::FLAGS>();
+    auto outNoise = spectre.results<ResultType::DISTANCE_NOISES>();
+    auto outAmplitude = spectre.results<ResultType::AMPLITUDES>();
+
+    target->width = narrow_cast<uint16_t> (spectre.getOutputWidth());
+    target->height = narrow_cast<uint16_t> (spectre.getOutputHeight());
+    target->streamId = streamId;
+    target->timestamp = m_timeStamp.count();
+
+    royale::ProcessingParameterMap params;
+    this->getProcessingParameters (params, streamId);
+    float noiseThreshold = params[ProcessingFlag::NoiseThreshold_Float].getFloat();
+
+    doPrepareIRImage (outAmplitude, target->irData);
+    doPrepareDepthImage (outCoord3d, outNoise, noiseThreshold, outFlags, target->dpData, streamId);
 }
 
 inline bool ProcessingSpectre::useValidateImageActivated (StreamId streamId)
@@ -775,7 +902,10 @@ void ProcessingSpectre::setExposureMode (ExposureMode exposureMode,
 
     if (spectreInfo.spectre->reconfigure (*config))
     {
+        //ProcessingType will be discarded after "convertConfiguration"
+        auto tempProcessingType = m_parameters[streamId][ProcessingFlag::SpectreProcessingType_Int];
         m_parameters[streamId] = convertConfiguration (*config);
+        m_parameters[streamId][ProcessingFlag::SpectreProcessingType_Int] = tempProcessingType;
     }
     else
     {
@@ -849,4 +979,79 @@ royale::FilterLevel ProcessingSpectre::getFilterLevel (royale::StreamId streamId
 
     // Apparently the current parameters are different from all predefined sets
     return FilterLevel::Custom;
+}
+
+royale::Variant ProcessingSpectre::setSpectreProcessingType (const ProcessingParameterMap &parameters,
+        const royale::StreamId streamId)
+{
+    auto &spectreInfo = getSpectreForStream (streamId);
+
+    auto baseConfig = spectreInfo.spectre->basicConfiguration();
+    if (parameters.find (ProcessingFlag::SpectreProcessingType_Int) != parameters.end())
+    {
+        try
+        {
+            auto spType = parameters.find (ProcessingFlag::SpectreProcessingType_Int);
+            if (spType->second.getInt() == 1)
+            {
+                setParameterOrFail (*baseConfig, ParameterKey::PROCESSING_TYPE, ProcessingType::AUTO);
+            }
+            else if (spType->second.getInt() == 2)
+            {
+                setParameterOrFail (*baseConfig, ParameterKey::PROCESSING_TYPE, ProcessingType::CB_BINNED_WS);
+            }
+            else if (spType->second.getInt() == 3)
+            {
+                setParameterOrFail (*baseConfig, ParameterKey::PROCESSING_TYPE, ProcessingType::NG);
+            }
+            else if (spType->second.getInt() == 5)
+            {
+                setParameterOrFail (*baseConfig, ParameterKey::PROCESSING_TYPE, ProcessingType::CB_BINNED_NG);
+            }
+            else if (spType->second.getInt() == 6)
+            {
+                setParameterOrFail (*baseConfig, ParameterKey::PROCESSING_TYPE, ProcessingType::GRAY_IMAGE);
+            }
+        }
+        catch (...)
+        {
+            // ignore the error
+        }
+
+        spectreInfo.spectre->reconfigure (*baseConfig);
+    }
+
+    Variant spectreProcessingType (1, 1, 5);
+    auto spType = baseConfig->getParameterByKey (ParameterKey::PROCESSING_TYPE).getValue();
+
+    ProcessingType spTypeVal = ProcessingType::AUTO;
+    spType.get<ProcessingType> (spTypeVal);
+
+    switch (spTypeVal)
+    {
+        case ProcessingType::WS:
+        case ProcessingType::CB_FAST:
+        case ProcessingType::AUTO_EXPOSURE_ONLY:
+        case ProcessingType::AUTO:
+            break;
+        case ProcessingType::CB_BINNED_WS:
+            spectreProcessingType = Variant (2, 2, 2);
+            break;
+        case ProcessingType::NG:
+            spectreProcessingType = Variant (3, 3, 3);
+            break;
+
+        // Value 4 is reserved for the autofocus pipeline
+
+        case ProcessingType::CB_BINNED_NG:
+            spectreProcessingType = Variant (5, 5, 5);
+            break;
+        case ProcessingType::GRAY_IMAGE:
+            spectreProcessingType = Variant (6, 6, 6);
+            break;
+        default:
+            throw InvalidValue ("SpectreProcessingType not recognized!");
+    }
+
+    return spectreProcessingType;
 }

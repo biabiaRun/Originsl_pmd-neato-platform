@@ -10,8 +10,10 @@
 
 #pragma once
 
+#include <errno.h>
 #include <stdint.h>
 #include <stddef.h>
+#include <string.h>
 
 #ifdef _WIN32
 #  if defined(RRFACCESSAPI_EXPORTS)
@@ -86,9 +88,9 @@ typedef enum royale_rrf_compressiontype
 #ifdef WIN32
 
 // fopen
-#define fopen_royale_rrf( file, filename, mode ) \
-auto fopenerror = fopen_s( &file, filename, mode ); \
-if (fopenerror) file = 0;
+#define fopen_royale_rrf( file, filename, mode, fopenerror ) \
+fopenerror = fopen_s( &file, filename, mode ); \
+if (fopenerror) file = 0
 
 // fread
 #define fread_royale_rrf( buf, bufsize, elsize, elcount, file ) \
@@ -96,16 +98,31 @@ fread_s( buf, bufsize, elsize, elcount, file );
 
 #define stat_royale_rrf _stat64
 
+static inline const char *strerror_royale_rrf (int errCode)
+{
+    static char buffer[128];
+    strerror_s (buffer, 128, errCode);
+    return buffer;
+}
+
 #else
 
 // fopen
-#define fopen_royale_rrf( file, filename, mode ) \
-file = fopen ( filename, mode )
+#define fopen_royale_rrf( file, filename, mode, fopenerror ) \
+errno = 0;  \
+file = fopen ( filename, mode ); \
+fopenerror = errno
+
 
 // fread
 #define fread_royale_rrf( buf, bufsize, elsize, elcount, file ) \
 fread( buf, elsize, elcount, file );
 
 #define stat_royale_rrf stat64
+
+static inline const char *strerror_royale_rrf (int errCode)
+{
+    return strerror (errCode);
+}
 
 #endif

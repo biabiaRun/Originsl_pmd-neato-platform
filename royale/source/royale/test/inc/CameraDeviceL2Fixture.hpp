@@ -13,19 +13,14 @@
 #include <CameraDeviceL1Fixture.hpp>
 #include <royale/RawData.hpp>
 
-class CameraDeviceL2Fixture : public CameraDeviceL1Fixture
-{
-protected:
-    CameraDeviceL2Fixture();
-    virtual ~CameraDeviceL2Fixture();
-
-    virtual void SetUp();
-    virtual void TearDown();
-};
-
 class ExtendedDataListener : public royale::IExtendedDataListener, public MonitorableListener
 {
 public:
+    ExtendedDataListener() :
+        m_count (0)
+    {
+    }
+
     ~ExtendedDataListener()
     {
         depthDataExposureTimes.clear();
@@ -35,6 +30,7 @@ public:
 
     void onNewData (const royale::IExtendedData *data) override
     {
+        m_count++;
         if (data->hasRawData())
         {
             EXPECT_GT (data->getRawData()->phaseAngles.size(), 0u);
@@ -49,6 +45,8 @@ public:
                 EXPECT_EQ (illuminationEnabled.size(), data->getRawData()->illuminationEnabled.size());
             }
             illuminationEnabled = data->getRawData()->illuminationEnabled;
+
+            rawDataExposureTimes = data->getRawData()->exposureTimes;
         }
 
         // Check if there is any intermediate data inside
@@ -95,18 +93,16 @@ public:
                 EXPECT_TRUE (thereIsDistanceData);
                 EXPECT_TRUE (thereIsIntensityData);
             }
-        }
 
-
-        if (data->hasDepthData() &&
-                data->hasIntermediateData() &&
-                data->hasRawData())
-        {
-            depthDataExposureTimes = data->getDepthData()->exposureTimes;
-            rawDataExposureTimes = data->getRawData()->exposureTimes;
             intermediateDataExposureTimes = data->getIntermediateData()->exposureTimes;
         }
-        pulse ();
+
+
+        if (data->hasDepthData())
+        {
+            depthDataExposureTimes = data->getDepthData()->exposureTimes;
+        }
+        pulse();
     }
 
     royale::Vector<uint32_t> depthDataExposureTimes;
@@ -115,4 +111,51 @@ public:
 
     royale::Vector<uint16_t> phaseAngles;
     royale::Vector<uint8_t> illuminationEnabled;
+    int m_count;
 };
+
+class CameraDeviceL2Fixture : public CameraDeviceL1Fixture
+{
+protected:
+    CameraDeviceL2Fixture();
+    virtual ~CameraDeviceL2Fixture();
+
+    virtual void SetUp();
+    virtual void TearDown();
+
+    void runUseCaseAndCheckFPS (royale::String useCase)
+    {
+        ExtendedDataListener extendedListener;
+        camera->registerDataListenerExtended (&extendedListener);
+
+        uint32_t nrStreams;
+        ASSERT_EQ (camera->getNumberOfStreams (useCase, nrStreams), royale::CameraStatus::SUCCESS);
+        if (nrStreams > 1)
+        {
+            LOG (DEBUG) << "This test only works for non mixed mode use cases";
+            return;
+        }
+
+        ASSERT_EQ (camera->setUseCase (useCase), royale::CameraStatus::SUCCESS);
+
+        uint16_t maxFrameRate;
+        ASSERT_EQ (camera->getMaxFrameRate (maxFrameRate), royale::CameraStatus::SUCCESS);
+        ASSERT_EQ (camera->startCapture(), royale::CameraStatus::SUCCESS);
+
+        // Wait until the camera is really running
+        std::this_thread::sleep_for (std::chrono::milliseconds (500));
+        extendedListener.m_count = 0u;
+
+        std::this_thread::sleep_for (std::chrono::seconds (5));
+        ASSERT_EQ (camera->stopCapture(), royale::CameraStatus::SUCCESS);
+
+        int measuredFPS = extendedListener.m_count / 5;
+        LOG (DEBUG) << "Testing use case : " << useCase;
+        LOG (DEBUG) << "Use Case FPS : " << maxFrameRate;
+        LOG (DEBUG) << "Measured FPS : " << measuredFPS;
+
+        EXPECT_TRUE (measuredFPS <= maxFrameRate  &&
+                     measuredFPS >= maxFrameRate - 2);
+    }
+};
+

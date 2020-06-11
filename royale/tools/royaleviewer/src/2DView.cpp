@@ -32,12 +32,14 @@ TwoDView::TwoDView (ColorHelper *colorHelper, QMutex *dataMutex, QWidget *parent
     m_uniform = false;
     m_showGrayimage = false;
     m_showOverlayimage = false;
+    m_showFlagimage = false;
     m_currentDataset = nullptr;
     m_curRect = QRect (0, 0, this->size().width(), this->size().height());
     m_isWindowSizeChanged = false;
     m_pixelInfoManager = new PixelInfoManager();
     m_isHorizontallyFlipped = false;
     m_isVerticallyFlipped = false;
+    m_irMode = false;
 
     m_filterMin = 0.0f;
     m_filterMax = 7.5f;
@@ -61,123 +63,143 @@ void TwoDView::fillImage()
 
     m_imageBuffer.resize (m_currentDataset->height * m_currentDataset->width * 4);
 
-    if (m_showDistance)
+    unsigned int numPoints = m_currentDataset->height * m_currentDataset->width;
+
+    const DepthPoint *currentPoint = &m_currentDataset->points[0];
+    const IntermediatePoint *currentInterPoint = &m_currentInterDataset->points[0];
+    uint8_t *currentImagerBuffer = &m_imageBuffer[0];
+
+    if (m_showGrayimage || m_irMode)
     {
-        int idx = 0;
-        for (int y = 0; y < m_currentDataset->height; y++)
+        for (auto idx = 0u; idx < numPoints; ++idx, ++currentPoint, ++currentInterPoint)
         {
-            for (int x = 0; x < m_currentDataset->width; x++)
+            if (currentPoint->z < m_filterMin || currentPoint->z > m_filterMax)
             {
-                const DepthPoint &currentPoint = m_currentDataset->points[idx];
-                const IntermediatePoint &currentInterPoint = m_currentInterDataset->points[idx];
-
-                const RgbColor &curColor = m_colorHelper->getColor (currentPoint.z);
-
-                auto currentIndex = idx * 4;
-                if (currentInterPoint.flags & FLAGS_SBI_ON)
+                //note: qt's QImage::Format_ARGB32, i.e. 32-bit ARGB format (0xAARRGGBB).
+                * (currentImagerBuffer++) = 0u;
+                * (currentImagerBuffer++) = 0u;
+                * (currentImagerBuffer++) = 0u;
+                * (currentImagerBuffer++) = 255u; // full opaque
+            }
+            else
+            {
+                if (m_irMode)
                 {
-                    //note: qt's QImage::Format_ARGB32, i.e. 32-bit ARGB format (0xAARRGGBB).
-                    m_imageBuffer[currentIndex++] = 120u;
-                    m_imageBuffer[currentIndex++] = 120u;
-                    m_imageBuffer[currentIndex++] = 120u;
-                    m_imageBuffer[currentIndex] = 255u; // full opaque
-                }
-                else if (currentPoint.z == 0.f || currentPoint.z < m_filterMin || currentPoint.z > m_filterMax)
-                {
-                    //note: qt's QImage::Format_ARGB32, i.e. 32-bit ARGB format (0xAARRGGBB).
-                    m_imageBuffer[currentIndex++] = 0u;
-                    m_imageBuffer[currentIndex++] = 0u;
-                    m_imageBuffer[currentIndex++] = 0u;
-                    m_imageBuffer[currentIndex] = 255u; // full opaque
+                    // For IR mode we just take the value returned from Spectre
+                    //note: qt's QImage::Format_ARGB32, i.e. 32-bit ARGB format (0xAARRGGBB).s
+                    * (currentImagerBuffer++) = static_cast<uint8_t> (currentPoint->grayValue);
+                    * (currentImagerBuffer++) = static_cast<uint8_t> (currentPoint->grayValue);
+                    * (currentImagerBuffer++) = static_cast<uint8_t> (currentPoint->grayValue);
+                    * (currentImagerBuffer++) = 255u; // full opaque
                 }
                 else
                 {
-                    //note: qt's QImage::Format_ARGB32, i.e. 32-bit ARGB format (0xAARRGGBB).
-                    m_imageBuffer[currentIndex++] = static_cast<uint8_t> (curColor.b);
-                    m_imageBuffer[currentIndex++] = static_cast<uint8_t> (curColor.g);
-                    m_imageBuffer[currentIndex++] = static_cast<uint8_t> (curColor.r);
-                    m_imageBuffer[currentIndex] = 255u; // full opaque
-                }
+                    const RgbColor &curColor = m_colorHelper->getGrayColor (currentPoint->grayValue);
 
-                idx += 1;
+                    //note: qt's QImage::Format_ARGB32, i.e. 32-bit ARGB format (0xAARRGGBB).s
+                    * (currentImagerBuffer++) = curColor.b;
+                    * (currentImagerBuffer++) = curColor.g;
+                    * (currentImagerBuffer++) = curColor.r;
+                    * (currentImagerBuffer++) = 255u; // full opaque
+                }
             }
         }
-
     }
-    else if (m_showGrayimage)
+    else if (m_showDistance)
     {
-        int idx = 0;
-        for (int y = 0; y < m_currentDataset->height; y++)
+        for (auto idx = 0u; idx < numPoints; ++idx, ++currentPoint, ++currentInterPoint)
         {
-            for (int x = 0; x < m_currentDataset->width; x++)
+            if (currentInterPoint->flags & FLAGS_SBI_ON)
             {
-                const DepthPoint &currentPoint = m_currentDataset->points[idx];
+                //note: qt's QImage::Format_ARGB32, i.e. 32-bit ARGB format (0xAARRGGBB).
+                * (currentImagerBuffer++) = 120u;
+                * (currentImagerBuffer++) = 120u;
+                * (currentImagerBuffer++) = 120u;
+                * (currentImagerBuffer++) = 255u; // full opaque
+            }
+            else if (currentPoint->z == 0.f || currentPoint->z < m_filterMin || currentPoint->z > m_filterMax)
+            {
+                //note: qt's QImage::Format_ARGB32, i.e. 32-bit ARGB format (0xAARRGGBB).
+                * (currentImagerBuffer++) = 0u;
+                * (currentImagerBuffer++) = 0u;
+                * (currentImagerBuffer++) = 0u;
+                * (currentImagerBuffer++) = 255u; // full opaque
+            }
+            else
+            {
+                const RgbColor &curColor = m_colorHelper->getColor (currentPoint->z);
 
-                const RgbColor &curColor = m_colorHelper->getGrayColor (currentPoint.grayValue);
-                auto currentIndex = idx * 4;
-
-                if (currentPoint.z < m_filterMin || currentPoint.z > m_filterMax)
-                {
-                    //note: qt's QImage::Format_ARGB32, i.e. 32-bit ARGB format (0xAARRGGBB).
-                    m_imageBuffer[currentIndex++] = 0u;
-                    m_imageBuffer[currentIndex++] = 0u;
-                    m_imageBuffer[currentIndex++] = 0u;
-                    m_imageBuffer[currentIndex] = 255u; // full opaque
-                }
-                else
-                {
-                    //note: qt's QImage::Format_ARGB32, i.e. 32-bit ARGB format (0xAARRGGBB).s
-                    m_imageBuffer[currentIndex++] = static_cast<uint8_t> (curColor.b);
-                    m_imageBuffer[currentIndex++] = static_cast<uint8_t> (curColor.g);
-                    m_imageBuffer[currentIndex++] = static_cast<uint8_t> (curColor.r);
-                    m_imageBuffer[currentIndex] = 255; // full opaque
-                }
-
-                idx += 1;
+                //note: qt's QImage::Format_ARGB32, i.e. 32-bit ARGB format (0xAARRGGBB).
+                * (currentImagerBuffer++) = curColor.b;
+                * (currentImagerBuffer++) = curColor.g;
+                * (currentImagerBuffer++) = curColor.r;
+                * (currentImagerBuffer++) = 255u; // full opaque
             }
         }
     }
     else if (m_showOverlayimage)
     {
-
-        int idx = 0;
-        for (int y = 0; y < m_currentDataset->height; y++)
+        for (auto idx = 0u; idx < numPoints; ++idx, ++currentPoint, ++currentInterPoint)
         {
-            for (int x = 0; x < m_currentDataset->width; x++)
+            if (currentPoint->z == 0.f || currentPoint->z < m_filterMin || currentPoint->z > m_filterMax)
             {
-                const DepthPoint &currentPoint = m_currentDataset->points[idx];
-
-                const RgbColor &curColor = m_colorHelper->getColor (currentPoint.z);
-
-                float grayVal = (float) m_colorHelper->getGrayColor (currentPoint.grayValue).r;
-                float scaleTmp = 8.0f * std::pow (currentPoint.z, 1.5f) * grayVal / 255.f;
+                //note: qt's QImage::Format_ARGB32, i.e. 32-bit ARGB format (0xAARRGGBB).
+                * (currentImagerBuffer++) = 0u;
+                * (currentImagerBuffer++) = 0u;
+                * (currentImagerBuffer++) = 0u;
+                * (currentImagerBuffer++) = 255u; // full opaque
+            }
+            else
+            {
+                const RgbColor &curColor = m_colorHelper->getColor (currentPoint->z);
+                float grayVal = (float) m_colorHelper->getGrayColor (currentPoint->grayValue).r;
+                float scaleTmp = 8.0f * std::pow (currentPoint->z, 1.5f) * grayVal / 255.f;
                 float scale = qBound (0.f, scaleTmp, 1.f);
 
-                auto currentIndex = idx * 4;
-
-                if (currentPoint.z == 0.f || currentPoint.z < m_filterMin || currentPoint.z > m_filterMax)
-                {
-                    //note: qt's QImage::Format_ARGB32, i.e. 32-bit ARGB format (0xAARRGGBB).
-                    m_imageBuffer[currentIndex++] = 0u;
-                    m_imageBuffer[currentIndex++] = 0u;
-                    m_imageBuffer[currentIndex++] = 0u;
-                    m_imageBuffer[currentIndex] = 255u; // full opaque
-                }
-                else
-                {
-                    //note: qt's QImage::Format_ARGB32, i.e. 32-bit ARGB format (0xAARRGGBB).
-                    m_imageBuffer[currentIndex++] = static_cast<uint8_t> (scale * curColor.b);
-                    m_imageBuffer[currentIndex++] = static_cast<uint8_t> (scale * curColor.g);
-                    m_imageBuffer[currentIndex++] = static_cast<uint8_t> (scale * curColor.r);
-                    m_imageBuffer[currentIndex] = 255u; // full opaque
-                }
-
-                idx += 1;
+                //note: qt's QImage::Format_ARGB32, i.e. 32-bit ARGB format (0xAARRGGBB).
+                * (currentImagerBuffer++) = static_cast<uint8_t> (scale * curColor.b);
+                * (currentImagerBuffer++) = static_cast<uint8_t> (scale * curColor.g);
+                * (currentImagerBuffer++) = static_cast<uint8_t> (scale * curColor.r);
+                * (currentImagerBuffer++) = 255u; // full opaque
+            }
+        }
+    }
+    else if (m_showFlagimage)
+    {
+        for (auto idx = 0u; idx < numPoints; ++idx, ++currentInterPoint)
+        {
+            if (currentInterPoint->flags)
+            {
+                * (currentImagerBuffer++) = 0u;
+                * (currentImagerBuffer++) = 0u;
+                * (currentImagerBuffer++) = 0u;
+                * (currentImagerBuffer++) = 255u;
+            }
+            else
+            {
+                * (currentImagerBuffer++) = 255u;
+                * (currentImagerBuffer++) = 255u;
+                * (currentImagerBuffer++) = 255u;
+                * (currentImagerBuffer++) = 255u;
             }
         }
     }
 
-    m_image = QImage (&m_imageBuffer[0], m_currentDataset->width, m_currentDataset->height, QImage::Format_ARGB32).mirrored (m_isHorizontallyFlipped, m_isVerticallyFlipped);
+    if (m_image.width() != m_currentDataset->width ||
+            m_image.height() != m_currentDataset->height)
+    {
+        m_image = QImage (m_currentDataset->width, m_currentDataset->height, QImage::Format_ARGB32);
+    }
+
+    for (int y = 0; y < m_image.height(); y++)
+    {
+        memcpy (m_image.scanLine (y), &m_imageBuffer[y * m_image.bytesPerLine()], m_image.bytesPerLine());
+    }
+
+    if (m_isHorizontallyFlipped || m_isVerticallyFlipped)
+    {
+        m_image = m_image.mirrored (m_isHorizontallyFlipped, m_isVerticallyFlipped);
+    }
 
     update();
 }
@@ -337,6 +359,7 @@ void TwoDView::switchToDistanceBuffer()
     m_uniform = false;
     m_showGrayimage = false;
     m_showOverlayimage = false;
+    m_showFlagimage = false;
     fillImage();
 }
 
@@ -354,6 +377,7 @@ void TwoDView::switchToGrayBuffer (bool uniform)
     m_uniform = uniform;
     m_showGrayimage = true;
     m_showOverlayimage = false;
+    m_showFlagimage = false;
     fillImage();
 }
 
@@ -364,6 +388,18 @@ void TwoDView::switchToOverlay()
     m_uniform = false;
     m_showGrayimage = false;
     m_showOverlayimage = true;
+    m_showFlagimage = false;
+    fillImage();
+}
+
+void TwoDView::switchToFlag()
+{
+    QMutexLocker locker (m_dataMutex);
+    m_showDistance = false;
+    m_uniform = false;
+    m_showGrayimage = false;
+    m_showOverlayimage = false;
+    m_showFlagimage = true;
     fillImage();
 }
 
@@ -450,6 +486,11 @@ void TwoDView::setFilterMinMax (float filterMin, float filterMax, bool cameraSta
     }
 }
 
+void TwoDView::clearPixelInfos()
+{
+    m_pixelInfoManager->wipeOut();
+}
+
 void TwoDView::flipHorizontally (bool enabled)
 {
     m_pixelInfoManager->wipeOut();
@@ -460,4 +501,9 @@ void TwoDView::flipVertically (bool enabled)
 {
     m_pixelInfoManager->wipeOut();
     m_isVerticallyFlipped = enabled;
+}
+
+void TwoDView::setIRMode (bool irMode)
+{
+    m_irMode = irMode;
 }

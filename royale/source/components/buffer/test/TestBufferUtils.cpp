@@ -67,6 +67,19 @@ namespace
                                    0xee, 0x0e, 0xff, 0x0f
                                };
 
+    /**
+     * Testdata for the S32V234 format
+     */
+    const auto testDataS32V234 = std::vector<uint8_t>
+                                 {
+                                     0x20, 0x10, 0x40, 0x30, 0x70, 0x56, 0xd0, 0xfe,
+                                     0x40, 0x23, 0xc0, 0xab, 0x70, 0x35, 0xd0, 0x9b,
+                                     0x00, 0x00, 0x10, 0x11, 0x20, 0x22, 0x30, 0x33,
+                                     0x40, 0x44, 0x50, 0x55, 0x80, 0x88, 0x90, 0x99,
+                                     0xa0, 0xaa, 0xb0, 0xbb, 0xc0, 0xcc, 0xd0, 0xdd,
+                                     0xe0, 0xee, 0xf0, 0xff
+                                 };
+
     std::vector<uint8_t> createStrideData (const std::vector<uint8_t> &src, std::size_t elementSize, std::size_t strideSize)
     {
         const auto PAD = uint8_t (0);
@@ -113,6 +126,20 @@ TEST (TestBufferUtils, CopyAndNormalizeRaw12)
     SimpleCapturedBuffer dest (pixelCount * sizeof (uint16_t), 0, pixelCount);
 
     BufferUtils::copyAndNormalize (dest, testDataRaw12.data(), testDataRaw12.size(), BufferDataFormat::RAW12);
+
+    const auto pixelData = dest.getPixelData();
+    for (auto i = 0u; i < pixelCount; i++)
+    {
+        ASSERT_EQ (testFramePixels.at (i), pixelData[i]);
+    }
+}
+
+TEST (TestBufferUtils, CopyAndNormalizeS32V234)
+{
+    const std::size_t pixelCount = testFramePixels.size();
+    SimpleCapturedBuffer dest (pixelCount * sizeof (uint16_t), 0, pixelCount);
+
+    BufferUtils::copyAndNormalize (dest, testDataS32V234.data(), testDataS32V234.size(), BufferDataFormat::S32V234);
 
     const auto pixelData = dest.getPixelData();
     for (auto i = 0u; i < pixelCount; i++)

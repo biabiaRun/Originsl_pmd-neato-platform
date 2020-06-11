@@ -1,0 +1,108 @@
+#****************************************************************************
+# Copyright (C) 2019 pmdtechnologies ag & Infineon Technologies
+#
+# THIS CODE AND INFORMATION ARE PROVIDED "AS IS" WITHOUT WARRANTY OF ANY
+# KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
+# PARTICULAR PURPOSE.
+#
+#****************************************************************************
+
+cmake_minimum_required(VERSION 3.0.0)
+
+project(RoyPy)
+
+set(CMAKE_PREFIX_PATH "../../share")
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../share")
+
+# Starting with CMake 3.13, UseSWIG generates now standard target names.
+if(POLICY CMP0078)
+    cmake_policy(SET CMP0078 NEW)
+endif()
+
+find_package(royale REQUIRED)
+
+find_package(SWIG REQUIRED)
+
+find_package(PythonInterp 3 REQUIRED)
+set(Python_ADDITIONAL_VERSIONS ${PYTHON_VERSION_STRING})
+find_package(PythonLibs 3 REQUIRED)
+
+if (NOT SWIG_FOUND OR
+    NOT PYTHONLIBS_FOUND)
+    message("SWIG not found. Python wrapper will not be built!")
+    return()
+endif()
+
+include(${SWIG_USE_FILE})
+
+set(CMAKE_SWIG_FLAGS "")
+set(CMAKE_SWIG_OUTDIR "${CMAKE_BINARY_DIR}/bin")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/bin" CACHE STRING "" FORCE )
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/bin" CACHE STRING "" FORCE )
+
+#this option can be set to have faster retrieval of depth points and
+#for this case, numpy.i should be included in the current directory
+option(royale_USE_NUMPY_IN_ROYPY "Use numpy.i for the Python wrapper" OFF)
+
+if (royale_USE_NUMPY_IN_ROYPY)
+    if (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/numpy.i")
+        message(FATAL_ERROR "numpy.i not found! Please download numpy.i from https://github.com/numpy/numpy/tree/master/tools/swig and place it in ${CMAKE_CURRENT_SOURCE_DIR}")
+    endif()
+    if (NOT Numpy_FOUND)
+        find_package (Numpy)
+        if (Numpy_FOUND)
+            set_target_properties(${SWIG_MODULE_roypy_REAL_NAME} PROPERTIES SWIG_COMPILE_DEFINITIONS ACTIVATE_NUMPY)
+        else()
+            MESSAGE(FATAL_ERROR "Numpy activated but Python package was not found!")
+        endif()
+    endif()
+    message(STATUS "Numpy version : ${Numpy_VERSION}")
+    ADD_DEFINITIONS(-DROYALE_ACTIVATE_NUMPY)
+    SET(CMAKE_SWIG_FLAGS -DROYALE_ACTIVATE_NUMPY)
+endif ()
+
+include_directories(${PYTHON_INCLUDE_PATH}
+                    ${CMAKE_CURRENT_SOURCE_DIR}
+                    ${PYTHON_INCLUDE_DIRS}
+                    ../../include
+                    ${Numpy_INCLUDE_DIR}
+                    )
+set_source_files_properties(roypy.i PROPERTIES
+    CPLUSPLUS ON)
+
+link_directories(${royale_LIB_DIR})  
+  
+if(${CMAKE_VERSION} VERSION_LESS "3.8.0")   
+    SWIG_ADD_MODULE (roypy python
+        roypy.i roypy.h)
+else()
+    #SWIG_ADD_MODULE was marked as deprecated beginning with CMake 3.8
+    SWIG_ADD_LIBRARY(roypy LANGUAGE python
+        SOURCES roypy.i roypy.h)
+endif()    
+
+# If we don't have the debug library link against the release
+IF(NOT PYTHON_DEBUG_LIBRARIES AND MSVC)
+    target_compile_definitions(${SWIG_MODULE_roypy_REAL_NAME}
+        PRIVATE
+        $<$<CONFIG:Debug>:SWIG_PYTHON_INTERPRETER_NO_DEBUG>)
+endif()
+
+swig_link_libraries(roypy "${royale_LIBS}" ${PYTHON_LIBRARIES})
+
+set_target_properties(${SWIG_MODULE_roypy_REAL_NAME}
+    PROPERTIES
+    FOLDER python
+    DEBUG_POSTFIX ""
+)
+
+if (APPLE) 
+   set_target_properties(${SWIG_MODULE_roypy_REAL_NAME} PROPERTIES MACOSX_RPATH TRUE)
+   set_target_properties(${SWIG_MODULE_roypy_REAL_NAME} PROPERTIES CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+   set_target_properties(${SWIG_MODULE_roypy_REAL_NAME} PROPERTIES INSTALL_RPATH "@loader_path")
+elseif(UNIX)
+   set_target_properties(${SWIG_MODULE_roypy_REAL_NAME} PROPERTIES INSTALL_RPATH "\$ORIGIN/")
+endif()
+
+COPY_ROYALE_LIBS(${SWIG_MODULE_roypy_REAL_NAME})

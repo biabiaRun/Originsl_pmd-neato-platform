@@ -61,8 +61,8 @@ BEGIN
             VALUE "ProductVersion", VER_PRODUCTVERSION_STR
             VALUE "FileVersion", VER_FILEVERSION_STR
             VALUE "ProductName", "@RC_PRODUCTNAME@\0"
-            VALUE "CompanyName", "pmd technologies gmbh & Infineon Technologies AG\0"
-            VALUE "LegalCopyright", "pmd technologies gmbh & Infineon Technologies AG\0"
+            VALUE "CompanyName", "pmdtechnologies ag & Infineon Technologies AG\0"
+            VALUE "LegalCopyright", "pmdtechnologies ag & Infineon Technologies AG\0"
             VALUE "FileDescription",  "@RC_FILEDESCRIPTION@\0"
             VALUE "InternalName",     "@RC_INTERNALNAME@\0"
             VALUE "OriginalFilename", "@RC_ORIGINALFILENAME@\0"

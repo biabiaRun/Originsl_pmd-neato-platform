@@ -23,6 +23,7 @@
 #include <IRImageCAPI.h>
 #include <SparsePointCloudCAPI.h>
 #include <ExposureModeCAPI.h>
+#include <FilterLevelCAPI.h>
 #include <RecordCAPI.h>
 #include <ExposureCAPI.h>
 #include <StatusCAPI.h>
@@ -412,6 +413,22 @@ ROYALE_CAPI royale_camera_status royale_camera_device_get_number_of_streams_v330
 * @param[in] use_external_trigger set to true to synchronize with another camera
 */
 ROYALE_CAPI royale_camera_status royale_camera_device_set_external_trigger_v330 (royale_camera_handle handle, bool use_external_trigger);
+
+/**
+* see royale::ICameraDevice::setFilterLevel()
+* @param[in] handle camera device instance handle.
+* @param[in] stream_id stream id (may be 0 if there is only one stream).
+* @param[in] filter_level filter level that should be set
+*/
+ROYALE_CAPI royale_camera_status royale_camera_device_set_filter_level_v32400 (royale_camera_handle handle, royale_stream_id stream_id, royale_filter_level filter_level);
+
+/**
+* see royale::ICameraDevice::getFilterLevel()
+* @param[in] handle camera device instance handle.
+* @param[in] stream_id stream id (may be 0 if there is only one stream).
+* @param[out] filter_level the current filter level
+*/
+ROYALE_CAPI royale_camera_status royale_camera_device_get_filter_level_v32400 (royale_camera_handle handle, royale_stream_id stream_id, royale_filter_level *filter_level);
 
 // ----------------------------------------------------------------------------------------------
 // Level 2: Experienced users (Laser Class 1 guaranteed) - activation key required

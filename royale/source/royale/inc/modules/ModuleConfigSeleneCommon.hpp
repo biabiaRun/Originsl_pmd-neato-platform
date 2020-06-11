@@ -45,7 +45,7 @@ namespace royale
             false
         };
         static const IlluminationConfig illuConfig = IlluminationConfig{ royale::usecase::RawFrameSet::DutyCycle::DC_25, 90000000, royale::config::IlluminationPad::SE_P };
-        static const TemperatureSensorConfig tempsensorConfig = TemperatureSensorConfig{ TemperatureSensorConfig::TemperatureSensorType::PSEUDODATA,
+        static const TemperatureSensorConfig tempsensorConfig = TemperatureSensorConfig{ TemperatureSensorConfig::TemperatureSensorType::PSD_NTC,
                                                                                          std::make_shared<royale::config::NTCTemperatureSensorConfig> (6800.0f, 100000.0f, 25.0f, 4200.0f),
                                                                                          hal::IPsdTemperatureSensor::PseudoDataPhaseSync::SECOND };
 

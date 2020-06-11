@@ -27,6 +27,10 @@ namespace royale
 
             auto usbList = royale::config::getUsbProbeDataRoyale();
 
+            usbList.push_back ({ 0x058b, 0x00a1, BridgeType::UVC, std::make_shared<ModuleConfigFactoryFixed> (moduleconfig::PicoMonstarDefault) });
+            usbList.push_back ({ 0x058b, 0x00a6, BridgeType::UVC, std::make_shared<ModuleConfigFactoryFixed> (moduleconfig::PicoMonstarDefault) });
+            usbList.push_back ({ 0x058b, 0x00a7, BridgeType::UVC, std::make_shared<ModuleConfigFactoryFixed> (moduleconfig::PicoMonstarDefault) });
+
             // Add G8 VID/PIDs
             if (addG8Maxx)
             {
@@ -51,7 +55,6 @@ namespace royale
                 usbList.push_back ({ 0x1f46, 0xff24, BridgeType::UVC, std::make_shared<ModuleConfigFactoryFixed> (moduleconfig::PicoMonstarDefault) });
                 usbList.push_back ({ 0x1f46, 0xff25, BridgeType::UVC, std::make_shared<ModuleConfigFactoryFixed> (moduleconfig::PicoMonstarDefault) });
                 usbList.push_back ({ 0x1f46, 0xfff0, BridgeType::UVC, std::make_shared<ModuleConfigFactoryFixed> (moduleconfig::PicoMonstarDefault) });
-                usbList.push_back ({ 0x1f46, 0xff66, BridgeType::UVC, std::make_shared<ModuleConfigFactoryFixed> (moduleconfig::PicoMonstar850nmGlass) });
             }
 
             return usbList;

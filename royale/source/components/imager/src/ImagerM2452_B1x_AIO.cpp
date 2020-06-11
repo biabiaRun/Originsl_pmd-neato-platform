@@ -418,7 +418,7 @@ void ImagerM2452_B1x_AIO::startCapture()
     const bool enabledSSC = m_executingUcd.getSSCEnabled();
 
     //if a NTC temperature sensor is connected to the imager enable NTC readout.
-    const uint16_t ntcEnableBit = m_imagerParams.ntcSensorUsed ? 0x01 : 0x0;
+    const uint16_t ntcEnableBit = hasNtc() ? 0x01 : 0x0;
 
     //remember: other functions are enabled with the same write call (e.g. SSC+MM: (1 << 6) | (1 << 5))
     readImagerRegister (ISM_ISMSTATE, regValue);
@@ -469,7 +469,7 @@ bool ImagerM2452_B1x_AIO::isValidExposureTime (bool enabledMixedMode, size_t ove
         //for the overall framerate - no ps/pll or CTRLSEQ change is supported;
         const size_t numParamCountMax = std::min (2 + (overallRawFrameCount * 2), (size_t) 16);
         const auto mixedModeReconfigWorstCase = static_cast<double> (numParamCountMax) * 7.;
-        const auto minExpoMixedMode = static_cast<uint32_t> ( (m_imagerParams.ntcSensorUsed ? 88u : 21u) + mixedModeReconfigWorstCase);
+        const auto minExpoMixedMode = static_cast<uint32_t> ( (hasNtc() ? 88u : 21u) + mixedModeReconfigWorstCase);
 
         if (exposureTime < minExpoMixedMode)
         {
@@ -481,7 +481,7 @@ bool ImagerM2452_B1x_AIO::isValidExposureTime (bool enabledMixedMode, size_t ove
         const uint32_t minExpoNormalModeNoNTC = 8u;
         const uint32_t minExpoNormalModeWithNTC = 75u;
 
-        if (exposureTime < (m_imagerParams.ntcSensorUsed ? minExpoNormalModeWithNTC : minExpoNormalModeNoNTC))
+        if (exposureTime < (hasNtc() ? minExpoNormalModeWithNTC : minExpoNormalModeNoNTC))
         {
             return false;
         }
@@ -592,4 +592,9 @@ std::map < uint16_t, uint16_t > ImagerM2452_B1x_AIO::prepareUseCase (const Image
     regChanges[CFGCNT_ROIROW] = static_cast<uint16_t> ( (roiRMax << 8) | roiRMin);
 
     return regChanges;
+}
+
+bool ImagerM2452_B1x_AIO::hasNtc()
+{
+    return m_imagerParams.tempSensor == royale::config::ImConnectedTemperatureSensor::NTC;
 }

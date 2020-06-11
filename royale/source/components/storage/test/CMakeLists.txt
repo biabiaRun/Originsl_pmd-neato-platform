@@ -48,6 +48,11 @@ set (exampleZwetschgeDevice "${ROYALE_RUNTIME_OUTPUT_DIRECTORY}/exampleDevice.zw
 set (exampleZwetschgeFlashImage "${ROYALE_RUNTIME_OUTPUT_DIRECTORY}/exampleFlashImage.zwetschge")
 ADD_DEFINITIONS(-DEXAMPLE_DEVICE_FOR_ZWETSCHGE="${exampleZwetschgeDevice}")
 ADD_DEFINITIONS(-DEXAMPLE_FLASH_IMAGE_FOR_ZWETSCHGE="${exampleZwetschgeFlashImage}")
+
+# Zwetschge example files with dummy secure area
+ADD_DEFINITIONS(-DDUMMY_EXAMPLE_DEVICE_FOR_ZWETSCHGE="${ROYALE_RUNTIME_OUTPUT_DIRECTORY}/dummyExampleDevice.zwetschge")
+ADD_DEFINITIONS(-DDUMMY_EXAMPLE_FLASH_IMAGE_FOR_ZWETSCHGE="${ROYALE_RUNTIME_OUTPUT_DIRECTORY}/dummyExampleFlashImage.zwetschge")
+
 generate_zwetschge_file (exampleZwetschgeDeviceTarget
     OUTPUT "${ROYALE_RUNTIME_OUTPUT_DIRECTORY}/exampleDevice.zwetschge"
     MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/data/zwetschgeExample/ExampleDevice.py"

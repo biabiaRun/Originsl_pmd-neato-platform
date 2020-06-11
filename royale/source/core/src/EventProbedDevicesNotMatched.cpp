@@ -49,6 +49,12 @@ namespace royale
                 }
             }
 
+#ifdef ROYALE_TARGET_PLATFORM_WINDOWS
+            description += "Did you check that the camera access is allowed?\n";
+            description += "(Windows Start -> Settings -> Privacy -> Camera\n";
+            description += "-> Allow apps to access your camera)\n";
+#endif
+
             return description;
         }
 

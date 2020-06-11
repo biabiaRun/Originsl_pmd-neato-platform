@@ -112,3 +112,12 @@ SUBSYSTEMS=="usb", ATTRS{idVendor}=="1c28", ATTRS{idProduct}=="c035", MODE="0666
 
 # Holkin
 SUBSYSTEMS=="usb", ATTRS{idVendor}=="1c28", ATTRS{idProduct}=="c036", MODE="0666", SYMLINK+="holkin-%k", GROUP="plugdev"
+
+# pmd Module 277x
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="1c28", ATTRS{idProduct}=="c039", MODE="0666", SYMLINK+="pmdmodule277x-%k", GROUP="plugdev"
+
+# x1.1 Amundsen
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="1c28", ATTRS{idProduct}=="c03a", MODE="0666", SYMLINK+="x1.1-%k", GROUP="plugdev"
+
+# Europa UVC
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="1c28", ATTRS{idProduct}=="c03b", MODE="0666", SYMLINK+="europa-%k", GROUP="plugdev"

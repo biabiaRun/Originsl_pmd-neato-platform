@@ -15,6 +15,7 @@
 #include <royale/StreamId.hpp>
 #include <memory>
 #include <cstdint>
+#include <cstring>
 #include <chrono>
 
 namespace royale
@@ -57,6 +58,24 @@ namespace royale
         uint16_t                            height;          //!< height of depth image
         royale::Vector<uint32_t>            exposureTimes;   //!< exposureTimes retrieved from CapturedUseCase
         royale::Vector<royale::DepthPoint>  points;          //!< array of points
-    };
 
+        DepthData &operator= (const DepthData &dd)
+        {
+            if (this != &dd)
+            {
+                this->version = dd.version;
+                this->timeStamp = dd.timeStamp;
+                this->streamId = dd.streamId;
+                this->width = dd.width;
+                this->height = dd.height;
+
+                this->exposureTimes.resize (dd.exposureTimes.size());
+                memcpy (&this->exposureTimes[0], &dd.exposureTimes[0], dd.exposureTimes.size() * sizeof (uint32_t));
+
+                this->points.resize (dd.points.size());
+                memcpy (&this->points[0], &dd.points[0], dd.points.size() * sizeof (royale::DepthPoint));
+            }
+            return *this;
+        }
+    };
 }

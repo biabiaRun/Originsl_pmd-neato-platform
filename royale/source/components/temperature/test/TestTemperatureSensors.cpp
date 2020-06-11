@@ -11,6 +11,7 @@
 #include <pal/II2cDeviceAccess.hpp>
 
 #include <temperature/TemperatureSensorTMP102.hpp>
+#include <temperature/TemperatureSensorTMP103.hpp>
 #include <temperature/TemperatureSensorMCP98x43.hpp>
 #include <temperature/TemperatureSensorADS1013_NTC.hpp>
 
@@ -34,6 +35,22 @@ namespace
     const vector<uint8_t> TMP102_20C =
     {
         0x14, 0x00
+    };
+
+    /**
+     * The data returned from a TMP103 temperature sensor, at twentyfive degrees celsius.
+     */
+    const vector<uint8_t> TMP103_25C =
+    {
+        0x19
+    };
+
+    /**
+     * The data returned from a TMP103 temperature sensor, at minus twentyfive degrees celsius.
+     */
+    const vector<uint8_t> TMP103_MINUS_25C =
+    {
+        0xE7
     };
 
     /**
@@ -132,3 +149,18 @@ TEST (TestTemperatureSensors, ADS1013_NTC)
     ASSERT_NEAR (sensor->getTemperature(), device->getReferenceTemperature(), device->getReferenceTemperaturePrecision());
 }
 
+TEST (TestTemperatureSensors, TMP103)
+{
+    auto device = std::make_shared<MockTemperatureSensor> (TMP103_25C);
+    std::unique_ptr<royale::hal::ITemperatureSensor> sensor =
+        royale::common::makeUnique<royale::sensors::TemperatureSensorTMP103> (device);
+    ASSERT_FLOAT_EQ (sensor->getTemperature(), 25.0f);
+}
+
+TEST (TestTemperatureSensors, TMP103_negative)
+{
+    auto device = std::make_shared<MockTemperatureSensor> (TMP103_MINUS_25C);
+    std::unique_ptr<royale::hal::ITemperatureSensor> sensor =
+        royale::common::makeUnique<royale::sensors::TemperatureSensorTMP103> (device);
+    ASSERT_FLOAT_EQ (sensor->getTemperature(), -25.0f);
+}

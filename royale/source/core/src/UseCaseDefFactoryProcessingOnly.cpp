@@ -26,16 +26,13 @@ namespace
     class UcdProcessingOnly : public UseCaseDefinition
     {
     public:
-        using ProcOnlyExpo = UseCaseDefFactoryProcessingOnly::ProcOnlyExpo;
-        using ProcOnlyRFS = UseCaseDefFactoryProcessingOnly::ProcOnlyRFS;
-
         UcdProcessingOnly (
             royale::usecase::UseCaseIdentifier identifier,
             royale::Pair<uint16_t, uint16_t> imageSize,
             royale::Pair<uint16_t, uint16_t> frameRateLimits,
             uint16_t targetFrameRate,
-            const royale::Vector<ProcOnlyExpo> &expoGroups,
-            const royale::Vector<ProcOnlyRFS> &rfses) :
+            const Vector<ExposureGroup> &expoGroups,
+            const Vector<RawFrameSet> &rfs) :
             UseCaseDefinition (frameRateLimits.second)
         {
             m_identifier = identifier;
@@ -48,25 +45,13 @@ namespace
             for (auto i = std::size_t (0u); i < expoGroups.size(); i++)
             {
                 auto name = String ("group") + String::fromInt (narrow_cast<uint32_t> (i));
-                m_exposureGroups.push_back (ExposureGroup {std::move (name), expoGroups[i].exposureLimits, expoGroups[i].exposureTime});
+                m_exposureGroups.push_back (ExposureGroup {std::move (name), expoGroups[i].m_exposureLimits, expoGroups[i].m_exposureTime});
             }
 
             royale::Vector<RawFrameSet> rawFrameSets;
-            for (const auto &rfs : rfses)
+            for (const auto &rawframeset : rfs)
             {
-                RawFrameSet::PhaseDefinition phaseDef;
-                switch (rfs.frameCount)
-                {
-                    case 1:
-                        phaseDef = RawFrameSet::PhaseDefinition::GRAYSCALE;
-                        break;
-                    case 4:
-                        phaseDef = RawFrameSet::PhaseDefinition::MODULATED_4PH_CW;
-                        break;
-                    default:
-                        throw InvalidValue ("Unsupported frame count");
-                }
-                rawFrameSets.emplace_back (rfs.modulationFrequency, phaseDef, RawFrameSet::DutyCycle::DC_AUTO, rfs.exposureGroupIdx);
+                rawFrameSets.emplace_back (rawframeset.modulationFrequency, rawframeset.phaseDefinition, RawFrameSet::DutyCycle::DC_AUTO, rawframeset.exposureGroupIdx);
             }
 
             constructNonMixedUseCase (std::move (rawFrameSets));
@@ -80,8 +65,8 @@ std::shared_ptr<UseCaseDefinition> UseCaseDefFactoryProcessingOnly::createUcd (
     royale::Pair<uint16_t, uint16_t> imageSize,
     royale::Pair<uint16_t, uint16_t> frameRateLimits,
     uint16_t targetFrameRate,
-    const royale::Vector<ProcOnlyExpo> &expoGroups,
-    const royale::Vector<ProcOnlyRFS> &rfses)
+    const Vector<ExposureGroup> &expoGroups,
+    const Vector<RawFrameSet> &rfs)
 {
     return std::make_shared<UcdProcessingOnly> (
                std::move (identifier),
@@ -89,21 +74,21 @@ std::shared_ptr<UseCaseDefinition> UseCaseDefFactoryProcessingOnly::createUcd (
                std::move (frameRateLimits),
                targetFrameRate,
                expoGroups,
-               rfses);
+               rfs);
 }
 
 std::shared_ptr<UseCaseDefinition> UseCaseDefFactoryProcessingOnly::createUcd (const UseCaseDefinition &other)
 {
-    royale::Vector<ProcOnlyExpo> expoGroups;
+    royale::Vector<ExposureGroup> expoGroups;
     for (const auto &expo : other.getExposureGroups())
     {
-        expoGroups.push_back (ProcOnlyExpo {expo.m_exposureLimits, expo.m_exposureTime});
+        expoGroups.push_back (expo);
     }
 
-    royale::Vector<ProcOnlyRFS> rawFrameSets;
+    royale::Vector<RawFrameSet> rawFrameSets;
     for (const auto &rfs : other.getRawFrameSets())
     {
-        rawFrameSets.push_back (ProcOnlyRFS {rfs.countRawFrames(), rfs.modulationFrequency, rfs.exposureGroupIdx});
+        rawFrameSets.push_back (rfs);
     }
 
     uint16_t columns, rows;

@@ -11,7 +11,21 @@
 #pragma once
 
 #ifdef _WIN32
-#    define ROYALE_API __declspec(dllexport)
+#   define ROYALE_API __declspec(dllexport)
+
+// During debugging we want to show the console.
+// We are using __pragma because the preprocessor can't use #pragma in defines.
+// Add this above the main function in Qt GUI tools.
+#   ifdef _DEBUG
+// Show console
+#   define ADD_DEBUG_CONSOLE __pragma(comment( linker, "/SUBSYSTEM:console" ))
+#   else
+// Hide console
+#   define ADD_DEBUG_CONSOLE __pragma(comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup"))
+#   endif
+
 #else
-#    define ROYALE_API
+#   define ROYALE_API
+#   define ADD_DEBUG_CONSOLE
 #endif
+

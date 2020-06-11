@@ -22,6 +22,7 @@ set(SOURCES
   "${CMAKE_CURRENT_SOURCE_DIR}/src/SPIStorage_M2452.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/SPIStorage_M2453.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/SPIStorage_M2455.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/SPIStorage_M2457.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/SPIStorageHardwareSpi.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/SPIStorageHelper.cpp"
   )
@@ -32,6 +33,7 @@ set(HEADERS
   "${CMAKE_CURRENT_SOURCE_DIR}/inc/SPIStorage_M2452.hpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/inc/SPIStorage_M2453.hpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/inc/SPIStorage_M2455.hpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/inc/SPIStorage_M2457.hpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/inc/SPIStorageBase.hpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/inc/SPIStorageHardwareSpi.hpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/inc/SPIStorageHelper.hpp"

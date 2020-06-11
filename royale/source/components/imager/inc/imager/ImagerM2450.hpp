@@ -53,11 +53,11 @@ namespace royale
                 x_coor ( (efuseval4 >> 7) & 0x1F)
             {
                 std::ostringstream  serialNr;
-                uint32_t serial1 = 0;
-                uint32_t serial2 = 0;
+                uint32_t serial1 = 0u;
+                uint32_t serial2 = 0u;
 
-                serial1 = ( (efuseval3 & 0x7FE0) << 11) + ( (efuseval4 & 0xF80) << 1) + ( (efuseval4 & 0x7C) >> 2);
-                serial2 = ( (efuseval2 & 0xF000) << 4) + ( (efuseval2 & 0xFC0) << 2) + (efuseval3 & 0x1F);
+                serial1 = ( (efuseval3 & 0x7FE0u) << 11u) + ( (efuseval4 & 0xF80u) << 1u) + ( (efuseval4 & 0x7Cu) >> 2u);
+                serial2 = ( (efuseval2 & 0xF000u) << 4u) + ( (efuseval2 & 0xFC0u) << 2u) + (efuseval3 & 0x1Fu);
 
                 serialNr << std::setfill ('0') << std::setw (4) << std::dec << (serial2 >> 16);
                 serialNr << "-";
@@ -116,6 +116,8 @@ namespace royale
                 double &rawFrameTime) const override;
 
             const std::map < ImagerRawFrame::ImagerDutyCycle, std::map < uint16_t, uint16_t > > &getPhaseMapping() override;
+
+            bool isFirstFrame (const std::vector<ImagerRawFrame> &rfList, size_t index) const override;
 
         private:
             /**

@@ -117,7 +117,7 @@ namespace royale
             /**
              * If recording should be enabled, a recording engine must be set
              */
-            ROYALE_API void setRecordingEngine (std::unique_ptr<royale::IRecord> recording);
+            ROYALE_API void setRecordingEngine (std::unique_ptr<royale::IRecord> recording) override;
 
         private:
             royale::CameraStatus activateUseCase ();

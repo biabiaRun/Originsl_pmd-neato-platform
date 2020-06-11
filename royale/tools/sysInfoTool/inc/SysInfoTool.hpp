@@ -40,9 +40,9 @@ private:
     /**
     *  Output the information of the queried RRF file
     *
-    *  @param processID: the number of the RRF file being listed
+    *  @param rrfNo: the number of the RRF file being listed
     */
-    void showRRFInfo (int rrfNo);
+    void showRRFInfo (size_t rrfNo);
 
     /**
     *  Find all RRF files under the target folder

@@ -64,6 +64,54 @@ public:
     royale::Vector<uint16_t> receivedData;
 };
 
+class TestDepthIRImageListener : public DepthIRImageListener
+{
+public:
+
+    TestDepthIRImageListener() :
+        DepthIRImageListener()
+    {
+        readFileToVector (ROYALE_TEST_FILE_PATH "/ListenerTest_Depth.dat", testDpData);
+        readFileToVector (ROYALE_TEST_FILE_PATH "/ListenerTest_IR.dat", testIRData);
+    }
+
+    ~TestDepthIRImageListener()
+    {
+    }
+
+    void onNewData (const DepthIRImage *data) override
+    {
+        receivedDpData = data->dpData;
+        receivedIRData = data->irData;
+        m_count++;
+        pulse();
+    }
+
+    void checkData()
+    {
+        static const uint16_t maxDeviation = 5u;
+
+        for (auto i = 0u; i < receivedDpData.size(); ++i)
+        {
+            uint16_t testDepth = testDpData[i] & 0x1fff;
+            uint16_t recDepth = receivedDpData[i] & 0x1fff;
+
+            EXPECT_NEAR (testDepth, recDepth, maxDeviation);
+        }
+
+        for (auto i = 0u; i < receivedIRData.size(); ++i)
+        {
+            EXPECT_NEAR (testIRData[i], receivedIRData[i], maxDeviation);
+        }
+    }
+
+    royale::Vector<uint16_t> testDpData;
+    royale::Vector<uint16_t> receivedDpData;
+
+    royale::Vector<uint8_t> testIRData;
+    royale::Vector<uint8_t> receivedIRData;
+};
+
 class TestIRImageListener : public IRImageListener
 
 {
@@ -156,6 +204,7 @@ TEST_F (CameraDeviceL1Fixture, TestListeners)
     std::shared_ptr<IDepthImageListener> testDepthImageListener{ new TestDepthImageListener() };
     std::shared_ptr<IIRImageListener> testIRImageListener{ new TestIRImageListener() };
     std::shared_ptr<ISparsePointCloudListener> testSparsePointListener{ new TestSparsePointCloudListener() };
+    std::shared_ptr<IDepthIRImageListener> testDepthIRImageListener{ new TestDepthIRImageListener() };
 
     auto status = camera->initialize();
     ASSERT_EQ (CameraStatus::SUCCESS, status);
@@ -166,10 +215,13 @@ TEST_F (CameraDeviceL1Fixture, TestListeners)
     ASSERT_EQ (CameraStatus::SUCCESS, status);
     status = camera->registerSparsePointCloudListener (testSparsePointListener.get());
     ASSERT_EQ (CameraStatus::SUCCESS, status);
+    status = camera->registerDepthIRImageListener (testDepthIRImageListener.get());
+    ASSERT_EQ (CameraStatus::SUCCESS, status);
 
     TestDepthImageListener *dil = static_cast<TestDepthImageListener *> (testDepthImageListener.get());
     TestIRImageListener *iil = static_cast<TestIRImageListener *> (testIRImageListener.get());
     TestSparsePointCloudListener *spl = static_cast<TestSparsePointCloudListener *> (testSparsePointListener.get());
+    TestDepthIRImageListener *diil = static_cast<TestDepthIRImageListener *> (testDepthIRImageListener.get());
 
     EXPECT_EQ (CameraStatus::SUCCESS, camera->startCapture());
 
@@ -177,6 +229,7 @@ TEST_F (CameraDeviceL1Fixture, TestListeners)
     EXPECT_TRUE (spl->waitForCallback (std::chrono::seconds (1)));
     EXPECT_TRUE (dil->hasBeenCalled (std::chrono::seconds (1)));
     EXPECT_TRUE (iil->hasBeenCalled (std::chrono::seconds (1)));
+    EXPECT_TRUE (diil->hasBeenCalled (std::chrono::seconds (1)));
 
     EXPECT_EQ (CameraStatus::SUCCESS, camera->stopCapture());
 
@@ -185,4 +238,5 @@ TEST_F (CameraDeviceL1Fixture, TestListeners)
     dil->checkData();
     iil->checkData();
     spl->checkData();
+    diil->checkData();
 }

@@ -34,6 +34,7 @@ PixelInfoView::PixelInfoView (QWidget *parent)
     m_stdDevSqrSum = 0.0;
     m_stdDevSum = 0.0;
     this->setStyleSheet ("");
+    this->setAttribute (Qt::WA_TransparentForMouseEvents);
 }
 
 PixelInfoView::~PixelInfoView()
@@ -90,7 +91,6 @@ void PixelInfoView::updateDepthPointInfo (const QPoint &windowPosition, const QP
     ui.title->setText ("x,y = (" + QString::number (imagePosition.x()) + ", " + QString::number (imagePosition.y()) + ")");
     ui.depthLabel->setText (QString::number (p.z, 'f', 3) + " m");
     ui.stddevLabel->setText (QString::number (stdDev, 'f', 3) + " m");
-    ui.noiseLabel->setText (QString::number (p.noise, 'f', 3) + " m");
     ui.grayLabel->setText (QString::number (p.grayValue));
     ui.confidenceLabel->setText (QString::number (p.depthConfidence));
     move (shiftedPosition);

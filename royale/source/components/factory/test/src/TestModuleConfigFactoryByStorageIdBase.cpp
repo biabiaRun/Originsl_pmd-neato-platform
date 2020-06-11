@@ -75,7 +75,8 @@ namespace
         }
 
         std::shared_ptr<const royale::config::ModuleConfig>
-        probeAndCreate (royale::factory::IBridgeFactory &bridgeFactory) const override
+        probeAndCreate (royale::factory::IBridgeFactory &bridgeFactory,
+                        royale::CameraAccessLevel accessLevel) const override
         {
             throw NotImplemented ("The test is expected to call readAndCreate() directly");
         }

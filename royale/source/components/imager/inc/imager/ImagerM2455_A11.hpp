@@ -10,21 +10,18 @@
 
 #pragma once
 
-#include <imager/ImagerM2453.hpp>
+#include <imager/FlashDefinedImagerComponent.hpp>
 
 namespace royale
 {
     namespace imager
     {
-        using ImagerM2455Serial = ImagerSimpleHexSerialNumber;
-
         /**
         * Support for the M2455, currently only the A11 design step.
         *
-        * The imager is similar to the M2453 with a higher image resolution. It's handled here as if
-        * it was another design step of the M2453.
+        * The imager is similar to the M2453 with a higher image resolution.
         */
-        class ImagerM2455_A11 : public ImagerM2453
+        class ImagerM2455_A11 : public FlashDefinedImagerComponent
         {
         public:
             /**
@@ -37,12 +34,13 @@ namespace royale
             ~ImagerM2455_A11() override = default;
 
             std::unique_ptr<common::IPseudoDataInterpreter> createPseudoDataInterpreter() override;
-            void reconfigureTargetFrameRate (uint16_t targetFrameRate, uint16_t &reconfigIndex) override;
-
-            void initialize() override;
 
         protected:
             std::vector < uint16_t > getSerialRegisters() override;
+            void doFlashToImagerUseCaseTransfer (const IImagerExternalConfig::UseCaseData &useCaseData) override;
+
+            DesignStepInfo getDesignStepInfo() override;
+            ExpoTimeRegInfo getExpoTimeRegInfo() override;
         };
     }
 }

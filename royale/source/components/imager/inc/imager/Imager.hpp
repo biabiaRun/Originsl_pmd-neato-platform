@@ -54,7 +54,7 @@ namespace royale
             void startCapture() override;
             void reconfigureExposureTimes (const std::vector<uint32_t> &exposureTimes, uint16_t &reconfigIndex) override;
             void reconfigureTargetFrameRate (uint16_t targetFrameRate, uint16_t &reconfigIndex) override;
-            void stopCapture() override;
+            uint16_t stopCapture() override;
             void setExternalTrigger (bool useExternalTrigger) override;
 
         protected:

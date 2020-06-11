@@ -13,6 +13,7 @@
 #include <common/ICapturedRawFrame.hpp>
 
 #include <cstdint>
+#include <vector>
 
 namespace royale
 {
@@ -111,21 +112,18 @@ namespace royale
             virtual float getImagerTemperature (const common::ICapturedRawFrame &frame) const = 0;
 
             /**
-             * This function returns the raw ADC readings if supported by the concrete
+             * This function returns the raw temperature readings if supported by the concrete
              * implementation of IPseudoDataInterpreter.
              *
-             * Some imagers include an ADC to read from an external peripheral, for example a thermistor,
+             * Some imagers are connected to an illumination temperature sensor, for example a thermistor,
              * and include the readings in the pseudodata. If this feature is supported and active,
-             * this returns the raw temperature readings.
+             * this returns the raw temperature readings. The number of values in the return vector depends
+             * on the temperature sensor that the PseudoDataInterpreter assumes.
              *
              * \param   frame   Contains the data from one raw frame of the imager.
-             * \param   vRef1   First pixel of the raw temperature reading.
-             * \param   vNtc1   Second pixel of the raw temperature reading.
-             * \param   vRef2   Third pixel of the raw temperature reading.
-             * \param   vNtc2   Fourth pixel of the raw temperature reading.
-             * \param   offset  Reserved.
+             * \return The raw temperature values
              */
-            virtual void getTemperatureRawValues (const common::ICapturedRawFrame &frame, uint16_t &vRef1, uint16_t &vNtc1, uint16_t &vRef2, uint16_t &vNtc2, uint16_t &offset) const = 0;
+            virtual std::vector<uint16_t> getTemperatureRawValues (const common::ICapturedRawFrame &frame) const = 0; /*{return std::vector<uint16_t>(); }*/
 
             /**
              * Returns the minimum required image width in pixels.

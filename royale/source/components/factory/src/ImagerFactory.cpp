@@ -19,7 +19,9 @@
 #include <imager/ImagerM2453_A11.hpp>
 #include <imager/ImagerM2453_B11.hpp>
 #include <imager/ImagerM2455_A11.hpp>
-#include <imager/ImagerMXXXX_Dummy.hpp>
+#include <imager/ImagerM2455_A14.hpp>
+#include <imager/ImagerM2455_B12.hpp>
+#include <imager/ImagerM2457_A11.hpp>
 
 #include <imager/ImagerDirectAccess.hpp>
 
@@ -31,6 +33,8 @@
 #include <imager/M2453/PseudoDataInterpreter.hpp>
 #include <imager/M2453/PseudoDataInterpreter_B11.hpp>
 #include <imager/M2455/PseudoDataInterpreter.hpp>
+#include <imager/M2457/PseudoDataInterpreter.hpp>
+#include <imager/M2457/PseudoDataInterpreter_IC.hpp>
 #include <common/exceptions/LogicError.hpp>
 #include <common/exceptions/RuntimeError.hpp>
 
@@ -41,7 +45,7 @@ using namespace royale::imager;
 namespace
 {
 
-    std::shared_ptr<royale::imager::IFlashDefinedImagerComponent> createFlashDefinedImager (
+    std::shared_ptr<royale::imager::FlashDefinedImagerComponent> createFlashDefinedImager (
         std::shared_ptr<royale::hal::IBridgeImager> bridge,
         const std::shared_ptr<const royale::config::ICoreConfig> &coreConfig,
         const std::shared_ptr<const royale::config::ImagerConfig> &imagerConfig,
@@ -65,19 +69,14 @@ namespace
                 return std::make_shared<royale::imager::ImagerM2453_B11> (newParams);
             case config::ImagerType::M2455_A11:
                 return std::make_shared<royale::imager::ImagerM2455_A11> (newParams);
-            case config::ImagerType::MXXXX_DUMMY:
-                /**
-                * This "dummy" imager type supported using M2452 imagers to prototype the M2453's
-                * IImagerExternalConfig feature, using the "C2_M2452_B1x.lena" file.  Please note that
-                * providing such a file is currently not part of Royale.
-                *
-                * This imager is for debugging only, may be removed, and currently development time is
-                * not spent on ensuring that it still works.
-                * 1) Take an Animator board with a M2452 B1x module from Infineon and flash a cx3_*_animator.img image to it.
-                * 2) Change the ModuleConfigDataAnimatorDefault.cpp to use a MXXXX_DUMMY instead of a M2452_B1x_AIO imager type.
-                * 3) Use a Lena or Zwetschge file, configuring as documented for the M2453.
-                */
-                return std::make_shared<royale::imager::ImagerMXXXX_Dummy> (newParams);
+            case config::ImagerType::M2455_A14:
+                return std::make_shared<royale::imager::ImagerM2455_A14> (newParams);
+            case config::ImagerType::M2455_B12:
+                return std::make_shared<royale::imager::ImagerM2455_B12> (newParams);
+            case config::ImagerType::M2457_A11:
+                return std::make_shared<royale::imager::ImagerM2457_A11> (newParams);
+            case config::ImagerType::M2457_A11_SIC:
+                return std::make_shared<royale::imager::ImagerM2457_A11> (newParams);
             default:
                 // should not be here
                 throw royale::common::LogicError ("Imager type is not supported");
@@ -91,25 +90,34 @@ royale::String ImagerFactory::getImagerTypeName (config::ImagerType imagerType)
     switch (imagerType)
     {
         case config::ImagerType::M2450_A11:
-            return "M2450_A11";
+            return "IRS1125C_A11";
             break;
         case config::ImagerType::M2450_A12_AIO:
-            return "M2450_A12_AIO";
+            return "IRS1125A/C_A12";
             break;
         case config::ImagerType::M2452_B1x_AIO:
-            return "M2452_B1x_AIO";
+            return "IRS1645_B1x";
             break;
         case config::ImagerType::M2453_A11:
-            return "M2453_A11";
+            return "IRS2381_A11";
             break;
         case config::ImagerType::M2453_B11:
-            return "M2453_B11";
+            return "IRS2381_B11";
             break;
         case config::ImagerType::M2455_A11:
-            return "M2455_A11";
+            return "IRS2771_A11";
             break;
-        case config::ImagerType::MXXXX_DUMMY:
-            return "MXXXX_DUMMY";
+        case config::ImagerType::M2455_A14:
+            return "IRS2771_A14";
+            break;
+        case config::ImagerType::M2455_B12:
+            return "IRS2771_B12";
+            break;
+        case config::ImagerType::M2457_A11:
+            return "IRS2877_A11";
+            break;
+        case config::ImagerType::M2457_A11_SIC:
+            return "IRS2877_A11_SIC";
             break;
         default:
             // should not be here
@@ -143,8 +151,17 @@ royale::String ImagerFactory::getPseudoDataInterpreter (config::ImagerType image
         case config::ImagerType::M2455_A11:
             return "M2455_A11";
             break;
-        case config::ImagerType::MXXXX_DUMMY:
-            return "MXXXX_DUMMY";
+        case config::ImagerType::M2455_A14:
+            return "M2455_A14";
+            break;
+        case config::ImagerType::M2455_B12:
+            return "M2455_B12";
+            break;
+        case config::ImagerType::M2457_A11:
+            return "M2457_A11";
+            break;
+        case config::ImagerType::M2457_A11_SIC:
+            return "M2457_A11_SIC";
             break;
         default:
             // should not be here
@@ -191,10 +208,22 @@ std::unique_ptr<common::IPseudoDataInterpreter> ImagerFactory::createPseudoDataI
     {
         pseudoDataInter.reset (new M2455::PseudoDataInterpreter);
     }
-    else if (pseudoDataInterpreter.compare ("MDUMMY") == 0)
+    else if (pseudoDataInterpreter.compare ("M2455_A14") == 0)
     {
-        // ROYAL-2734 says that this imager should use M2452 data until \todo ROYAL-2712 has been resolved
-        pseudoDataInter.reset (new M2452::PseudoDataInterpreter_AIO);
+        pseudoDataInter.reset (new M2455::PseudoDataInterpreter);
+    }
+    else if (pseudoDataInterpreter.compare ("M2455_B12") == 0)
+    {
+        pseudoDataInter.reset (new M2455::PseudoDataInterpreter);
+    }
+    else if (pseudoDataInterpreter.compare ("M2457_A11") == 0 ||
+             pseudoDataInterpreter.compare ("M2457") == 0)
+    {
+        pseudoDataInter.reset (new M2457::PseudoDataInterpreter);
+    }
+    else if (pseudoDataInterpreter.compare ("M2457_A11_SIC") == 0)
+    {
+        pseudoDataInter.reset (new M2457::PseudoDataInterpreter_IC);
     }
     else
     {
@@ -229,7 +258,13 @@ bool ImagerFactory::getRequiresUseCaseDefGuids (config::ImagerType imagerType)
             return true;
         case config::ImagerType::M2455_A11:
             return true;
-        case config::ImagerType::MXXXX_DUMMY:
+        case config::ImagerType::M2455_A14:
+            return true;
+        case config::ImagerType::M2455_B12:
+            return true;
+        case config::ImagerType::M2457_A11:
+            return true;
+        case config::ImagerType::M2457_A11_SIC:
             return true;
         default:
             // should not be here
@@ -255,7 +290,7 @@ std::shared_ptr<hal::IImager> ImagerFactory::createImager (
     ImagerParameters params = royale::factory::ImagerConfigAdapter().createImagerParameters (bridge, nullptr, coreConfig, imagerConfig, illuminationConfig);
 
     std::shared_ptr<royale::imager::ISoftwareDefinedImagerComponent> sdimager;
-    std::shared_ptr<royale::imager::IFlashDefinedImagerComponent>    fdimager;
+    std::shared_ptr<royale::imager::FlashDefinedImagerComponent>    fdimager;
     std::shared_ptr<royale::imager::ImagerRegisterAccess>            fdDirectAccess;
     switch (imagerConfig->imagerType)
     {
@@ -274,7 +309,10 @@ std::shared_ptr<hal::IImager> ImagerFactory::createImager (
         case config::ImagerType::M2453_A11:
         case config::ImagerType::M2453_B11:
         case config::ImagerType::M2455_A11:
-        case config::ImagerType::MXXXX_DUMMY:
+        case config::ImagerType::M2455_A14:
+        case config::ImagerType::M2455_B12:
+        case config::ImagerType::M2457_A11:
+        case config::ImagerType::M2457_A11_SIC:
             fdimager = createFlashDefinedImager (bridge, coreConfig, imagerConfig, illuminationConfig);
             if (directAccessEnabled)
             {

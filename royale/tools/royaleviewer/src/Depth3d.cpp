@@ -196,113 +196,21 @@ void Depth3d::render (const QMatrix4x4 &mvMatrix, const QMatrix4x4 &projectionMa
     {
         if (m_numIdxs != m_currentDataset->height * m_currentDataset->width)
         {
-            if (m_vertices)
-            {
-                delete[] m_vertices;
-            }
-
-            if (m_indices)
-            {
-                delete[] m_indices;
-            }
-
-            initGL();
-
-            m_numVtxs = m_currentDataset->height * m_currentDataset->width;
-            m_numIdxs = m_currentDataset->height * m_currentDataset->width;
-
-            m_vertices = new VertexData[m_numVtxs];
-            m_indices = new GLuint[m_numIdxs];
-
-            for (GLsizei i = 0; i < m_numIdxs; ++i)
-            {
-                m_indices[i] = i;
-            }
-
-            m_indexBuf.bind();
-            m_indexBuf.write (0, m_indices, static_cast<int> (m_numIdxs * sizeof (GLuint)));
+            initGeometry();
         }
 
         m_arrayBuf.bind();
 
-
-        if (m_showDistance)
+        for (GLsizei i = 0; i < m_numVtxs; ++i)
         {
-            for (GLsizei i = 0; i < m_numVtxs; ++i)
-            {
-                // update new coordinates
-                const DepthPoint &currentPoint = m_currentDataset->points[i];
-                const IntermediatePoint &currentInterPoint = m_currentInterDataset->points[i];
-                m_vertices[i].position = QVector3D (currentPoint.x, currentPoint.y, currentPoint.z);
-                const RgbColor &curColor = m_colorHelper->getColor (currentPoint.z);
-                if (currentInterPoint.flags & FLAGS_SBI_ON)
-                {
-                    m_vertices[i].color = QVector4D (0.5f, 0.5f, 0.5f, 1.0f);
-                }
-                else if (currentPoint.z == 0.f || currentPoint.z < m_filterMin || currentPoint.z > m_filterMax)
-                {
-                    m_vertices[i].color = QVector4D (0.0f, 0.0f, 0.0f, 1.0f);
-                }
-                else
-                {
-                    m_vertices[i].color = QVector4D (curColor.r / 255.0f, curColor.g / 255.0f, curColor.b / 255.0f, 1.0f);
-                }
-            }
-        }
-        else if (m_showGrayimage)
-        {
-            for (GLsizei i = 0; i < m_numVtxs; ++i)
-            {
-                // update new coordinates
-                const DepthPoint &currentPoint = m_currentDataset->points[i];
-                m_vertices[i].position = QVector3D (currentPoint.x, currentPoint.y, currentPoint.z);
-                const RgbColor &curColor = m_colorHelper->getGrayColor (currentPoint.grayValue);
-                if (currentPoint.z == 0.f || currentPoint.z < m_filterMin || currentPoint.z > m_filterMax)
-                {
-                    m_vertices[i].color = QVector4D (0.0f, 0.0f, 0.0f, 0.5f);
-                }
-                else
-                {
-                    if (m_uniform)
-                    {
-                        m_vertices[i].color = QVector4D (210.0f / 255.0f, 210.0f / 255.0f, 210.0f / 255.0f, 0.5f);
-                    }
-                    else
-                    {
-                        m_vertices[i].color = QVector4D (curColor.r / 255.0f, curColor.g / 255.0f, curColor.b / 255.0f, 0.5f);
-                    }
-                }
-            }
-        }
-        else if (m_showOverlayimage)
-        {
-            for (GLsizei i = 0; i < m_numVtxs; ++i)
-            {
-                // update new coordinates
-                const DepthPoint &currentPoint = m_currentDataset->points[i];
-                m_vertices[i].position = QVector3D (currentPoint.x, currentPoint.y, currentPoint.z);
-                const RgbColor &curColor = m_colorHelper->getColor (currentPoint.z);
-
-                float grayVal = (float) m_colorHelper->getGrayColor (currentPoint.grayValue).r;
-                float scaleTmp = 8.0f * std::pow (currentPoint.z, 1.5f) * grayVal / 255.f;
-                if (scaleTmp != 0.f)
-                {
-                    scaleTmp += 0.1f;
-                }
-                float scale = qBound (0.f, scaleTmp, 1.f);
-
-                if (currentPoint.z == 0.f || currentPoint.z < m_filterMin || currentPoint.z > m_filterMax)
-                {
-                    m_vertices[i].color = QVector4D (0.0f, 0.0f, 0.0f, 1.0f);
-                }
-                else
-                {
-                    m_vertices[i].color = QVector4D (scale * curColor.r / 255.0f, scale * curColor.g / 255.0f, scale * curColor.b / 255.0f, 1.0f);
-                }
-            }
+            const DepthPoint &currentPoint = m_currentDataset->points[i];
+            const IntermediatePoint &currentInterPoint = m_currentInterDataset->points[i];
+            m_vertices[i].position = QVector3D (currentPoint.x, currentPoint.y, currentPoint.z);
+            m_vertices[i].color = getColor (currentPoint, currentInterPoint);
         }
 
         m_arrayBuf.write (0, m_vertices, static_cast<int> (m_numVtxs * sizeof (VertexData)));
+
         // reset
         m_isNewDataAvailable = false;
         m_modeSwitched = false;
@@ -362,6 +270,17 @@ void Depth3d::render (const QMatrix4x4 &mvMatrix, const QMatrix4x4 &projectionMa
 void Depth3d::initGeometry ()
 {
     Renderable::initGeometry();
+
+    if (m_vertices)
+    {
+        delete[] m_vertices;
+    }
+
+    if (m_indices)
+    {
+        delete[] m_indices;
+    }
+
     m_vertices = new VertexData[m_currentDataset->height * m_currentDataset->width];
     m_indices = new GLuint[m_currentDataset->height * m_currentDataset->width];
 
@@ -389,6 +308,71 @@ void Depth3d::initGeometry ()
 
 }
 
+QVector4D Depth3d::getColor (royale::DepthPoint curDepthPoint, royale::IntermediatePoint curIntPoint)
+{
+
+    if (m_showDistance)
+    {
+        // update new coordinates
+        const RgbColor &curColor = m_colorHelper->getColor (curDepthPoint.z);
+        if (curIntPoint.flags & FLAGS_SBI_ON)
+        {
+            return QVector4D (0.5f, 0.5f, 0.5f, 1.0f);
+        }
+        else if (curDepthPoint.z == 0.f || curDepthPoint.z < m_filterMin || curDepthPoint.z > m_filterMax)
+        {
+            return QVector4D (0.0f, 0.0f, 0.0f, 1.0f);
+        }
+        else
+        {
+            return QVector4D (curColor.r / 255.0f, curColor.g / 255.0f, curColor.b / 255.0f, 1.0f);
+        }
+    }
+    else if (m_showGrayimage)
+    {
+        // update new coordinates
+        const RgbColor &curColor = m_colorHelper->getGrayColor (curDepthPoint.grayValue);
+        if (curDepthPoint.z == 0.f || curDepthPoint.z < m_filterMin || curDepthPoint.z > m_filterMax)
+        {
+            return QVector4D (0.0f, 0.0f, 0.0f, 0.5f);
+        }
+        else
+        {
+            if (m_uniform)
+            {
+                return QVector4D (210.0f / 255.0f, 210.0f / 255.0f, 210.0f / 255.0f, 0.5f);
+            }
+            else
+            {
+                return QVector4D (curColor.r / 255.0f, curColor.g / 255.0f, curColor.b / 255.0f, 0.5f);
+            }
+        }
+    }
+    else if (m_showOverlayimage)
+    {
+        // update new coordinates
+        const RgbColor &curColor = m_colorHelper->getColor (curDepthPoint.z);
+
+        float grayVal = (float) m_colorHelper->getGrayColor (curDepthPoint.grayValue).r;
+        float scaleTmp = 8.0f * std::pow (curDepthPoint.z, 1.5f) * grayVal / 255.f;
+        if (scaleTmp != 0.f)
+        {
+            scaleTmp += 0.1f;
+        }
+        float scale = qBound (0.f, scaleTmp, 1.f);
+
+        if (curDepthPoint.z == 0.f || curDepthPoint.z < m_filterMin || curDepthPoint.z > m_filterMax)
+        {
+            return QVector4D (0.0f, 0.0f, 0.0f, 1.0f);
+        }
+        else
+        {
+            return QVector4D (scale * curColor.r / 255.0f, scale * curColor.g / 255.0f, scale * curColor.b / 255.0f, 1.0f);
+        }
+    }
+
+    return QVector4D (0.0f, 0.0f, 0.0f, 1.0f);
+}
 
 void Depth3d::setData (const royale::DepthData *data, const royale::IntermediateData *intData)
 {
@@ -443,6 +427,11 @@ void Depth3d::switchToOverlay()
 void Depth3d::colorRangeChanged()
 {
     m_modeSwitched = true;
+}
+
+bool Depth3d::isGray()
+{
+    return m_showGrayimage;
 }
 
 void Depth3d::setFilterMinMax (float filterMin, float filterMax, bool cameraStart)

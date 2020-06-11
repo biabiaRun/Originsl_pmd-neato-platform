@@ -9,7 +9,7 @@ TERMS AND CONDITIONS FOR USE AND REPRODUCTION
 
 "License" shall mean the terms and conditions for use and reproduction of the Software as defined by sections 1 to 9 of this document.
 
-"Licensor" shall mean the company pmdtechnologies ag, organised under the laws of Germany, with offices at Am Eichenhang 50, 57076 Siegen, Germany.
+"Licensor" shall mean the company pmdtechnologies ag, organised under the laws of Germany, with offices at Martinshardt 19, 57074 Siegen, Germany.
 
 "Licensee" shall mean an individual or legal entity exercising permissions granted by this License.
 

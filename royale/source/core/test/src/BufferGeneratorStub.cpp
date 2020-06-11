@@ -159,14 +159,9 @@ namespace
             throw NotImplemented();
         }
 
-        void getTemperatureRawValues (const royale::common::ICapturedRawFrame &frame,
-                                      uint16_t &vRef1,
-                                      uint16_t &vNtc1,
-                                      uint16_t &vRef2,
-                                      uint16_t &vNtc2,
-                                      uint16_t &offset) const override
+        std::vector<uint16_t> getTemperatureRawValues (const royale::common::ICapturedRawFrame &) const override
         {
-            throw NotImplemented();
+            throw royale::common::NotImplemented ("Not supported");
         }
 
         uint16_t getRequiredImageWidth() const override
@@ -277,11 +272,11 @@ void BufferGeneratorStub::configureFromUseCase (const UseCaseDefinition *useCase
         {
             frameCount += useCase->getRawFrameSets().at (rfsIdx).countRawFrames ();
         }
-        m_minFramesToDoubleBuffer += 2 * frameCount;
+        m_minFramesToDoubleBuffer += BUFFER_MULT_FACTOR * frameCount;
 
         // a very optimistic calculation of m_minSuperframesToDoubleBuffer
         const auto buffersPerGroup = double (useCase->getRawFrameSetIndices (streamId, 0).size()) / double (maxSuperframeHeightInFrames);
-        m_minSuperframesToDoubleBuffer += 2 * static_cast<std::size_t> (std::ceil (buffersPerGroup));
+        m_minSuperframesToDoubleBuffer += BUFFER_MULT_FACTOR * static_cast<std::size_t> (std::ceil (buffersPerGroup));
     }
     m_hasBeenConfigured = true;
 }
@@ -418,7 +413,7 @@ bool BufferGeneratorStub::waitBuffersRequeued (std::size_t maxInFlight, std::siz
     // the actual number of buffers in flight.
     //
     // This avoids arithmetic overflow.
-    if (maxInFlight >= std::numeric_limits<std::size_t>::max() / 2)
+    if (maxInFlight >= std::numeric_limits<std::size_t>::max() / BUFFER_MULT_FACTOR)
     {
         return true;
     }
@@ -461,7 +456,7 @@ std::size_t BufferGeneratorStub::executeUseCase (int width, int height, std::siz
     if (heightInFrames == 1)
     {
         // the frame collector expects individual frames
-        if (preferredBufferCount > 2 * m_useCaseFrameCount)
+        if (preferredBufferCount > BUFFER_MULT_FACTOR * m_useCaseFrameCount)
         {
             // this applies to both non-mixed and mixed mode
             throw LogicError ("FrameCollector requested too many buffers");

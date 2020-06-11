@@ -33,7 +33,7 @@
   <td id="projectlogo"><img alt="Logo" src="pmdlogo.png"/></td>
   <td style="padding-left: 0.5em;">
    <div id="projectname">Spectre API Documentation
-   &#160;<span id="projectnumber">4.1.0.222</span>
+   &#160;<span id="projectnumber">4.7.0.319</span>
    </div>
    <div id="projectbrief">Time-Of-Flight reference implementation</div>
   </td>
@@ -95,37 +95,43 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;</div>
 <div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="keyword">namespace </span>spectre</div>
 <div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;{</div>
-<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#define SPECTRE_RESULT_TYPES(X)                                         \</span></div>
-<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor"></span><span class="comment">    /*! 3D coordinates with confidence (in x1,y1,z1,c1,...,xn,yn,zn,cn format)*/</span><span class="preprocessor"> X(COORDINATES) \</span></div>
-<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor"></span><span class="comment">    /*! Amplitudes for each pixel */</span><span class="preprocessor"> X(AMPLITUDES)                       \</span></div>
-<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="preprocessor"></span><span class="comment">    /*! Flags for each pixel */</span><span class="preprocessor"> X(FLAGS)                                \</span></div>
-<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor"></span><span class="comment">    /*! Distance noise for each pixel (in m) */</span><span class="preprocessor"> X(DISTANCE_NOISES)      \</span></div>
-<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="preprocessor"></span><span class="comment">    /*! Intensity for each pixel (gray value picture without illumnation) */</span><span class="preprocessor"> X(INTENSITIES) \</span></div>
-<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="preprocessor"></span><span class="comment">    /*! Radial distance for each pixel */</span><span class="preprocessor"> X(DISTANCES)</span></div>
-<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="preprocessor"></span></div>
-<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;<span class="preprocessor">#define SPECTRE_ENUM_NAME(KEY,...) KEY,</span></div>
-<div class="line"><a name="l00028"></a><span class="lineno"><a class="code" href="namespacespectre.html#a0e7af6ad974c85248e62d9ee24ea386a">   28</a></span>&#160;<span class="preprocessor"></span>    <span class="keyword">enum class</span> <a class="code" href="namespacespectre.html#a0e7af6ad974c85248e62d9ee24ea386a">ResultType</a></div>
-<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;    {</div>
-<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;        SPECTRE_RESULT_TYPES (<a class="code" href="namespacespectre.html#a0e7af6ad974c85248e62d9ee24ea386aa1918283186cbbf64b959188f29515239">SPECTRE_ENUM_NAME</a>)</div>
-<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;        EXPOSURE_TIMES,</div>
-<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;        NUM_ENTRIES</div>
-<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;    };</div>
-<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;<span class="preprocessor">#undef SPECTRE_ENUM_NAME</span></div>
-<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;<span class="preprocessor"></span></div>
-<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;<span class="comment"></span></div>
-<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;<span class="comment">    /**</span></div>
-<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;<span class="comment">     * @brief Data type returned by the depth-processing for a ResultType value</span></div>
-<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;<span class="comment">     */</span></div>
-<div class="line"><a name="l00040"></a><span class="lineno"><a class="code" href="namespacespectre.html#ad3e020f359d7f3339c83698f002128d5">   40</a></span>&#160;    <span class="keyword">template</span>&lt;ResultType R&gt;</div>
-<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;    <span class="keyword">using</span> <a class="code" href="namespacespectre.html#ad3e020f359d7f3339c83698f002128d5" title="Data type returned by the depth-processing for a ResultType value.">ResultTypeType</a> = <span class="keyword">typename</span> std::enable_if &lt; R != ResultType::NUM_ENTRIES, typename std::conditional &lt; (R == ResultType::FLAGS || R == ResultType::EXPOSURE_TIMES), uint32_t, float &gt;::type &gt;::type;</div>
-<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;</div>
-<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;}  <span class="comment">// spectre</span></div>
-<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;</div>
-<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;<span class="preprocessor">#endif </span><span class="comment">/*__RESULTTYPE_HPP__*/</span><span class="preprocessor"></span></div>
+<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="comment">// clang-format off</span></div>
+<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#define SPECTRE_RESULT_TYPES(X)                                                \</span></div>
+<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor"></span><span class="comment">    /*! 3D coordinates with confidence (in x1,y1,z1,c1,...,xn,yn,zn,cn         \</span></div>
+<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="comment">     * format)*/</span><span class="preprocessor">                                                               \</span></div>
+<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">    X (COORDINATES) </span><span class="comment">/*! Amplitudes for each pixel */</span><span class="preprocessor"> X (                       \</span></div>
+<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="preprocessor">        AMPLITUDES) </span><span class="comment">/*! Flags for each pixel */</span><span class="preprocessor">                                \</span></div>
+<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="preprocessor">        X (FLAGS) </span><span class="comment">/*! Distance noise for each pixel (in m) */</span><span class="preprocessor"> X (              \</span></div>
+<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="preprocessor">            DISTANCE_NOISES) </span><span class="comment">/*! Intensity for each pixel (gray value picture  \</span></div>
+<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;<span class="comment">                                without illumnation) */</span><span class="preprocessor">                        \</span></div>
+<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;<span class="preprocessor">        X (INTENSITIES) </span><span class="comment">/*! Radial distance for each pixel */</span><span class="preprocessor"> X (DISTANCES)</span></div>
+<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;<span class="preprocessor"></span></div>
+<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;<span class="preprocessor">#define SPECTRE_ENUM_NAME(KEY, ...) KEY,</span></div>
+<div class="line"><a name="l00031"></a><span class="lineno"><a class="code" href="namespacespectre.html#a0e7af6ad974c85248e62d9ee24ea386a">   31</a></span>&#160;<span class="preprocessor"></span>    <span class="keyword">enum class</span> <a class="code" href="namespacespectre.html#a0e7af6ad974c85248e62d9ee24ea386a">ResultType</a></div>
+<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;    {</div>
+<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;        SPECTRE_RESULT_TYPES (<a class="code" href="namespacespectre.html#a0e7af6ad974c85248e62d9ee24ea386aa1918283186cbbf64b959188f29515239">SPECTRE_ENUM_NAME</a>) EXPOSURE_TIMES,</div>
+<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;        NUM_ENTRIES</div>
+<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;    };</div>
+<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;<span class="preprocessor">#undef SPECTRE_ENUM_NAME</span></div>
+<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;<span class="preprocessor"></span><span class="comment">// clang-format on</span></div>
+<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;<span class="comment"></span></div>
+<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;<span class="comment">    /**</span></div>
+<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;<span class="comment">     * @brief Data type returned by the depth-processing for a ResultType value</span></div>
+<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;<span class="comment">     */</span></div>
+<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;    <span class="keyword">template</span>&lt;ResultType R&gt;</div>
+<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;    <span class="keyword">using</span> <a class="code" href="namespacespectre.html#aa5c9a69e15d0e8d8b0631e90ea5bda52" title="Data type returned by the depth-processing for a ResultType value.">ResultTypeType</a> = <span class="keyword">typename</span> std::enable_if&lt;</div>
+<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;        R != ResultType::NUM_ENTRIES,</div>
+<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;        <span class="keyword">typename</span> std::conditional&lt;(R == ResultType::FLAGS ||</div>
+<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;                                   R == ResultType::EXPOSURE_TIMES),</div>
+<div class="line"><a name="l00047"></a><span class="lineno"><a class="code" href="namespacespectre.html#aa5c9a69e15d0e8d8b0631e90ea5bda52">   47</a></span>&#160;                                  uint32_t, <span class="keywordtype">float</span>&gt;::type&gt;::type;</div>
+<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;</div>
+<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;} <span class="comment">// namespace spectre</span></div>
+<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;</div>
+<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;<span class="preprocessor">#endif </span><span class="comment">/*__RESULTTYPE_HPP__*/</span><span class="preprocessor"></span></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Tue Mar 26 2019 15:04:18 for Spectre API Documentation by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Thu Mar 19 2020 15:57:03 for Spectre API Documentation by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.3.1
 </small></address>

@@ -499,7 +499,7 @@ int main (int argc, char **argv)
 
     try
     {
-        auto devices = bridgeController.probeDevices();
+        auto devices = bridgeController.probeDevices (royale::CameraAccessLevel::L3);
 
         if (devices.empty())
         {

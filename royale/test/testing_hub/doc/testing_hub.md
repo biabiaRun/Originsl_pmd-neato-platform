@@ -16,7 +16,7 @@ Operating Systems
 
 This project was tested on the following operating systems:
 
-- Windows 7
+- Windows 10
 - Linux (Ubuntu 15.10)
 
 Hardware Requirements

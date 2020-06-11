@@ -50,7 +50,7 @@ CameraDevice::CameraDevice (
 
 CameraDevice::~CameraDevice()
 {
-    if (m_recording && m_recording->isRecording())
+    if (m_recording->isRecording())
     {
         auto status = stopRecording();
         if (status != CameraStatus::SUCCESS)
@@ -70,7 +70,7 @@ CameraDevice::~CameraDevice()
 
 void CameraDevice::setRecordingEngine (std::unique_ptr<IRecord> recording)
 {
-    m_recording = std::move (recording);
+    CameraDeviceBase::setRecordingEngine (std::move (recording));
 
     auto status = updateRecordingEngineListener();
     if (status != CameraStatus::SUCCESS)
@@ -108,7 +108,8 @@ void CameraDevice::updateSupportedUseCases()
                             (uc.getCallbackData() == CallbackData::Depth ||
                              uc.getCallbackData() == CallbackData::Intermediate))
                     {
-                        if (m_cameraCore->verifyUseCase (uc.getDefinition()) == VerificationStatus::SUCCESS)
+                        if (m_cameraCore->verifyUseCase (uc.getDefinition()) == VerificationStatus::SUCCESS &&
+                                m_processing->verifyUseCase (*uc.getDefinition()) == VerificationStatus::SUCCESS)
                         {
                             m_supportedUseCaseNames.push_back (uc.getName());
                         }
@@ -123,7 +124,12 @@ void CameraDevice::updateSupportedUseCases()
 
 CameraStatus CameraDevice::updateExposureTimes (const Vector<uint32_t> &exposureTimes)
 {
-    std::lock_guard<std::recursive_mutex> lock (m_currentUseCaseMutex);
+    std::unique_lock<std::recursive_mutex> lock (m_currentUseCaseMutex, std::try_to_lock);
+    if (!lock.owns_lock())
+    {
+        return CameraStatus::RUNTIME_ERROR;
+    }
+
     auto savedExposureTimes = m_currentUseCaseDefinition->getExposureTimes();
     try
     {
@@ -212,6 +218,15 @@ CameraStatus CameraDevice::initialize() ROYALE_API_EXCEPTION_SAFE_BEGIN
 
     m_processing->registerExposureListener (this);
 
+    if (m_callbackData == static_cast<uint16_t> (CallbackData::Raw))
+    {
+        m_processing->setProcessingActivated (false);
+    }
+    else
+    {
+        m_processing->setProcessingActivated (true);
+    }
+
     m_exposureModes.clear();
 
     // make a (modifiable) copy of the usecases
@@ -287,7 +302,7 @@ CameraStatus CameraDevice::initialize() ROYALE_API_EXCEPTION_SAFE_BEGIN
     updateSupportedUseCases();
 
     if (m_supportedUseCaseNames.empty() &&
-            !m_availableUseCases.empty ())
+            !m_availableUseCases.empty())
     {
         LOG (ERROR) << "There are no use cases available for the current access level";
         return CameraStatus::NO_USE_CASES_FOR_LEVEL;
@@ -381,6 +396,9 @@ CameraStatus CameraDevice::startCapture() ROYALE_API_EXCEPTION_SAFE_BEGIN
     try
     {
         m_cameraCore->startCapture();
+
+        // Try setting the exposure times that were set before
+        m_cameraCore->reconfigureImagerExposureTimes (m_currentUseCaseDefinition, m_currentUseCaseDefinition->getExposureTimes().toStdVector());
     }
     catch (Exception &e)
     {
@@ -689,7 +707,7 @@ CameraStatus CameraDevice::startRecording (const String &fileName,
         return CameraStatus::NOT_IMPLEMENTED;
     }
 
-    if (!m_recording)
+    if (! (*m_recording))
     {
         return CameraStatus::RESOURCE_ERROR;
     }
@@ -720,7 +738,7 @@ CameraStatus CameraDevice::stopRecording() ROYALE_API_EXCEPTION_SAFE_BEGIN
         return CameraStatus::NOT_IMPLEMENTED;
     }
 
-    if (!m_recording)
+    if (! (*m_recording))
     {
         return CameraStatus::RESOURCE_ERROR;
     }
@@ -915,7 +933,7 @@ CameraStatus CameraDevice::setExposureTime (const String &exposureGroup, uint32_
     }
 
     auto exposureGroups = m_currentUseCaseDefinition->getExposureGroups();
-    auto exposureTimes  = m_currentUseCaseDefinition->getExposureTimes();
+    auto exposureTimes = m_currentUseCaseDefinition->getExposureTimes();
 
     for (auto idx = 0u; idx < exposureGroups.size(); ++idx)
     {
@@ -995,6 +1013,10 @@ ROYALE_API_EXCEPTION_SAFE_END
 
 CameraStatus CameraDevice::setUseCase (size_t idx) ROYALE_API_EXCEPTION_SAFE_BEGIN
 {
+    if (m_recording->isRecording())
+    {
+        return CameraStatus::USECASE_NOT_SUPPORTED;
+    }
     if (!m_isInitialized)
     {
         return CameraStatus::DEVICE_NOT_INITIALIZED;
@@ -1117,13 +1139,13 @@ CameraStatus CameraDevice::setCallbackData (uint16_t cbData) ROYALE_API_EXCEPTIO
         return CameraStatus::INVALID_VALUE;
     }
 
-    if (cbData >  static_cast<uint16_t> (CallbackData::Raw) &&
+    if (cbData > static_cast<uint16_t> (CallbackData::Raw) &&
             (m_isInitialized && !m_processing->isReadyToProcessDepthData()))
     {
         return CameraStatus::NO_CALIBRATION_DATA;
     }
 
-    bool restartCapture { false };
+    bool restartCapture{ false };
     if (isCapturing())
     {
         restartCapture = true;
@@ -1139,7 +1161,7 @@ CameraStatus CameraDevice::setCallbackData (uint16_t cbData) ROYALE_API_EXCEPTIO
     // is also available for depth
     bool switchFromRaw = false;
     if (m_callbackData == static_cast<uint16_t> (CallbackData::Raw) &&
-            cbData >  static_cast<uint16_t> (CallbackData::Raw))
+            cbData > static_cast<uint16_t> (CallbackData::Raw))
     {
         switchFromRaw = true;
     }
@@ -1154,6 +1176,8 @@ CameraStatus CameraDevice::setCallbackData (uint16_t cbData) ROYALE_API_EXCEPTIO
     if (m_isInitialized && switchFromRaw)
     {
         std::lock_guard<std::recursive_mutex> lock (m_currentUseCaseMutex);
+
+        m_processing->setProcessingActivated (true);
 
         // We try to switch from raw to one of the depth modes
         m_currentUseCaseDefinition = nullptr;
@@ -1227,6 +1251,11 @@ CameraStatus CameraDevice::setCallbackData (uint16_t cbData) ROYALE_API_EXCEPTIO
         }
     }
 
+    if (m_callbackData == static_cast<uint16_t> (CallbackData::Raw))
+    {
+        m_processing->setProcessingActivated (false);
+    }
+
     auto status = setupListeners();
     if (status != CameraStatus::SUCCESS)
     {
@@ -1257,12 +1286,9 @@ CameraStatus CameraDevice::setCallbackData (uint16_t cbData) ROYALE_API_EXCEPTIO
 
 CameraStatus CameraDevice::updateRecordingEngineListener() ROYALE_API_EXCEPTION_SAFE_BEGIN
 {
-    if (m_recording)
+    if (!m_recording->setFrameCaptureListener (m_processing.get()))
     {
-        if (!m_recording->setFrameCaptureListener (m_processing.get()))
-        {
-            return CameraStatus::DEVICE_IS_BUSY;
-        }
+        return CameraStatus::DEVICE_IS_BUSY;
     }
     return CameraStatus::SUCCESS;
 } ROYALE_API_EXCEPTION_SAFE_END
@@ -1345,7 +1371,7 @@ CameraStatus CameraDevice::activateUseCase() ROYALE_API_EXCEPTION_SAFE_BEGIN
     }
 
 
-    if (m_recording)
+    if (*m_recording)
     {
         m_recording->resetParameters();
         for (auto i = 0u; i < numStreams; ++i)
@@ -1487,7 +1513,7 @@ CameraStatus CameraDevice::writeDataToFlash (const royale::String &filename) ROY
 
 void CameraDevice::saveProcessingParameters (royale::StreamId streamId)
 {
-    if (m_recording)
+    if (*m_recording)
     {
         // Retrieve the full parameter set from the processing
         // setProcessingParameters might only receive a partial list of parameters
@@ -1723,7 +1749,11 @@ bool CameraDevice::isAutoexposureEnabled (const royale::StreamId streamId)
 
 royale::CameraStatus CameraDevice::updateExposureTime (uint32_t exposureTime, royale::StreamId streamId)
 {
-    std::lock_guard<std::recursive_mutex> lock (m_currentUseCaseMutex);
+    std::unique_lock<std::recursive_mutex> lock (m_currentUseCaseMutex, std::try_to_lock);
+    if (!lock.owns_lock())
+    {
+        return CameraStatus::RUNTIME_ERROR;
+    }
 
     const auto savedExposureTimes = m_currentUseCaseDefinition->getExposureTimes();
 

@@ -24,38 +24,42 @@ namespace spectre
     namespace common
     {
         /**
-        * @brief The AbstractField class is an abstract helper class which encapsulates
-        * an array.
-        *
-        * The class is a type-safe wrapper with an STL-like interface. It
-        * allows for optional bounds checking if enabled during
-        * compilation.
-        *
-        * Depending on the chosen implementation the class can act as a reference to an
-        * existing array (ArrayReference<T>), or hold the memory itself (ArrayHolder<T>).
-        */
-        template <typename T>
+         * @brief The AbstractField class is an abstract helper class which
+         * encapsulates an array.
+         *
+         * The class is a type-safe wrapper with an STL-like interface. It
+         * allows for optional bounds checking if enabled during
+         * compilation.
+         *
+         * Depending on the chosen implementation the class can act as a
+         * reference to an existing array (ArrayReference<T>), or hold the
+         * memory itself (ArrayHolder<T>).
+         */
+        template<typename T>
         class AbstractField
         {
         protected:
-            AbstractField() : m_data (nullptr), m_size (0) {}
+            AbstractField () : m_data (nullptr), m_size (0)
+            {}
 
-            AbstractField (T *data, size_t size) : m_data (data), m_size (size) {}
+            AbstractField (T *data, size_t size) : m_data (data), m_size (size)
+            {}
 
         public:
-
-            virtual ~AbstractField() {}
+            virtual ~AbstractField ()
+            {}
             /**
-             * @brief virtual operation which returns a copy of the appropiate class
+             * @brief virtual operation which returns a copy of the appropiate
+             * class
              * @return copy of current class
              */
-            virtual AbstractField<T> *clone() const = 0;
+            virtual AbstractField<T> *clone () const = 0;
 
             /**
              * @brief returns the number of the elements contained
              * @return number of elements
              */
-            inline size_t size() const
+            inline size_t size () const
             {
                 return m_size;
             }
@@ -64,7 +68,7 @@ namespace spectre
              * @brief checks whether the container is empty
              * @return true if the container is empty, false otherwise
              */
-            inline bool empty() const
+            inline bool empty () const
             {
                 return m_size == 0;
             }
@@ -87,21 +91,12 @@ namespace spectre
              * @brief returns the underlying array
              * @return underlying array
              */
-            inline T *data()
+            inline T *data ()
             {
                 return m_data;
             }
 
-            inline const T *data() const
-            {
-                return m_data;
-            }
-
-            /**
-             * @brief returns an iterator to the beginning
-             * @return iterator to the beginning
-             */
-            inline T *begin()
+            inline const T *data () const
             {
                 return m_data;
             }
@@ -110,17 +105,25 @@ namespace spectre
              * @brief returns an iterator to the beginning
              * @return iterator to the beginning
              */
-            inline const T *begin() const
+            inline T *begin ()
             {
                 return m_data;
             }
 
+            /**
+             * @brief returns an iterator to the beginning
+             * @return iterator to the beginning
+             */
+            inline const T *begin () const
+            {
+                return m_data;
+            }
 
             /**
              * @brief returns an const_iterator to the beginning
              * @return const_iterator to the beginning
              */
-            inline const T *cbegin() const
+            inline const T *cbegin () const
             {
                 return m_data;
             }
@@ -129,7 +132,7 @@ namespace spectre
              * @brief returns an iterator to the end
              * @return iterator to the end
              */
-            inline T *end()
+            inline T *end ()
             {
                 return m_data + m_size;
             }
@@ -138,57 +141,54 @@ namespace spectre
              * @brief returns an iterator to the end
              * @return iterator to the end
              */
-            inline const T *end() const
+            inline const T *end () const
             {
                 return m_data + m_size;
             }
-
 
             /**
              * @brief returns an const_iterator to the end
              * @return const_iterator to the end
              */
-            inline const T *cend() const
+            inline const T *cend () const
             {
                 return m_data + m_size;
             }
 
             /// Underlying type
-            using value_type =  T;
+            using value_type = T;
 
             /// const iterator type
-            using const_iterator = const T*;
+            using const_iterator = const T *;
 
             /// iterator type
-            using iterator = T*;
-
+            using iterator = T *;
 
         protected:
-            T *m_data; ///< pointer to underlying array
+            T *m_data;     ///< pointer to underlying array
             size_t m_size; ///< number of elements contained
         };
 
         /**
          * @brief Wrapper class around an AbstractField which makes it immutable
          */
-        template <typename T>
+        template<typename T>
         class ImmutableField final
         {
         public:
             explicit ImmutableField (const AbstractField<T> &other)
-                : m_field (other.clone())
+                : m_field (other.clone ())
             {}
 
             ImmutableField (const ImmutableField<T> &other)
-                : m_field (other.m_field->clone())
+                : m_field (other.m_field->clone ())
             {}
 
             /// Creates an invalid ImmutableField
-            ImmutableField()
-                : m_field (nullptr)
+            ImmutableField () : m_field (nullptr)
             {}
 
-            ~ImmutableField()
+            ~ImmutableField ()
             {
                 details::callDelete (m_field);
             }
@@ -196,7 +196,7 @@ namespace spectre
             ImmutableField<T> &operator= (const ImmutableField<T> &other)
             {
                 callDelete (m_field);
-                m_field = other.m_field->clone();
+                m_field = other.m_field->clone ();
                 return *this;
             }
 
@@ -212,105 +212,110 @@ namespace spectre
                 other.m_field = nullptr;
             }
 
-            inline const size_t size() const
+            inline const size_t size () const
             {
-                return m_field->size();
+                return m_field->size ();
             }
 
             /**
              * @brief checks whether the container is empty
              * @return true if the container is empty, false otherwise
              */
-            inline bool empty() const
+            inline bool empty () const
             {
-                return m_field->empty();
+                return m_field->empty ();
             }
 
             const T &operator[] (size_t idx) const
             {
-                return (*m_field) [idx];
+                return (*m_field)[idx];
             }
 
             /**
              * @brief returns the underlying array
              * @return underlying array
              */
-            inline const T *data() const
+            inline const T *data () const
             {
-                return m_field->data();
+                return m_field->data ();
             }
 
             /**
              * @brief returns an iterator to the beginning
              * @return iterator to the beginning
              */
-            inline const T *begin() const
+            inline const T *begin () const
             {
-                return m_field->begin();
+                return m_field->begin ();
             }
 
             /**
              * @brief returns an const_iterator to the beginning
              * @return const_iterator to the beginning
              */
-            inline const T *cbegin() const
+            inline const T *cbegin () const
             {
-                return m_field->cbegin();
+                return m_field->cbegin ();
             }
 
             /**
              * @brief returns an iterator to the end
              * @return iterator to the end
              */
-            inline const T *end() const
+            inline const T *end () const
             {
-                return m_field->end();
+                return m_field->end ();
             }
-
 
             /**
              * @brief returns an const_iterator to the end
              * @return const_iterator to the end
              */
-            inline const T *cend() const
+            inline const T *cend () const
             {
-                return m_field->cend();
+                return m_field->cend ();
             }
 
             /// Underlying type
-            using value_type =  T;
+            using value_type = T;
 
             /// const iterator type
-            using const_iterator = const T*;
+            using const_iterator = const T *;
 
         private:
             AbstractField<T> *m_field;
         };
 
-
         /**
-         * @brief The ArrayReference class is an implementation of the AbstractField class that holds a reference to external memory
+         * @brief The ArrayReference class is an implementation of the
+         * AbstractField class that holds a reference to external memory
          */
-        template <typename T>
-        class ArrayReference : public AbstractField<T>
+        template<typename T>
+        class ArrayReference: public AbstractField<T>
         {
         public:
-            ArrayReference() : AbstractField<T> (nullptr, 0) {}
+            ArrayReference () : AbstractField<T> (nullptr, 0)
+            {}
 
             /**
              * References memory passed by data.
              *
-             * Note that ArrayReference is only valid as long as the referenced memory
-             * is valid.
+             * Note that ArrayReference is only valid as long as the referenced
+             * memory is valid.
              *
              * @param data memory to be referenced
              * @param size number of elements in data
              */
-            ArrayReference (T *data, size_t size) : AbstractField<T> (data, size) {}
+            ArrayReference (T *data, size_t size)
+                : AbstractField<T> (data, size)
+            {}
 
-            ArrayReference (const ArrayReference<T> &other) : AbstractField<T> (other.m_data, other.m_size) {}
+            ArrayReference (const ArrayReference<T> &other)
+                : AbstractField<T> (other.m_data, other.m_size)
+            {}
 
-            virtual ~ArrayReference() {}
+            virtual ~ArrayReference ()
+            {}
 
             ArrayReference<T> &operator= (const ArrayReference<T> &other)
             {
@@ -322,28 +327,30 @@ namespace spectre
                 return *this;
             }
 
-            ArrayReference<T> *clone() const override
+            ArrayReference<T> *clone () const override
             {
                 return details::callCopyCtor (*this);
             }
-
         };
 
         /**
-         * @brief The ArrayHolder class is an implementation of the AbstractField class that holds and manages its own memory
+         * @brief The ArrayHolder class is an implementation of the
+         * AbstractField class that holds and manages its own memory
          */
-        template <typename T>
-        class ArrayHolder : public AbstractField<T>
+        template<typename T>
+        class ArrayHolder: public AbstractField<T>
         {
         public:
-            ArrayHolder() : AbstractField<T> (nullptr, 0) {}
+            ArrayHolder () : AbstractField<T> (nullptr, 0)
+            {}
 
             /**
              * Allocates memory of the given size
              *
              * @param size number of elements to allocate
              */
-            explicit ArrayHolder (size_t size) : AbstractField<T> (nullptr, size)
+            explicit ArrayHolder (size_t size)
+                : AbstractField<T> (nullptr, size)
             {
                 if (size)
                 {
@@ -360,21 +367,27 @@ namespace spectre
              * @param data memory to be copied
              * @param size number of elements in data
              */
-            ArrayHolder (const T *data, size_t size) : AbstractField<T> (nullptr, size)
+            ArrayHolder (const T *data, size_t size)
+                : AbstractField<T> (nullptr, size)
             {
                 if (size)
                 {
                     this->m_data = allocArray<T> (this->m_size);
-                    std::copy_n (PMD_CHECKED_ITERATOR (data, size), size, PMD_CHECKED_ITERATOR (this->m_data, size));
+                    std::copy_n (PMD_CHECKED_ITERATOR (data, size), size,
+                                 PMD_CHECKED_ITERATOR (this->m_data, size));
                 }
             }
 
-            ArrayHolder (const ArrayHolder<T> &other) : AbstractField<T> (nullptr, other.m_size)
+            ArrayHolder (const ArrayHolder<T> &other)
+                : AbstractField<T> (nullptr, other.m_size)
             {
                 if (this->m_size)
                 {
                     this->m_data = allocArray<T> (this->m_size);
-                    std::copy_n (PMD_CHECKED_ITERATOR (other.m_data, other.m_size), other.m_size, PMD_CHECKED_ITERATOR (this->m_data, other.m_size));
+                    std::copy_n (
+                        PMD_CHECKED_ITERATOR (other.m_data, other.m_size),
+                        other.m_size,
+                        PMD_CHECKED_ITERATOR (this->m_data, other.m_size));
                 }
             }
 
@@ -388,15 +401,17 @@ namespace spectre
             }
 
             ArrayHolder (std::initializer_list<T> init)
-                : AbstractField<T> (allocArray<T> (init.size()), init.size())
+                : AbstractField<T> (allocArray<T> (init.size ()), init.size ())
             {
                 if (this->m_size)
                 {
-                    std::copy (init.begin(), init.end(), PMD_CHECKED_ITERATOR (this->m_data, init.size()));
+                    std::copy (
+                        init.begin (), init.end (),
+                        PMD_CHECKED_ITERATOR (this->m_data, init.size ()));
                 }
             }
 
-            virtual ~ArrayHolder()
+            virtual ~ArrayHolder ()
             {
                 freeArray (this->m_data);
             }
@@ -415,7 +430,10 @@ namespace spectre
 
                     if (this->m_size)
                     {
-                        std::copy_n (PMD_CHECKED_ITERATOR (other.m_data, other.m_size), other.m_size, PMD_CHECKED_ITERATOR (this->m_data, other.m_size));
+                        std::copy_n (
+                            PMD_CHECKED_ITERATOR (other.m_data, other.m_size),
+                            other.m_size,
+                            PMD_CHECKED_ITERATOR (this->m_data, other.m_size));
                     }
                 }
                 return *this;
@@ -435,10 +453,11 @@ namespace spectre
                 return *this;
             }
 
-            ArrayHolder<T> *clone() const override
+            ArrayHolder<T> *clone () const override
             {
-                return details::callCopyCtor (*this); //TODO: undefined reference
+                return details::callCopyCtor (
+                    *this); // TODO: undefined reference
             }
         };
-    }
-}
+    } // namespace common
+} // namespace spectre

@@ -35,7 +35,7 @@ namespace royale
             void initialize() override;
             void startCapture() override;
             void reconfigure (const ImagerUseCaseDefinition &useCase, uint16_t &reconfigIndex) override;
-            void stopCapture() override;
+            uint16_t stopCapture() override;
             std::unique_ptr<common::IPseudoDataInterpreter> createPseudoDataInterpreter() override;
             ImagerVerificationStatus verifyUseCase (const ImagerUseCaseDefinition &useCase) override;
 

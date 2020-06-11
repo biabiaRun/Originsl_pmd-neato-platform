@@ -103,9 +103,10 @@ royale::Vector<royale::String> CameraManager::getConnectedCameraList()
 #if defined(TARGET_PLATFORM_ANDROID)
     auto cameraPartsList = bridgeController.probeDevices (androidUsbDeviceFD,
                            androidUsbDeviceVid,
-                           androidUsbDevicePid);
+                           androidUsbDevicePid,
+                           m_data->accessLevel);
 #else
-    auto cameraPartsList = bridgeController.probeDevices();
+    auto cameraPartsList = bridgeController.probeDevices (m_data->accessLevel);
 #endif
 
     if (cameraPartsList.empty())
@@ -167,11 +168,38 @@ royale::Vector<royale::String> CameraManager::getConnectedCameraList()
         }
     }
 
+    // save the camera Ids
+    m_usedCameraIds.clear();
+    m_usedCameraIds = cameraIds;
+
     return cameraIds;
 }
 
 std::unique_ptr<ICameraDevice> CameraManager::createCamera (const royale::String &cameraId, const royale::TriggerMode mode)
 {
+#ifndef TARGET_PLATFORM_ANDROID
+    // if it is an ID we have opened before, but it's not in our m_data list we should update the camera list
+    for (auto const &id : m_usedCameraIds)
+    {
+        if (id.compare (cameraId) == 0)
+        {
+            bool found = false;
+            for (size_t i = 0; i < m_data->cameraDevices.size(); ++i)
+            {
+                if ( (m_data->cameraDevices.at (i).first.compare (cameraId) == 0) && m_data->cameraDevices.at (0).second != 0)
+                {
+                    found = true;
+                }
+            }
+            if (!found)
+            {
+                getConnectedCameraList();
+                break;
+            }
+        }
+    }
+#endif
+
     // if ID is not found, return check if it is a file name pointing to a replay file
     for (size_t i = 0; i < m_data->cameraDevices.size(); ++i)
     {

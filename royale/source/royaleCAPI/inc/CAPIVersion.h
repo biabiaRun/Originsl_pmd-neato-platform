@@ -29,6 +29,9 @@
  *         added royale_camera_device_set_external_trigger
  * 31000 - C API as of Royale v3.10.0
  *         added royale_camera_device_write_data_to_flash
+ * 32400 - C API as of Royale v3.24.0
+ *         added royale_camera_device_set_filter_level
+ *         added royale_camera_device_get_filter_level
  *
  * Older C API versions were already deprecated in previous releases and have now been removed.
  *
@@ -51,7 +54,7 @@
  */
 
 #ifndef ROYALE_C_API_VERSION
-#define ROYALE_C_API_VERSION 31000
+#define ROYALE_C_API_VERSION 32400
 #endif
 
 /* old, now unsupported way of selecting API versions: */
@@ -89,7 +92,9 @@
  */
 #endif
 
-#if ROYALE_C_API_VERSION == 31000
+#if ROYALE_C_API_VERSION == 32400
+#include <CAPIVersion32400.h>
+#elif ROYALE_C_API_VERSION == 31000
 #include <CAPIVersion31000.h>
 #elif ROYALE_C_API_VERSION == 330
 #include <CAPIVersion330.h>
