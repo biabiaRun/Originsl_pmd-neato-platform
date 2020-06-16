@@ -78,7 +78,7 @@ const ModuleConfig moduleConfigCustom
 	    royale::usecase::UseCase{
 		"MODE_9_5FPS",
 		std::make_shared<royale::usecase::UseCaseEightPhase> (
-		5u, 80320000, 60240000, royale::Pair<uint32_t, uint32_t> { MIN_EXPO_NR, 2000u }, 2000u, 2000u, 200u,
+		5u, 80320000, 60240000, royale::Pair<uint32_t, uint32_t> { MIN_EXPO_NR, 1880u }, 1880u, 1880u, 200u,
 		royale::usecase::ExposureGray::Off,
 		royale::usecase::IntensityPhaseOrder::IntensityFirstPhase,
 		true, ssc_freq, ssc_kspread, ssc_delta_80320kHz, ssc_delta_60240kHz),
@@ -88,7 +88,7 @@ const ModuleConfig moduleConfigCustom
 	    royale::usecase::UseCase{
 		"MODE_9_10FPS",
 		std::make_shared<royale::usecase::UseCaseEightPhase> (
-		10u, 80320000, 60240000, royale::Pair<uint32_t, uint32_t> { MIN_EXPO_NR, 1000u }, 1000u, 1000u, 200u,
+		10u, 80320000, 60240000, royale::Pair<uint32_t, uint32_t> { MIN_EXPO_NR, 1070u }, 1070u, 1070u, 200u,
 		royale::usecase::ExposureGray::Off,
 		royale::usecase::IntensityPhaseOrder::IntensityFirstPhase,
 		true, ssc_freq, ssc_kspread, ssc_delta_80320kHz, ssc_delta_60240kHz),
@@ -98,7 +98,7 @@ const ModuleConfig moduleConfigCustom
 	    royale::usecase::UseCase{
 		"MODE_9_15FPS",
 		std::make_shared<royale::usecase::UseCaseEightPhase> (
-		15u, 80320000, 60240000, royale::Pair<uint32_t, uint32_t> { MIN_EXPO_NR, 650u }, 650u, 650u, 200u,
+		15u, 80320000, 60240000, royale::Pair<uint32_t, uint32_t> { MIN_EXPO_NR, 710u }, 710u, 710u, 200u,
 		royale::usecase::ExposureGray::Off,
 		royale::usecase::IntensityPhaseOrder::IntensityFirstPhase,
 		true, ssc_freq, ssc_kspread, ssc_delta_80320kHz, ssc_delta_60240kHz),
