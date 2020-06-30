@@ -19,7 +19,7 @@ int main(int argc, char **argv)
 
     royale::String test_mode = "MODE_5_5FPS";
     int test_fps = 5;
-    int numSecondsToStream = 60;
+    int numSecondsToStream = 7;
 
     // [Setup] Camera Initialization Test
     Camera::CameraError error = cam.RunInitializeTests(test_mode, test_fps);

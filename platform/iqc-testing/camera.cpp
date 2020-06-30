@@ -6,12 +6,6 @@
 using namespace royale;
 using namespace platform;
 
-
-// void Camera::onNewData (const royale::DepthData *data)
-// {
-    // Do something with the data
-// }
-
 Camera::CameraError Camera::RunInitializeTests(royale::String useCase, int fps)
 {
     // Test if CameraDevice was created
@@ -67,12 +61,8 @@ Camera::CameraError Camera::RunStreamTests()
                   << royale::getStatusString(status).c_str() << std::endl;
         return CAM_STREAM_ERROR;
     }
-    if (streamids.size() > 1) 
-    {
-        std::clog << "[WARNING] More than one camera stream exists. Using only the FIRST stream." << std::endl;
-    }
 
-    // Set stream ID
+    // Get stream ID
     try 
     {
         stream_id_ = streamids.front();
