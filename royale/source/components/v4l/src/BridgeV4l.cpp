@@ -106,7 +106,8 @@ namespace
         ROYALE_API void normalizeData()
         {
             uint8_t *tmp = reinterpret_cast<uint8_t *> (OffsetBasedCapturedBuffer::getPixelData ());
-            BufferUtils::copyOrInPlaceRaw12 (tmp, getPixelCount(), reinterpret_cast<uint16_t *> (m_normalizedData));
+            memcpy((void *)m_normalizedData, (void *)tmp, BufferUtils::expectedRawSize(getPixelCount(), BufferDataFormat::RAW12));
+            BufferUtils::copyOrInPlaceRaw12 (reinterpret_cast<uint8_t *>(m_normalizedData), getPixelCount(), reinterpret_cast<uint16_t *> (m_normalizedData));
         }
 
         ROYALE_API uint16_t *getPixelData()
