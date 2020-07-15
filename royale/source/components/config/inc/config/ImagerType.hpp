@@ -25,7 +25,10 @@ namespace royale
             M2453_A11,      // M2453 A11 (external configuration based)
             M2453_B11,      // M2453 B11 (external configuration based)
             M2455_A11,      // M2455 A11 (external configuration based)
-            MXXXX_DUMMY     // A placeholder for some future Mxxxx imager
+            M2455_A14,      // M2455 A14 (external configuration based)
+            M2455_B12,      // M2455 B12 (external configuration based)
+            M2457_A11,      // M2457 A11 (external configuration based)
+            M2457_A11_SIC,  // M2457 A11 (using psd temperature sensor from IC, external configuration based)
         };
     }
 }

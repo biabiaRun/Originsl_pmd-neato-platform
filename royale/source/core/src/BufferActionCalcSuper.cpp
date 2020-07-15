@@ -64,7 +64,7 @@ IBufferActionCalc::Result BufferActionCalcSuper::calculateActions (
         {
             const auto sequenceId = group.sequence[i];
             const auto bufferId = seqToBuffer.at (sequenceId);
-            const auto frameInBuffer = sequenceId - bufferId;
+            const auto frameInBuffer = static_cast<size_t> (sequenceId - bufferId);
             BufferAction &action = bam.at (bufferId);
             action.mapping.at (frameInBuffer).push_back (MapFramesTo {groupIdx, i});
             buffersForGroup.emplace (bufferId);
@@ -83,14 +83,14 @@ IBufferActionCalc::Result BufferActionCalcSuper::calculateActions (
     std::size_t bufferCount = 0u;
     for (const auto streamId : useCase.getStreamIds())
     {
-        // Double-buffering a stream with only one frame group requires enough buffers to hold
+        // Multi-buffering a stream with only one frame group requires enough buffers to hold
         // each pair of (frameGroup from first cycle, frameGroup from next cycle).
         //
-        // Double-buffering a stream with multiple frame groups can, assuming there are no frame
+        // Multi-buffering a stream with multiple frame groups can, assuming there are no frame
         // drops, get a smaller number by calculating adject groups.  However, assuming that there
         // may be frame drops we need at least enough buffers to handle the pair (any frameGroup
         // from one cycle, any frameGroup from the next cycle), and possibly more.
-        bufferCount += 2 * bufferCountsForStream.at (streamId);
+        bufferCount += BUFFER_MULT_FACTOR * bufferCountsForStream.at (streamId);
     }
 
     // Get height of each frame's image, in pixels.  The width is already in m_imageWidth, but the

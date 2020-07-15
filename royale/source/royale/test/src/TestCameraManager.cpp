@@ -182,3 +182,27 @@ TEST (TestCameraManager, TestGetConnectedCameraListTwiceConsumeOne)
 
     EXPECT_NO_THROW (EXPECT_EQ (camera->stopCapture(), CameraStatus::SUCCESS));
 }
+
+TEST (TestCameraManager, TestReuseId)
+{
+    CameraManager manager;
+
+#if defined(TARGET_PLATFORM_ANDROID)
+    auto connectedCameras = manager.getConnectedCameraList (0);
+#else
+    auto connectedCameras = manager.getConnectedCameraList();
+#endif
+
+    auto camId = connectedCameras[0];
+
+    ASSERT_FALSE (connectedCameras.empty());
+    auto camera = manager.createCamera (camId);
+
+    ASSERT_NE (camera, nullptr);
+
+    camera.reset (nullptr);
+
+    auto camera2 = manager.createCamera (camId);
+
+    ASSERT_NE (camera2, nullptr);
+}

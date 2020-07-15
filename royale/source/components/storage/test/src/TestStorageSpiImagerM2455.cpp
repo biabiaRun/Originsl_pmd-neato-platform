@@ -89,7 +89,7 @@ TEST_F (TestStorageSpiImagerM2455, TestRead)
         (*flash) [i] = testPattern[i];
     }
 
-    auto spiMaster = std::make_shared<SpiBusMasterM2455> (m_bridge, m_imagerType);
+    auto spiMaster = std::make_shared<SpiBusMasterM2455> (m_bridge);
     auto storage = std::make_shared<SpiGenericFlash> (testSpiConfig, spiMaster, m_busAddress);
 
     std::vector<uint8_t> data (testPattern.size(), 0);
@@ -125,7 +125,7 @@ TEST_F (TestStorageSpiImagerM2455, TestOutOfConfigBoundsRead)
         (*flash) [narrow_cast<uint32_t> (limit + i)] = 0;
     }
 
-    auto spiMaster = std::make_shared<SpiBusMasterM2455> (m_bridge, m_imagerType);
+    auto spiMaster = std::make_shared<SpiBusMasterM2455> (m_bridge);
     auto storage = std::make_shared<SpiGenericFlash> (testSpiConfig, spiMaster, m_busAddress);
 
     std::vector<uint8_t> data (10, 0);
@@ -155,7 +155,7 @@ TEST_F (TestStorageSpiImagerM2455, TestOutOf24BitBoundsRead)
         (*flash) [narrow_cast<uint32_t> (limit + i)] = 0;
     }
 
-    auto spiMaster = std::make_shared<SpiBusMasterM2455> (m_bridge, m_imagerType);
+    auto spiMaster = std::make_shared<SpiBusMasterM2455> (m_bridge);
     auto storage = std::make_shared<SpiGenericFlash> (spiConfig, spiMaster, m_busAddress);
 
     std::vector<uint8_t> data (10, 0);
@@ -173,7 +173,7 @@ TEST_F (TestStorageSpiImagerM2455, TestOutOf24BitBoundsRead)
  */
 TEST_F (TestStorageSpiImagerM2455, TestOutOf24BitBoundsCreation)
 {
-    auto spiMaster = std::make_shared<SpiBusMasterM2455> (m_bridge, m_imagerType);
+    auto spiMaster = std::make_shared<SpiBusMasterM2455> (m_bridge);
     const auto spiConfig = FlashMemoryConfig{testSpiConfig} .setImageSize ( (1 << 24) + 1);
     ASSERT_THROW (std::make_shared<SpiGenericFlash> (spiConfig, spiMaster, m_busAddress), LogicError);
 }
@@ -199,7 +199,7 @@ TEST_F (TestStorageSpiImagerM2455, TestWriteAndReadBack)
         testPattern.emplace_back (static_cast<uint8_t> ( (i >> 8) + i));
     }
 
-    auto spiMaster = std::make_shared<SpiBusMasterM2455> (m_bridge, m_imagerType);
+    auto spiMaster = std::make_shared<SpiBusMasterM2455> (m_bridge);
     auto storage = std::make_shared<SpiGenericFlash> (spiConfig, spiMaster, m_busAddress);
 
     ASSERT_NO_THROW (storage->writeSectorBased (0u, testPattern));
@@ -229,7 +229,7 @@ TEST_F (TestStorageSpiImagerM2455, TestOutOfConfigBoundsWrite)
 {
     const auto limit = narrow_cast<int32_t> (testSpiConfig.imageSize);
 
-    auto spiMaster = std::make_shared<SpiBusMasterM2455> (m_bridge, m_imagerType);
+    auto spiMaster = std::make_shared<SpiBusMasterM2455> (m_bridge);
     auto storage = std::make_shared<SpiGenericFlash> (testSpiConfig, spiMaster, m_busAddress);
 
     // Writes need to be sector-aligned, so the test data is bigger than the read tests
@@ -258,7 +258,7 @@ TEST_F (TestStorageSpiImagerM2455, TestReadWithAccessOffset)
         (*flash) [narrow_cast<uint32_t> (config.accessOffset + i)] = testPattern[i];
     }
 
-    auto spiMaster = std::make_shared<SpiBusMasterM2455> (m_bridge, m_imagerType);
+    auto spiMaster = std::make_shared<SpiBusMasterM2455> (m_bridge);
     auto storage = std::make_shared<SpiGenericFlash> (config, spiMaster, m_busAddress);
 
     std::vector<uint8_t> data (testPattern.size(), 0);

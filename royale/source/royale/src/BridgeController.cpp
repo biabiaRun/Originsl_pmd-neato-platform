@@ -75,9 +75,11 @@ namespace
     {
     public:
         explicit CameraCoreBuilderInserter (std::vector<std::unique_ptr<ICameraCoreBuilder>> &coreBuilders,
-                                            std::shared_ptr<IProcessingParameterMapFactory> &paramFactory) :
+                                            std::shared_ptr<IProcessingParameterMapFactory> &paramFactory,
+                                            royale::CameraAccessLevel accessLevel) :
             m_coreBuilders (coreBuilders),
-            m_paramFactory (paramFactory)
+            m_paramFactory (paramFactory),
+            m_accessLevel (accessLevel)
         {
         }
 
@@ -87,7 +89,7 @@ namespace
             try
             {
                 bridgeFactory->initialize();
-                auto moduleConfig = pd.moduleConfigFactory->probeAndCreate (*bridgeFactory);
+                auto moduleConfig = pd.moduleConfigFactory->probeAndCreate (*bridgeFactory, m_accessLevel);
                 if (moduleConfig == nullptr)
                 {
                     throw RuntimeError ("Unable to determine moduleConfig");
@@ -109,6 +111,7 @@ namespace
     private:
         std::vector<std::unique_ptr<ICameraCoreBuilder>> &m_coreBuilders;
         std::shared_ptr<IProcessingParameterMapFactory> m_paramFactory;
+        royale::CameraAccessLevel m_accessLevel;
     };
 
     /**
@@ -163,13 +166,14 @@ BridgeController::BridgeController (const royale::usb::config::UsbProbeDataList 
 #if defined(TARGET_PLATFORM_ANDROID)
 std::vector<std::unique_ptr<ICameraCoreBuilder>> BridgeController::probeDevices (uint32_t androidUsbDeviceFD,
         uint32_t androidUsbDeviceVid,
-        uint32_t androidUsbDevicePid)
+        uint32_t androidUsbDevicePid,
+        royale::CameraAccessLevel accessLevel)
 #else
-std::vector<std::unique_ptr<ICameraCoreBuilder>> BridgeController::probeDevices()
+std::vector<std::unique_ptr<ICameraCoreBuilder>> BridgeController::probeDevices (royale::CameraAccessLevel accessLevel)
 #endif
 {
     std::vector<std::unique_ptr<ICameraCoreBuilder> > deviceList;
-    CameraCoreBuilderInserter appendCoreBuilder (deviceList, m_paramFactory);
+    CameraCoreBuilderInserter appendCoreBuilder (deviceList, m_paramFactory, accessLevel);
     royale::device::ProbeResultInfo probeResultInfo;
 
 #if defined(ROYALE_BRIDGE_AMUNDSEN)

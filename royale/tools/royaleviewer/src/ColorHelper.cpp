@@ -8,9 +8,10 @@
  *
  \****************************************************************************/
 
-#include <algorithm>
-
 #include "ColorHelper.hpp"
+
+#include <algorithm>
+#include <cmath>
 
 ColorHelper::ColorHelper()
 {
@@ -24,7 +25,7 @@ ColorHelper::ColorHelper()
 
     for (auto i = 0u; i < M_COLOR_LOOKUP_SIZE; ++i)
     {
-        auto h = static_cast<uint16_t> (i);
+        auto h = static_cast<uint8_t> (i);
 
         HsvColor tempHsv;
         tempHsv.h = h;
@@ -34,23 +35,17 @@ ColorHelper::ColorHelper()
         m_colorLookup[i] = HsvToRgb (tempHsv);
     }
 
-    for (auto i = 0u; i < M_GRAY_LOOKUP_SIZE; ++i)
-    {
-        auto grayVal = static_cast<uint16_t> (i);
+    m_useGamma = false;
+    m_gammaValue = 1.0f;
 
-        RgbColor grayColor;
-        grayColor.r = grayVal;
-        grayColor.g = grayVal;
-        grayColor.b = grayVal;
-
-        m_grayLookup[i] = grayColor;
-    }
+    calcGrayLUT();
 }
 
 RgbColor ColorHelper::HsvToRgb (const HsvColor &hsv)
 {
     RgbColor rgb;
-    uint16_t region, remainder, p, q, t;
+    uint16_t region, remainder;
+    uint8_t p, q, t;
 
     if (hsv.s == 0)
     {
@@ -63,9 +58,9 @@ RgbColor ColorHelper::HsvToRgb (const HsvColor &hsv)
     region = hsv.h / 43;
     remainder = static_cast<uint16_t> ( (hsv.h % 43) * 6);
 
-    p = static_cast<uint16_t> ( (hsv.v * (255 - hsv.s)) >> 8);
-    q = static_cast<uint16_t> ( (hsv.v * (255 - ( (hsv.s * remainder) >> 8))) >> 8);
-    t = static_cast<uint16_t> ( (hsv.v * (255 - ( (hsv.s * (255 - remainder)) >> 8))) >> 8);
+    p = static_cast<uint8_t> ( (hsv.v * (255 - hsv.s)) >> 8);
+    q = static_cast<uint8_t> ( (hsv.v * (255 - ( (hsv.s * remainder) >> 8))) >> 8);
+    t = static_cast<uint8_t> ( (hsv.v * (255 - ( (hsv.s * (255 - remainder)) >> 8))) >> 8);
 
     switch (region)
     {
@@ -122,7 +117,7 @@ const RgbColor &ColorHelper::getColor (const float dist)
 {
     float clampedDist = std::min (m_maxDist, dist);
     clampedDist = std::max (m_minDist, clampedDist);
-    int index = std::min<uint16_t> (M_COLOR_LOOKUP_SIZE - 1, static_cast<uint16_t> (static_cast<float> (M_COLOR_LOOKUP_SIZE - 1) * (clampedDist - m_minDist) / m_spanDist));
+    int index = std::min<uint16_t> (M_COLOR_LOOKUP_SIZE - 1, static_cast<uint16_t> (static_cast<float> (M_COLOR_LOOKUP_SIZE - 1) * (clampedDist - m_minDist) * m_oneThroughSpanDist));
 
     if (index < 0)
     {
@@ -180,6 +175,7 @@ float ColorHelper::getMaxDist()
 void ColorHelper::calcSpanDist()
 {
     m_spanDist = m_maxDist - m_minDist;
+    m_oneThroughSpanDist = 1.0f / m_spanDist;
 }
 
 void ColorHelper::setMinVal (uint16_t val)
@@ -229,4 +225,36 @@ uint16_t ColorHelper::getMaxVal()
 void ColorHelper::calcSpanVal()
 {
     m_spanVal = static_cast<uint16_t> (m_maxVal - m_minVal);
+}
+
+void ColorHelper::enableGammaCorrection (bool enable)
+{
+    m_useGamma = enable;
+    calcGrayLUT();
+}
+
+void ColorHelper::setGammaValue (float val)
+{
+    m_gammaValue = val;
+    calcGrayLUT();
+}
+
+void ColorHelper::calcGrayLUT()
+{
+    for (auto i = 0u; i < M_GRAY_LOOKUP_SIZE; ++i)
+    {
+        auto grayVal = static_cast<uint8_t> (i);
+
+        if (m_useGamma)
+        {
+            grayVal = static_cast<uint8_t> (255.0 * pow (grayVal / 255.0, m_gammaValue));
+        }
+
+        RgbColor grayColor;
+        grayColor.r = grayVal;
+        grayColor.g = grayVal;
+        grayColor.b = grayVal;
+
+        m_grayLookup[i] = grayColor;
+    }
 }

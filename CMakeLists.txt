@@ -30,10 +30,14 @@ set (PLATFORM_VERSION_MINOR 0 CACHE STRING "Platform minor version" FORCE)
 set (PLATFORM_VERSION_PATCH 1 CACHE STRING "Platform patch version" FORCE)
 set (PLATFORM_VERSION_BUILD 0 CACHE STRING "Platform build version" FORCE)
 
-set (ROYALE_VERSION_MAJOR 3 CACHE STRING "Royale major version" FORCE)
-set (ROYALE_VERSION_MINOR 22 CACHE STRING "Royale minor version" FORCE)
-set (ROYALE_VERSION_PATCH 0 CACHE STRING "Royale patch version" FORCE)
-set (ROYALE_VERSION_BUILD 0 CACHE STRING "Royale build version" FORCE)
+include("${CMAKE_CURRENT_LIST_DIR}/royale/cmake/version.cmake")
+
+add_definitions (-DROYALE_VERSION_MAJOR=${ROYALE_VERSION_MAJOR})
+add_definitions (-DROYALE_VERSION_MINOR=${ROYALE_VERSION_MINOR})
+add_definitions (-DROYALE_VERSION_PATCH=${ROYALE_VERSION_PATCH})
+add_definitions (-DROYALE_VERSION_BUILD=${ROYALE_VERSION_BUILD})
+
+message(STATUS "Royale version : ${ROYALE_VERSION}")
 
 set (CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
@@ -100,6 +104,9 @@ if(ROYALE_ENABLE_PLATFORM_CODE)
         ${CMAKE_SOURCE_DIR}/royale/source/components/imager/inc
         ${CMAKE_SOURCE_DIR}/royale/source/components/factory/inc
         ${CMAKE_SOURCE_DIR}/royale/source/components/processing/inc
+        )
+
+    include_directories(SYSTEM
         ${PROCESSING_SPECTRE_HEADER_DIR}
         )
 

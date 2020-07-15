@@ -593,3 +593,18 @@ TEST_F (CameraDeviceL2Fixture, TestFilterLevelL2)
         EXPECT_EQ (it->second.getBool(), false);
     }
 }
+
+TEST_F (CameraDeviceL2Fixture, CheckFPS)
+{
+    camera->setCallbackData (CallbackData::Raw);
+
+    initCamera();
+
+    Vector<String> useCases;
+    ASSERT_EQ (camera->getUseCases (useCases), royale::CameraStatus::SUCCESS);
+
+    for (auto curUseCase : useCases)
+    {
+        runUseCaseAndCheckFPS (curUseCase);
+    }
+}

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.1)
 
 set(CMAKE_PREFIX_PATH "../../../share")
 
@@ -15,6 +15,11 @@ include_directories(
 add_executable(sampleCAPI
    sampleCAPI.c
    )
+set_target_properties( sampleCAPI
+	PROPERTIES
+	C_STANDARD 11
+	C_STANDARD_REQUIRED true
+)
 
 if (WIN32)
     add_custom_command(

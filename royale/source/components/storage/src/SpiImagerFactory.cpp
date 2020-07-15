@@ -10,6 +10,7 @@
 
 #include <storage/SpiBusMasterM2453.hpp>
 #include <storage/SpiBusMasterM2455.hpp>
+#include <storage/SpiBusMasterM2457.hpp>
 #include <storage/SpiGenericFlash.hpp>
 #include <storage/SpiImagerFactory.hpp>
 #include <storage/StorageSpiImagerM2452.hpp>
@@ -33,13 +34,19 @@ std::shared_ptr<royale::pal::IStorageReadRandom> SpiImagerFactory::createStorage
             break;
         case royale::config::ImagerAsBridgeType::M2453_SPI:
             {
-                auto imager = std::make_shared<SpiBusMasterM2453> (bridgeImager, imagerRoute.getImagerType());
+                auto imager = std::make_shared<SpiBusMasterM2453> (bridgeImager);
                 storage = std::make_shared<SpiGenericFlash> (flashMemoryConfig, imager, SensorRoutingConfigSpi {ONLY_DEVICE_ON_IMAGERS_SPI});
                 break;
             }
         case royale::config::ImagerAsBridgeType::M2455_SPI:
             {
-                auto imager = std::make_shared<SpiBusMasterM2455> (bridgeImager, imagerRoute.getImagerType());
+                auto imager = std::make_shared<SpiBusMasterM2455> (bridgeImager);
+                storage = std::make_shared<SpiGenericFlash> (flashMemoryConfig, imager, SensorRoutingConfigSpi {ONLY_DEVICE_ON_IMAGERS_SPI});
+                break;
+            }
+        case royale::config::ImagerAsBridgeType::M2457_SPI:
+            {
+                auto imager = std::make_shared<SpiBusMasterM2457> (bridgeImager);
                 storage = std::make_shared<SpiGenericFlash> (flashMemoryConfig, imager, SensorRoutingConfigSpi {ONLY_DEVICE_ON_IMAGERS_SPI});
                 break;
             }

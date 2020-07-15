@@ -11,8 +11,8 @@
 #ifndef __SPECTRECONFIG_HPP__
 #define __SPECTRECONFIG_HPP__
 
-/* This file contains information about the configuration used to compile Spectre.
- * The file is created by CMake, and shoudl not be changed manually.
+/* This file contains information about the configuration used to compile
+ * Spectre. The file is created by CMake, and shoudl not be changed manually.
  */
 
 #define SPECTRE_SHARED
@@ -20,9 +20,9 @@
 // Export Definition
 #if defined(SPECTRE_SHARED) && !defined(SPECTRE_FORCE_STATIC)
 #if defined(_WIN32) && !defined(SPECTRE_EXPORT)
-#define SPECTRE_API __declspec( dllimport  )
+#define SPECTRE_API __declspec(dllimport)
 #elif defined(_WIN32)
-#define SPECTRE_API __declspec( dllexport )
+#define SPECTRE_API __declspec(dllexport)
 #elif defined(SPECTRE_EXPORT)
 #define SPECTRE_API __attribute__ ((visibility ("default")))
 #else
@@ -42,6 +42,6 @@
  * of the individual binary libraries necessarily.
  *
  */
-#define SPECTRE_BUILD_VERSION "4.1.0.183"
+#define SPECTRE_BUILD_VERSION "4.7.0.84"
 
 #endif /*__SPECTRECONFIG_HPP__*/

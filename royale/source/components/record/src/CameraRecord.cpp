@@ -8,10 +8,12 @@
  *
  \****************************************************************************/
 
+#include <events/EventRecording.hpp>
 #include <record/CameraRecord.hpp>
-#include <royale/Vector.hpp>
 #include <royale/String.hpp>
+#include <royale/Vector.hpp>
 
+#include <MakeUnique.hpp>
 #include <NarrowCast.hpp>
 #include <factory/ImagerFactory.hpp>
 
@@ -20,7 +22,6 @@ using namespace royale;
 using namespace royale::common;
 using namespace royale::collector;
 using namespace royale::usecase;
-
 
 CameraRecord::CameraRecord (IRecordStopListener *recordStopListener,
                             IFrameCaptureListener *rawDataListener,
@@ -33,7 +34,8 @@ CameraRecord::CameraRecord (IRecordStopListener *recordStopListener,
       m_isRecording (false),
       m_recordStopListener (recordStopListener),
       m_cameraName (cameraName),
-      m_releaser (releaser)
+      m_releaser (releaser),
+      m_eventListener (nullptr)
 {
     m_parameterMap.clear();
 
@@ -125,6 +127,7 @@ void CameraRecord::captureCallback (std::vector<ICapturedRawFrame *> &frames,
                                     royale::StreamId streamId,
                                     std::unique_ptr<const CapturedUseCase> capturedCase)
 {
+    bool stopRecording = false;
     {
         std::lock_guard<std::mutex> lck (m_mutex);
         if (m_isRecording)
@@ -149,18 +152,28 @@ void CameraRecord::captureCallback (std::vector<ICapturedRawFrame *> &frames,
                 m_framesSkipped = 0;
                 m_lastCapture = std::chrono::duration_cast<std::chrono::milliseconds> (capturedCase->getTimestamp());
 
-                putFrame (frames, definition, streamId, *capturedCase, m_parameterMap[streamId]);
+                try
+                {
+                    putFrame (frames, definition, streamId, *capturedCase, m_parameterMap[streamId]);
+                }
+                catch (...)
+                {
+                    // There was a problem writing the frame, stop the recording
+                    sendEvent (EventSeverity::ROYALE_FATAL, "There was a problem writing the frame, stopping the recording");
+                    stopRecording = true;
+                }
             }
         }
     }
 
-    if (m_isRecording && m_framesToRecord && (m_currentFrame == m_framesToRecord))
+    if (stopRecording ||
+            (m_isRecording && m_framesToRecord && (m_currentFrame == m_framesToRecord)))
     {
         stopRecord();
     }
 
 
-    if (m_listener)
+    if (!stopRecording && m_listener)
     {
         m_listener->captureCallback (frames, definition, streamId, std::move (capturedCase));
     }
@@ -313,4 +326,31 @@ void CameraRecord::putFrame (const std::vector<ICapturedRawFrame *> &frames,
 void CameraRecord::resetParameters()
 {
     m_parameterMap.clear();
+}
+
+void CameraRecord::sendEvent (const royale::EventSeverity &severity, const royale::String &description)
+{
+    std::lock_guard<std::mutex> lock (m_eventMutex);
+    if (m_eventListener)
+    {
+        auto event = common::makeUnique<event::EventRecording> (severity, description);
+        m_eventListener->onEvent (std::move (event));
+    }
+}
+
+void CameraRecord::registerEventListener (royale::IEventListener *listener)
+{
+    std::lock_guard<std::mutex> lock (m_eventMutex);
+    m_eventListener = listener;
+}
+
+void CameraRecord::unregisterEventListener()
+{
+    std::lock_guard<std::mutex> lock (m_eventMutex);
+    m_eventListener = nullptr;
+}
+
+royale::record::CameraRecord::operator bool() const
+{
+    return true;
 }

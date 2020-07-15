@@ -75,6 +75,16 @@
      </property>
     </widget>
    </item>
+   <item alignment="Qt::AlignHCenter">
+    <widget class="PMDButton" name="flagButton">
+     <property name="text">
+      <string>Flags</string>
+     </property>
+     <property name="Visible">
+       <bool>false</bool>
+     </property>
+    </widget>
+   </item>
   </layout>
  </widget>
  <customwidgets>

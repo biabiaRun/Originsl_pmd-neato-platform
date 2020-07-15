@@ -20,6 +20,7 @@
 QT_FORWARD_DECLARE_CLASS (QOpenGLShaderProgram);
 QT_FORWARD_DECLARE_CLASS (QOpenGLTexture);
 QT_FORWARD_DECLARE_STRUCT (ThreeDViewProperties);
+Q_DECLARE_METATYPE (royale::LensParameters)
 
 
 class ThreeDView : public IView
@@ -83,8 +84,9 @@ public:
     *  Set new center of auto rotation for the current 3dView
     *
     *  @param center The center of auto rotation in the current 3dView
+    *  @param sync Enable or disable the synchronization of centers
     */
-    void setRotatingCenter (float center);
+    void setRotatingCenter (float center, bool sync);
 
     /*
     *  Set new speed of auto rotation and synchronize the rotating speed of the other 3dViews during "Lock View"
@@ -105,6 +107,7 @@ public:
 
 signals:
     void clicked();
+    void lensParametersChanged (royale::LensParameters lensParam, uint16_t width, uint16_t height);
 
     /**
     *  This signal will be sent when current view has been changed
@@ -133,9 +136,18 @@ signals:
     */
     void rotatingSpeedChanged (float speed);
 
+    /**
+    *  This signal will be sent when the status of auto rotation has changed,
+    *  e.g. to start/stop auto rotation, to pause auto rotation during mouse event, to change the main 3dView during "Lock View".
+    *
+    *  @param center The center of auto rotation
+    */
+    void rotatingCenterChanged (float center);
+
 public slots:
     virtual void onNewData (const royale::DepthData *data, const royale::IntermediateData *intData) Q_DECL_OVERRIDE;
     void frustumDisplayToggled (bool enabled);
+
 
     /**
     *  Change the status of "Lock View" in the current 3dView
@@ -156,6 +168,7 @@ public slots:
     *  This method is called every 10 milliseconds to achieve auto rotation
     */
     void onAutoRotation();
+
 
 protected:
     virtual void initializeGL() Q_DECL_OVERRIDE;
@@ -183,6 +196,12 @@ private:
     *  Pause auto rotation during mouse event
     */
     void pauseAutoRotation();
+
+private slots:
+    virtual void updateLensParametersSlot (const royale::LensParameters &lensParam, uint16_t width, uint16_t height);
+
+
+private:
 
     QImage                m_image;
     ThreeDViewProperties *m_p;

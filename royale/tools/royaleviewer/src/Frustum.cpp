@@ -23,7 +23,10 @@ struct VertexData
 Frustum::Frustum()
     : Renderable(),
       m_vertices (NULL),
-      m_indices (NULL)
+      m_indices (NULL),
+      m_updateGeometry (false),
+      m_fovx (0.0f),
+      m_fovy (0.0f)
 {
     m_numVtxs = 17;
     m_numIdxs = 40;
@@ -57,6 +60,8 @@ bool Frustum::initGLWithFov (const float fovx, const float fovy)
         return false;
     }
 
+    m_arrayBuf.setUsagePattern (QOpenGLBuffer::DynamicDraw);
+    m_indexBuf.setUsagePattern (QOpenGLBuffer::DynamicDraw);
     initGeometry (fovx, fovy);
 
     // setup shaders
@@ -105,6 +110,13 @@ bool Frustum::initGLWithFov (const float fovx, const float fovy)
         return false;
     }
 
+    m_arrayBuf.bind();
+    m_indexBuf.bind();
+    m_arrayBuf.allocate (m_vertices, static_cast<int> (m_numVtxs * sizeof (VertexData)));
+    m_indexBuf.allocate (m_indices, static_cast<int> (m_numIdxs * sizeof (GLushort)));
+    m_arrayBuf.release();
+    m_indexBuf.release();
+
     /*
     // Bind shader pipeline for use
     if (!m_program->bind())
@@ -124,6 +136,12 @@ void Frustum::render (const QMatrix4x4 &mvMatrix, const QMatrix4x4 &projectionMa
     glLineWidth (1.0f);
 
     m_program->bind();
+
+    if (m_updateGeometry)
+    {
+        initGeometry (m_fovx, m_fovy);
+        m_updateGeometry = false;
+    }
 
     // Tell OpenGL which VBOs to use
     m_arrayBuf.bind();
@@ -165,8 +183,10 @@ void Frustum::initGeometry (const float fovx, const float fovy)
 {
     Renderable::initGeometry();
 
-    float tmpFovx = fovx / 100.0f;
-    float tmpFovy = fovy / 100.0f;
+    float bla = 1.0f;
+
+    float tmpFovx = bla * fovx / 100.0f;
+    float tmpFovy = bla * fovy / 100.0f;
 
     QVector4D color1 = QVector4D (0.7f, 0.7f, 0.7f, 1.0f);
     QVector4D color2 = QVector4D (0.3f, 0.3f, 0.3f, 1.0f); // 0.2f, 0.2f, 0.2f, 1.0f
@@ -240,14 +260,18 @@ void Frustum::initGeometry (const float fovx, const float fovy)
 
     // Transfer vertex data to VBO 0
     m_arrayBuf.bind();
-    m_arrayBuf.allocate (m_vertices, static_cast<int> (m_numVtxs * sizeof (VertexData)));
+    m_arrayBuf.write (0, m_vertices, static_cast<int> (m_numVtxs * sizeof (VertexData)));
+    m_arrayBuf.release();
 
     // Transfer index data to VBO 1
     m_indexBuf.bind();
-    m_indexBuf.allocate (m_indices, static_cast<int> (m_numIdxs * sizeof (GLushort)));
+    m_indexBuf.write (0, m_indices, static_cast<int> (m_numIdxs * sizeof (GLushort)));
+    m_indexBuf.release();
 }
 
 void Frustum::updateFov (const float fovx, const float fovy)
 {
-    initGeometry (fovx, fovy);
+    m_fovx = fovx;
+    m_fovy = fovy;
+    m_updateGeometry = true;
 }

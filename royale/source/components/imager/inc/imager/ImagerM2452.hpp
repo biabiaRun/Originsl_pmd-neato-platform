@@ -83,7 +83,7 @@ namespace royale
             std::string getSerialNumber() override;
             void startCapture() override;
             void reconfigure (const ImagerUseCaseDefinition &useCase, uint16_t &reconfigIndex) override;
-            void stopCapture() override;
+            uint16_t stopCapture() override;
             std::unique_ptr<common::IPseudoDataInterpreter> createPseudoDataInterpreter() override;
 
         protected:
@@ -105,6 +105,8 @@ namespace royale
             void adjustRowCount (uint16_t &row) override;
             void evaluatePostStartState();
             const std::map < ImagerRawFrame::ImagerDutyCycle, std::map < uint16_t, uint16_t > > &getPhaseMapping() override;
+
+            bool isFirstFrame (const std::vector<ImagerRawFrame> &rfList, size_t index) const override;
 
             const static std::string MSG_STARTLPFSMIDLE;
             const static std::string MSG_DPHYPLLLOCK;

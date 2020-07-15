@@ -31,22 +31,31 @@ namespace spectre
             SUCCESS,
             /// An error occurred
             ERROR,
-            /// An error during calibration handling occurred. SpectreStatus::additional() contains an error code from libcalibration.
+            /// An error during calibration handling occurred.
+            /// SpectreStatus::additional() contains an error code from
+            /// libcalibration.
             CALIBRATION_ERROR,
             /// Invalid arguments were passed to the function
             INVALID_ARGUMENTS,
-            /// An error during processing initialization occurred. SpectreStatus::additional() contains an error code from libprocessing.
+            /// An error during processing initialization occurred.
+            /// SpectreStatus::additional() contains an error code from
+            /// libprocessing.
             PROCESSING_INIT_ERROR,
             /// The passed persistent initialization blob is invalid
             INVALID_PERINIT_DATA,
-            /// The filtered backend descriptor list was empty (e.g., no backend registered, no backend is not compatible with basic configuration)
+            /// The filtered backend descriptor list was empty (e.g., no backend
+            /// registered, no backend is not compatible with basic
+            /// configuration)
             BACKEND_DESCRIPTOR_LIST_EMPTY,
             /// No suitable backend for the extended configuration found
             NO_SUITABLE_BACKEND_FOUND,
-            /// An extended configuration which does not belong to the current <instance,basic config> pair has been to passed
+            /// An extended configuration which does not belong to the current
+            /// <instance,basic config> pair has been to passed
             STALE_CONFIGURATION,
             /// An output proxy could not be initialized
-            OUTPUT_PROXY_ERROR
+            OUTPUT_PROXY_ERROR,
+            /// Could not process depth data
+            DEPTH_PROCESSING_FAILED
         };
 
         /**
@@ -58,7 +67,7 @@ namespace spectre
         SpectreStatus (StatusCode code,
                        std::initializer_list<int> additionalCodes)
             : m_code (code), m_additional (additionalCodes)
-        { }
+        {}
 
         /**
          * @brief Ctor
@@ -69,9 +78,7 @@ namespace spectre
         SpectreStatus (StatusCode code,
                        common::ArrayHolder<int> additionalCodes)
             : m_code (code), m_additional (std::move (additionalCodes))
-        { }
-
-
+        {}
 
         /**
          * @brief Ctor
@@ -79,12 +86,8 @@ namespace spectre
          * @param code error code
          * @param additional list of additional internal codes
          */
-        SpectreStatus (StatusCode code,
-                       int additional)
-            : SpectreStatus (code, std::initializer_list<int> (
-        {
-            additional
-        }))
+        SpectreStatus (StatusCode code, int additional)
+            : SpectreStatus (code, std::initializer_list<int> ({additional}))
         {}
 
         /**
@@ -92,10 +95,8 @@ namespace spectre
          *
          * @param code error code
          */
-        explicit SpectreStatus (StatusCode code)
-            : SpectreStatus (code, {})
+        explicit SpectreStatus (StatusCode code) : SpectreStatus (code, {})
         {}
-
 
         /**
          * @brief Gets the status code of a Spectre operation
@@ -103,7 +104,7 @@ namespace spectre
          *
          * @return status code
          */
-        inline StatusCode code() const
+        inline StatusCode code () const
         {
             return m_code;
         }
@@ -115,17 +116,17 @@ namespace spectre
          *
          * @return internal error codes
          */
-        inline common::ArrayHolder<int> additional() const
+        inline common::ArrayHolder<int> additional () const
         {
             return m_additional;
         }
 
-        inline operator bool() const
+        inline operator bool () const
         {
             return m_code == StatusCode::SUCCESS;
         }
 
-        inline static SpectreStatus success()
+        inline static SpectreStatus success ()
         {
             return SpectreStatus (StatusCode::SUCCESS);
         }
@@ -138,12 +139,12 @@ namespace spectre
         /**
          * @brief Gets a description of the error
          *
-         * The returned null-terminated string is owned by the SpectreStatus instance.
+         * The returned null-terminated string is owned by the SpectreStatus
+         * instance.
          *
          * @return error description
          */
-        SPECTRE_API const char *description() const;
-
+        SPECTRE_API const char *description () const;
 
     private:
         StatusCode m_code;
@@ -151,6 +152,6 @@ namespace spectre
         mutable common::ArrayHolder<char> m_errorMsg;
     };
 
-}  // spectre
+} // namespace spectre
 
 #endif /*__SPECTRESTATUS_HPP__*/

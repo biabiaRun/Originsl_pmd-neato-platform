@@ -181,7 +181,7 @@ namespace
      *
      * This will return normally if the IO completed successfully.
      */
-    void checkUsbError (const int usbRet, const size_t expectedTransfer, const size_t transferred)
+    void checkUsbError (const int usbRet, const int expectedTransfer, const int transferred)
     {
         if ( (usbRet == LIBUSB_ERROR_NO_DEVICE) || (usbRet == LIBUSB_ERROR_IO && transferred == 0))
         {
@@ -229,7 +229,7 @@ void BridgeEnclustraLibUsb::doCommand (const EnclustraCommand command, const std
         throw Disconnected();
     }
 
-    m_transferBuffer.resize (std::max (blockSizeOut, blockSizeIn));
+    m_transferBuffer.resize (static_cast<size_t> (std::max (blockSizeOut, blockSizeIn)));
 
     if (cmdBuffer.size() > static_cast<unsigned> (blockSizeOut))
     {
@@ -276,15 +276,15 @@ void BridgeEnclustraLibUsb::doCommand (const EnclustraCommand command, const std
                     if (recvBuffer->size() > m_transferBuffer.size())       // This enhanced logic is only supported for flash reads!
                     {
                         /* Split into chunks of the size of blockSizeOut here and transfer them in a loop */
-                        uint32_t chunks = static_cast<uint32_t> (recvBuffer->size() / blockSizeIn);
-                        uint32_t lastChunkSize = static_cast<uint32_t> (recvBuffer->size() % blockSizeIn);
+                        uint32_t chunks = static_cast<uint32_t> (recvBuffer->size() / static_cast<size_t> (blockSizeIn));
+                        uint32_t lastChunkSize = static_cast<uint32_t> (recvBuffer->size() % static_cast<size_t> (blockSizeIn));
 
                         // loop through the 1024 or 512 byte chunks and read them separately
                         for (size_t i = 0; i < chunks; ++i)
                         {
                             usbRet = libusb_bulk_transfer (m_deviceHandle, UsbEndpoint::CONTROL_IN, &m_transferBuffer[0], blockSizeIn, &transferred, ENCLUSTRA_TIMEOUT);
                             checkUsbError (usbRet, blockSizeIn, transferred);
-                            std::memcpy (recvBuffer->data() + (i * blockSizeIn), &m_transferBuffer[0], transferred);
+                            std::memcpy (recvBuffer->data() + (i * static_cast<size_t> (blockSizeIn)), &m_transferBuffer[0], transferred);
                         }
 
                         // Next we read the remaining chunkLength if the whole buffer size was not a product of the
@@ -293,7 +293,7 @@ void BridgeEnclustraLibUsb::doCommand (const EnclustraCommand command, const std
                         {
                             usbRet = libusb_bulk_transfer (m_deviceHandle, UsbEndpoint::CONTROL_IN, &m_transferBuffer[0], blockSizeIn, &transferred, ENCLUSTRA_TIMEOUT);
                             checkUsbError (usbRet, blockSizeIn, transferred);
-                            std::memcpy (recvBuffer->data() + (chunks * blockSizeIn), &m_transferBuffer[0], lastChunkSize);
+                            std::memcpy (recvBuffer->data() + (chunks * static_cast<size_t> (blockSizeIn)), &m_transferBuffer[0], lastChunkSize);
                         }
                     }
                     else
@@ -313,8 +313,8 @@ void BridgeEnclustraLibUsb::doCommand (const EnclustraCommand command, const std
                     if (sendBuffer->size() > m_transferBuffer.size())
                     {
                         /* Split into chunks of the size of blockSizeOut here and transfer them in a loop */
-                        uint32_t chunks = static_cast<uint32_t> (sendBuffer->size() / blockSizeIn);
-                        uint32_t lastChunkSize = static_cast<uint32_t> (sendBuffer->size() % blockSizeIn);
+                        uint32_t chunks = static_cast<uint32_t> (sendBuffer->size() / static_cast<size_t> (blockSizeIn));
+                        uint32_t lastChunkSize = static_cast<uint32_t> (sendBuffer->size() % static_cast<size_t> (blockSizeIn));
 
                         // loop through the 1024 or 512 byte chunks and write them separately
                         for (size_t i = 0; i < chunks; ++i)

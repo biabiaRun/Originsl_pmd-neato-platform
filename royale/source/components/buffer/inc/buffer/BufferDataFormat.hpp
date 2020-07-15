@@ -50,7 +50,7 @@ namespace royale
              * The CSI controller on the S32V234 SoC will write RAW12 data in a way
              * where each pixel is on 16 bits with 4 bits of 0-padding.
              * CSI controller pixel: 0xX0 0xYZ (2 bytes)
-             * Reconstituted pixel: 0x0YZX (u16)
+             * Reconstructed pixel: 0x0YZX (u16)
              */
             S32V234,
         };

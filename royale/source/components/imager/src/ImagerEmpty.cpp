@@ -79,8 +79,9 @@ void ImagerEmpty::reconfigureTargetFrameRate (uint16_t targetFrameRate, uint16_t
 
 }
 
-void ImagerEmpty::stopCapture()
+uint16_t ImagerEmpty::stopCapture()
 {
+    return 0u;
 }
 
 ImagerVerificationStatus ImagerEmpty::verifyUseCase (const ImagerUseCaseDefinition &useCase)

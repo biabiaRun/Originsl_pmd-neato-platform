@@ -10,16 +10,15 @@ Royale contains all the logic which is required to operate a ToF based camera. T
 care about setting registers, but can conveniently control the camera via a high-level interface.
 The Royale framework is completely designed in C++ using the C++11 standard.
 
-Royale officially supports the **CamBoard pico flexx**, **CamBoard pico maxx** and **CamBoard pico monstar** cameras.
+Royale officially supports the **CamBoard pico flexx** and **CamBoard pico monstar** cameras.
 
 Operating Systems
 -----------------
 
 Royale supports the following operating systems:
 
-- Windows 7/8 
 - Windows 10
-- Linux (tested on Ubuntu 16.04)
+- Linux (tested on Ubuntu 18.04)
 - OS X (tested on El Capitan 10.11)
 - Android (minimum android version 4.1.0. Tested on Android 5.1.1 and 7)
 - Linux ARM (32Bit version tested on Raspbian GNU/Linux 8 (jessie) Raspberry Pi reference 2016-03-18 
@@ -30,17 +29,9 @@ Hardware Requirements
 
 Royale is tested on the following hardware configurations:
 
-- PC, Intel i5-660, 3.3 GHz, 2 cores (64 bit)
-- PC, Intel i7-2600, 3.4 GHz, 4 cores (64 bit)
 - PC, Intel i7-3770, 3.4 GHz, 4 cores (64 bit)
-- MacBook Pro Late 2013, Intel Core i5, 2.4 Ghz (64 bit)
-- Samsung Galaxy S7
-- Samsung Galaxy S8
-- OnePlus 2
-- Nexus 6
-- Huawei Mate 9
-- Raspberry Pi 3
-- Odroid C2
+- MacBook Pro, Intel Core i5, 2.9 Ghz (64 bit)
+- Samsung Galaxy S9
 
 Getting Started
 ===============
@@ -79,20 +70,9 @@ matlab folder of your installation.
 Reference
 =========
 
-FAQ: http://pmdtec.com/picofamily/
+FAQ: https://pmdtec.com/picofamily/faq/
 
 License
 =========
-See royale_license.txt.
-
-Parts of the software covered by this License Agreement (royale_license.txt) are using libusb under LGPL 2.1, QT5.5 under
-LGPL 3.0, gradle wrapper under the Apache 2.0 license and CyAPI under the Cypress Software License Agreement
-(cypress_license.txt). Spectre is using Kiss FFT licensed under a BSD-style license and PackedArray licensed under 
-the WTFPLv2. 
-The documentation is created using Doxygen, which uses jquery and sizzle, both are licensed under the MIT license. 
-The text of the GPL 3.0 is also provided because the LGPL 3.0, 
-although more permissive, is written as a supplement to the GPL 3.0 and requires both texts.
-
-The v3.11.x long-term support branch also contains libuvc under a BSD-style license.
-
-The source code of the open source software used in Royale is available at https://oss.pmdtec.com/.
+See ThirdPartySoftware.txt and royale_license.txt.
+The source code of the open source software used in the Royale binary installation is available at https://oss.pmdtec.com/.

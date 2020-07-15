@@ -34,27 +34,6 @@ namespace royale
         {
         public:
             /**
-             * The data used for each ExposureGroup. Group names will be generated automatically.
-             */
-            struct ProcOnlyExpo
-            {
-                /** Limits of the exposure, as a [min, max] pair, in microseconds */
-                royale::Pair<uint32_t, uint32_t> exposureLimits;
-                /** Default (starting) exposure time in microseconds */
-                uint32_t                         exposureTime;
-            };
-
-            /**
-             * The data used for each RawFrameSet.
-             */
-            struct ProcOnlyRFS
-            {
-                std::size_t frameCount;
-                uint32_t modulationFrequency;
-                ExposureGroupIdx exposureGroupIdx;
-            };
-
-            /**
              * Factory function used by callers that build UCDs from parts, for example the
              * Zwetschge reader. This uses shared_ptr instead of unique_ptr, as it's expected to be
              * passed to the constructor of UseCase.
@@ -71,8 +50,8 @@ namespace royale
                 royale::Pair<uint16_t, uint16_t> imageSize,
                 royale::Pair<uint16_t, uint16_t> frameRateLimits,
                 uint16_t targetFrameRate,
-                const royale::Vector<ProcOnlyExpo> &expoGroups,
-                const royale::Vector<ProcOnlyRFS> &rfs
+                const royale::Vector<royale::usecase::ExposureGroup> &expoGroups,
+                const royale::Vector<royale::usecase::RawFrameSet> &rfs
             );
 
             /**

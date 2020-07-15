@@ -216,12 +216,12 @@ namespace royale
                 copyOrInPlaceRaw16 (reinterpret_cast<uint8_t *> (pixelData), buffer.getPixelCount(), pixelData);
             }
 
-             /**
-             * Convert data received in S32V234, storing it in the area pointed to by pixelData.
-             * The caller must ensure that both pointers are valid for pixelCount pixels.
-             *
-             * The algorithm supports src pointing to the same location as pixelData.
-             */
+            /**
+            * Convert data received from the S32V234, storing it in the area pointed to by pixelData.
+            * The caller must ensure that both pointers are valid for pixelCount pixels.
+            *
+            * The algorithm supports src pointing to the same location as pixelData.
+            */
             inline static void copyOrInPlaceS32V234 (const uint8_t *srcData, std::size_t pixelCount, uint16_t *pixelData)
             {
                 // The two branches contain the same logic, one is just a manual unroll
@@ -229,20 +229,20 @@ namespace royale
                 for (std::size_t iPlusOne = pixelCount; iPlusOne > pixelUnroll; iPlusOne--)
                 {
                     const auto src = &srcData [2 * (iPlusOne - 1)];
-                    const auto pixelA = static_cast<uint16_t> ( ((src [0] >> 4) | (src [1] << 4)) & 0x0fff);
+                    const auto pixelA = static_cast<uint16_t> ( ( (src [0] >> 4) | (src [1] << 4)) & 0x0fff);
                     pixelData[iPlusOne - 1] = pixelA;
                 }
                 for (std::size_t iPlusEight = pixelUnroll; iPlusEight > 0; iPlusEight -= 8)
                 {
                     const auto src = &srcData[2 * (iPlusEight - 8)];
-                    const auto pixelA = static_cast<uint16_t> ( ((src [0] >> 4) | (src [1] << 4)) & 0x0fff);
-                    const auto pixelB = static_cast<uint16_t> ( ((src [2] >> 4) | (src [3] << 4)) & 0x0fff);
-                    const auto pixelC = static_cast<uint16_t> ( ((src [4] >> 4) | (src [5] << 4)) & 0x0fff);
-                    const auto pixelD = static_cast<uint16_t> ( ((src [6] >> 4) | (src [7] << 4)) & 0x0fff);
-                    const auto pixelE = static_cast<uint16_t> ( ((src [8] >> 4) | (src [9] << 4)) & 0x0fff);
-                    const auto pixelF = static_cast<uint16_t> ( ((src [10] >> 4) | (src [11] << 4)) & 0x0fff);
-                    const auto pixelG = static_cast<uint16_t> ( ((src [12] >> 4) | (src [13] << 4)) & 0x0fff);
-                    const auto pixelH = static_cast<uint16_t> ( ((src [14] >> 4) | (src [15] << 4)) & 0x0fff);
+                    const auto pixelA = static_cast<uint16_t> ( ( (src [0] >> 4) | (src [1] << 4)) & 0x0fff);
+                    const auto pixelB = static_cast<uint16_t> ( ( (src [2] >> 4) | (src [3] << 4)) & 0x0fff);
+                    const auto pixelC = static_cast<uint16_t> ( ( (src [4] >> 4) | (src [5] << 4)) & 0x0fff);
+                    const auto pixelD = static_cast<uint16_t> ( ( (src [6] >> 4) | (src [7] << 4)) & 0x0fff);
+                    const auto pixelE = static_cast<uint16_t> ( ( (src [8] >> 4) | (src [9] << 4)) & 0x0fff);
+                    const auto pixelF = static_cast<uint16_t> ( ( (src [10] >> 4) | (src [11] << 4)) & 0x0fff);
+                    const auto pixelG = static_cast<uint16_t> ( ( (src [12] >> 4) | (src [13] << 4)) & 0x0fff);
+                    const auto pixelH = static_cast<uint16_t> ( ( (src [14] >> 4) | (src [15] << 4)) & 0x0fff);
                     const auto dest = &pixelData[iPlusEight - 8];
                     dest[0] = pixelA;
                     dest[1] = pixelB;
@@ -256,17 +256,10 @@ namespace royale
             }
 
             /**
-             * Convert data received in RAW16 format, and convert the data in-place, which can be a
-             * no-op on little-endian architectures.  This may be optimised compared to the
-             * normalizeEnclustra function, or it may simply be an alias for it.
+             * Convert data received in S32V234 format, and convert the data in-place.
              */
             inline static void normalizeS32V234 (royale::hal::ICapturedBuffer &buffer)
             {
-                // \todo ROYAL-2447 If this is a little-endian system, and there are no bits set in
-                // the high nibbles of the data, then this function could be optimised to a no-op.
-                // But the number of devices that this would help is limited, because the current
-                // CX3 UVC firmware uses RAW12 instead of RAW16, and the older RAW16 firmware sets
-                // bits in the high nibble (so it needs the same conversion as Enclustra).
                 auto pixelData = buffer.getPixelData ();
                 copyOrInPlaceS32V234 (reinterpret_cast<uint8_t *> (pixelData), buffer.getPixelCount(), pixelData);
             }

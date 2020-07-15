@@ -50,6 +50,7 @@ namespace
      * format images, put some alignment in.
      */
     const auto ALIGNMENT_SEQUENTIAL_REGISTER_BLOCK = 256;
+    const auto RESERVED_SECURE_AREA = 8192;
 
     const auto tocMagic = stringlikeMagicNumber ("ZWETSCHGE");
     const auto toucMagic = stringlikeMagicNumber ("Elena");
@@ -72,20 +73,48 @@ namespace
     };
 }
 
+void royale::test::utils::writeDummyFile (std::string dummyFileLocation, std::string origFileLocation)
+{
+    char resData[RESERVED_SECURE_AREA] = {};
+
+    std::ofstream outFile;
+    outFile.open (dummyFileLocation, std::ios::binary);
+    outFile.write (resData, sizeof (resData));
+
+    std::ifstream originalFile;
+    originalFile.open (origFileLocation, std::ios::binary);
+    if (originalFile.is_open())
+    {
+        outFile << originalFile.rdbuf();
+    }
+    else
+    {
+        LOG (ERROR) << "error opening the input zwetschge file" << std::endl;
+    }
+    originalFile.close();
+    outFile.close();
+}
+
 royale::config::ExternalConfigFileConfig royale::test::utils::getNvsfGetterForZwetschgeExampleDevice()
 {
-#ifndef EXAMPLE_DEVICE_FOR_ZWETSCHGE
-#error The test environment needs to define EXAMPLE_DEVICE_FOR_ZWETSCHGE via CMake
+#if !defined(EXAMPLE_DEVICE_FOR_ZWETSCHGE) && !defined(DUMMY_EXAMPLE_DEVICE_FOR_ZWETSCHGE)
+#error The test environment needs to define EXAMPLE_DEVICE_FOR_ZWETSCHGE and DUMMY_EXAMPLE_DEVICE_FOR_ZWETSCHGE via CMake
 #endif
-    return royale::config::ExternalConfigFileConfig::fromZwetschgeFile (EXAMPLE_DEVICE_FOR_ZWETSCHGE);
+
+    writeDummyFile (DUMMY_EXAMPLE_DEVICE_FOR_ZWETSCHGE, EXAMPLE_DEVICE_FOR_ZWETSCHGE);
+
+    return royale::config::ExternalConfigFileConfig::fromZwetschgeFile (DUMMY_EXAMPLE_DEVICE_FOR_ZWETSCHGE);
 }
 
 std::shared_ptr<royale::pal::IStorageReadRandom> royale::test::utils::getZwetschgeExampleDevice()
 {
-#ifndef EXAMPLE_DEVICE_FOR_ZWETSCHGE
-#error The test environment needs to define EXAMPLE_DEVICE_FOR_ZWETSCHGE via CMake
+#if !defined(EXAMPLE_DEVICE_FOR_ZWETSCHGE) && !defined(DUMMY_EXAMPLE_DEVICE_FOR_ZWETSCHGE)
+#error The test environment needs to define EXAMPLE_DEVICE_FOR_ZWETSCHGE and DUMMY_EXAMPLE_DEVICE_FOR_ZWETSCHGE via CMake
 #endif
-    const royale::String zwetschgeFilename { EXAMPLE_DEVICE_FOR_ZWETSCHGE };
+
+    writeDummyFile (DUMMY_EXAMPLE_DEVICE_FOR_ZWETSCHGE, EXAMPLE_DEVICE_FOR_ZWETSCHGE);
+
+    const royale::String zwetschgeFilename { DUMMY_EXAMPLE_DEVICE_FOR_ZWETSCHGE };
     const royale::config::FlashMemoryConfig storageFileConfig {};
     return std::make_shared<StorageFile> (storageFileConfig, zwetschgeFilename);
 }
@@ -99,10 +128,13 @@ std::vector<uint8_t> royale::test::utils::idOfZwetschgeExampleDevice()
 
 std::shared_ptr<royale::pal::IStorageReadRandom> royale::test::utils::getZwetschgeExampleFlashImage()
 {
-#ifndef EXAMPLE_FLASH_IMAGE_FOR_ZWETSCHGE
-#error The test environment needs to define EXAMPLE_FLASH_IMAGE_FOR_ZWETSCHGE via CMake
+#if !defined(EXAMPLE_FLASH_IMAGE_FOR_ZWETSCHGE) && !defined(DUMMY_EXAMPLE_FLASH_IMAGE_FOR_ZWETSCHGE)
+#error The test environment needs to define EXAMPLE_FLASH_IMAGE_FOR_ZWETSCHGE and DUMMY_EXAMPLE_FLASH_IMAGE_FOR_ZWETSCHGE via CMake
 #endif
-    const royale::String zwetschgeFilename { EXAMPLE_FLASH_IMAGE_FOR_ZWETSCHGE };
+
+    writeDummyFile (DUMMY_EXAMPLE_FLASH_IMAGE_FOR_ZWETSCHGE, EXAMPLE_FLASH_IMAGE_FOR_ZWETSCHGE);
+
+    const royale::String zwetschgeFilename { DUMMY_EXAMPLE_FLASH_IMAGE_FOR_ZWETSCHGE };
     const royale::config::FlashMemoryConfig storageFileConfig {};
     return std::make_shared<StorageFile> (storageFileConfig, zwetschgeFilename);
 }

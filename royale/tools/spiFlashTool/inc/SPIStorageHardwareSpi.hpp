@@ -19,7 +19,7 @@ namespace spiFlashTool
     namespace storage
     {
         /**
-         * This implements common functionality for the M2453 and M2455 imagers, which do not need
+         * This implements common functionality for the imagers, which do not need
          * additional firmware to act as an SPI bus master, and which all have similar SPI support.
          */
         class SPIStorageHardwareSpi : public SPIStorageBase

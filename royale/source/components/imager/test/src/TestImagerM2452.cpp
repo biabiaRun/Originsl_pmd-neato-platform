@@ -120,7 +120,8 @@ protected:
     void createImager (ImgImageDataTransferType imageDataTransferType = ImgImageDataTransferType::MIPI_2LANE)
     {
         {
-            ImagerParameters params{ m_bridge, nullptr, true, false,
+            ImagerParameters params{ m_bridge, nullptr, true,
+                                     royale::config::ImConnectedTemperatureSensor::NONE,
                                      ImgTrigger::I2C, imageDataTransferType, 0.0000006f, {},
                                      SYSFREQ, ImagerRawFrame::ImagerDutyCycle::DC_50,
                                      ImgIlluminationPad::SE_P, 99900000, false };
@@ -216,7 +217,7 @@ protected:
 
 TEST_F (TestImagerM2452, CreateImagerDirectly)
 {
-    ImagerParameters params1{ nullptr, nullptr, false, false, ImgTrigger::I2C, ImgImageDataTransferType::PIF, 0., {}, 0u, ImagerRawFrame::ImagerDutyCycle::DC_0, ImgIlluminationPad::SE_P, 0u, false };
+    ImagerParameters params1{ nullptr, nullptr, false, royale::config::ImConnectedTemperatureSensor::NONE,  ImgTrigger::I2C, ImgImageDataTransferType::PIF, 0., {}, 0u, ImagerRawFrame::ImagerDutyCycle::DC_0, ImgIlluminationPad::SE_P, 0u, false };
 
     ASSERT_THROW (new ImagerM2452_B1x_AIO (params1), LogicError);
 }

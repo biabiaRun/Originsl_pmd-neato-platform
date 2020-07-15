@@ -84,6 +84,18 @@ namespace royale
          */
         ROYALE_EYE_SAFETY,
         /**
+         * This event is sent if, for example, the backend of the processing is changed.
+         */
+        ROYALE_PROCESSING,
+        /**
+         * This event is sent if something happens during the recording.
+         */
+        ROYALE_RECORDING,
+        /**
+         * This event is sent when a frame drop occurs.
+         */
+        ROYALE_FRAME_DROP,
+        /**
          * The event type is for any event for which there is no official API specification.
          */
         ROYALE_UNKNOWN,

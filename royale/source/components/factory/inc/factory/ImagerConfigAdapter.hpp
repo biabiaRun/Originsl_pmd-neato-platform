@@ -132,7 +132,7 @@ namespace royale
                 ImagerParameters params{ std::move (bridge),
                                          std::move (externalConfig),
                                          coreConfig->getFrameTransmissionMode() == royale::config::FrameTransmissionMode::SUPERFRAME,
-                                         imagerConfig->tempSensor == royale::config::ImConnectedTemperatureSensor::NTC,
+                                         imagerConfig->tempSensor,
                                          trigger,
                                          imageDataTransferType,
                                          imagerConfig->interfaceDelay,

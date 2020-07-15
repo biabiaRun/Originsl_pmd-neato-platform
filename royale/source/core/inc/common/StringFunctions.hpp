@@ -12,7 +12,9 @@
 
 #include <string>
 #include <sstream>
+#include <stdexcept>
 #include <stdint.h>
+#include <common/exceptions/InvalidValue.hpp>
 #include <royale/String.hpp>
 #include <royale/Vector.hpp>
 
@@ -78,6 +80,60 @@ namespace royale
             }
 
             return false;
+        }
+
+        /**
+         * Tries to convert the input string to a float value.
+         * Throws if the value can't be converted.
+         * @param s String that should be converted.
+         * @return Converted float.
+         */
+        inline float stofRoyale (const std::string &s)
+        {
+            auto result = float{ 0.0f };
+            if (! (std::istringstream (s) >> result))
+            {
+                throw std::invalid_argument ("Cannot convert to a float");
+            }
+            return result;
+        }
+
+        /**
+         * Tries to convert the input string to a float value.
+         * Throws if the value can't be converted.
+         * @param s String that should be converted.
+         * @return Converted float.
+         */
+        inline float stofRoyale (const royale::String &s)
+        {
+            return stofRoyale (s.toStdString());
+        }
+
+        /**
+         * Tries to convert the input string to an integer value.
+         * Throws if the value can't be converted.
+         * @param s String that should be converted.
+         * @return Converted integer.
+         */
+        inline int stoiRoyale (const std::string &s)
+        {
+            auto result = int{ 0 };
+            if (! (std::istringstream (s) >> result))
+            {
+                throw std::invalid_argument ("Cannot convert to an integer");
+            }
+            return result;
+        }
+
+        /**
+         * Tries to convert the input string to an integer value.
+         * Throws if the value can't be converted.
+         * @param s String that should be converted.
+         * @return Converted integer.
+         */
+        inline int stoiRoyale (const royale::String &s)
+        {
+            return stoiRoyale (s.toStdString());
         }
 
     }

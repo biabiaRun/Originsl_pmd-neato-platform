@@ -172,23 +172,42 @@ Camera::CameraError Camera::RunUseCaseTests()
 
 Camera::CameraError Camera::RunExposureTests()
 {
-    camera_->registerDataListener(&depthListener_);
-
-    // Start capture mode
-    if (camera_->startCapture() != royale::CameraStatus::SUCCESS)
+    royale::CameraStatus status = camera_->registerDataListenerExtended(&rawListener_);
+    if (status != royale::CameraStatus::SUCCESS)
     {
-        std::cerr << "[ERROR] Could not start capturing" << std::endl;
+        std::cerr << "[ERROR] Could not register the extended data listener" 
+                  << royale::getStatusString(status).c_str() << std::endl;
         return EXPOSURE_MODE_ERROR;
     }
 
+    status = camera_->setCallbackData (royale::CallbackData::Intermediate);
+    if (status != royale::CameraStatus::SUCCESS) {
+      std::cerr << "[ERROR] Could not set the callbackData" 
+                  << royale::getStatusString(status).c_str() << std::endl;
+        return EXPOSURE_MODE_ERROR;
+    }
+
+    // Start capture mode
+    status = camera_->startCapture();
+    if (status != royale::CameraStatus::SUCCESS)
+    {
+        std::cerr << "[ERROR] Could not start capturing" 
+                  << royale::getStatusString(status).c_str() << std::endl;
+        return EXPOSURE_MODE_ERROR;
+    }
+
+    std::this_thread::sleep_for (std::chrono::seconds (1));
+
     // Set Manual Exposure
-    royale::CameraStatus status = camera_->setExposureMode(royale::ExposureMode::MANUAL);
+    status = camera_->setExposureMode(royale::ExposureMode::MANUAL);
     if (status != royale::CameraStatus::SUCCESS)
     {
         std::cerr << "[ERROR] Could not set the exposure mode to Manual. " 
                   << royale::getStatusString(status).c_str() << std::endl;
         return EXPOSURE_MODE_ERROR;
     }
+
+    std::this_thread::sleep_for (std::chrono::seconds (1));
 
     // Get Exposure Limits
     royale::Pair<std::uint32_t, std::uint32_t> limits;
@@ -199,6 +218,8 @@ Camera::CameraError Camera::RunExposureTests()
                   << royale::getStatusString(status).c_str() << std::endl;
         return EXPOSURE_MODE_ERROR;
     }
+
+    std::this_thread::sleep_for (std::chrono::seconds (5));
 
     // Set Exposure Time (Manual ONLY!)
     // std::uint32_t rand_exposure = rand() % limits.second + limits.first;
@@ -274,7 +295,7 @@ Camera::CameraError Camera::RunTestReceiveData(int secondsToStream) {
   // Let the camera run for a second
   std::this_thread::sleep_for (std::chrono::seconds (1));
 
-  if (depthListener_.m_count == 0) {
+  if (rawListener_.m_count == 0) {
     std::cerr << "[ERROR] Not receiving new depth data" << std::endl;
     return RECEIVE_DATA_ERROR;
   }
@@ -282,11 +303,19 @@ Camera::CameraError Camera::RunTestReceiveData(int secondsToStream) {
   // Record to output file
   camera_->startRecording ("test.rrf");
 
-  depthListener_.m_count = 0u;
+  rawListener_.m_count = 0u;
   std::this_thread::sleep_for (std::chrono::seconds(secondsToStream));
 
   // Stop the recording
   camera_->stopRecording();
+
+  std::clog << "Temperature Sensor Value" << std::endl;
+  for (auto& tmp : rawListener_.m_cur_temp) {
+    if (tmp <= 0) {
+        std::cerr << "[ERROR] Temperature reading of " << tmp << " <= 0." << std::endl;
+            return RECEIVE_DATA_ERROR;
+    }
+  }
 
   // Stop the capturing mode
   royale::CameraStatus status = camera_->stopCapture();
@@ -295,8 +324,7 @@ Camera::CameraError Camera::RunTestReceiveData(int secondsToStream) {
               << royale::getStatusString(status).c_str() << std::endl;
     return RECEIVE_DATA_ERROR;
   }
-
-  float measuredFPS = static_cast<float>(depthListener_.m_count) / static_cast<float>(secondsToStream);
+  float measuredFPS = static_cast<float>(rawListener_.m_count) / static_cast<float>(secondsToStream);
   float fps_lower_limit = static_cast<float>(fps_) - 0.5f;
   float fps_upper_limit = static_cast<float>(fps_) + 0.5f;
 

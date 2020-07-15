@@ -34,6 +34,14 @@ public:
     virtual ~IView() {}
 
     virtual void colorRangeChanged() = 0;
+    virtual void enableGammaCorrection (bool enable)
+    {
+        m_colorHelper->enableGammaCorrection (enable);
+    }
+    virtual void setGamma (float val)
+    {
+        m_colorHelper->setGammaValue (val);
+    }
 
 public slots:
     virtual void onNewData (const royale::DepthData *data, const royale::IntermediateData *intData)

@@ -19,17 +19,10 @@ ImagerM2455_A14::ImagerM2455_A14 (const ImagerParameters &params) :
 {
 }
 
-void ImagerM2455_A14::initialize()
+DesignStepInfo ImagerM2455_A14::getDesignStepInfo()
 {
-
-    uint16_t regDs = 0;
-
-    m_bridge->readImagerRegister (M2455::ANAIP_DESIGNSTEP, regDs);
-
-    if (0x0A14 != regDs)
-    {
-        throw Exception ("wrong design step");
-    }
-
-    ImagerM2453::initialize();
+    DesignStepInfo info;
+    info.ANAIP_DESIGNSTEP_Address = M2455::ANAIP_DESIGNSTEP;
+    info.designSteps.push_back (0x0A14);
+    return info;
 }

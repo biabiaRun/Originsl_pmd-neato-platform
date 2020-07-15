@@ -57,8 +57,31 @@ namespace royale
         SmoothingFilterType_Int,            ///< Determines the type of smoothing that is used
         UseFlagSBI_Bool,                    ///< Enable/Disable the flagging of pixels where the SBI was active
         UseHoleFilling_Bool,                ///< Enable/Disable the hole filling algorithm
-        AutoExpoMin_Int,                    ///< The minimum value for the auto exposure algorithm (new values will be bound by use case limits)
-        AutoExpoMax_Int,                    ///< The maximum value for the auto exposure algorithm (new values will be bound by use case limits)
+        Reserved1,
+        Reserved2,
+        Reserved3,
+        Reserved4,
+        Reserved5,
+        Reserved6,
+        Reserved7,
+        Reserved8,
+        AutoExpoMin_Int,                        ///< The minimum value for the auto exposure algorithm (new values will be bound by use case limits)
+        AutoExpoMax_Int,                        ///< The maximum value for the auto exposure algorithm (new values will be bound by use case limits)
+        SpectreProcessingType_Int,              ///< The type of processing used by Spectre
+        UseGrayImageFallbackAmplitude_Bool,     ///< Uses the fallback image in the gray image pipeline as amplitude image
+        GrayImageMeanMap_Int,                   ///< Value where the mean of the gray image is mapped to
+        NoiseFilterSigmaD_Float,                ///< SigmaD
+        NoiseFilterIterations_Int,              ///< Iterations of the noise filter
+        FlyingPixelAngleLimit_Float,            ///< Angle limit of the flying pixel algorithm
+        FlyingPixelAmpThreshold_Float,          ///< Amplitude threshold of the flying pixel algorithm
+        FlyingPixelMinNeighbors_Int,            ///< Minimum neighbors for the flying pixel algorithm
+        FlyingPixelMaxNeighbors_Int,            ///< Maximum neighbors for the flying pixel algorithm
+        FlyingPixelNoiseRatioThresh_Float,      ///< Noiseratio threshold
+        SmoothingFilterResetThreshold_Float,    ///< Reset value for the smoothing
+        CCThresh_Int,                           ///< Connected components threshold
+        PhaseNoiseThresh_Float,                 ///< PhaseNoise threshold
+        StraylightThreshold_Float,              ///< Straylight threshold
+        // Temporary processing flags for special versions should be inserted after value 1000 !!!
         NUM_FLAGS
     };
 

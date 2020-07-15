@@ -13,44 +13,31 @@
 #include <factory/ProcessingParameterMapFactory.hpp>
 #include <modules/ModuleConfigData.hpp>
 
-#include <modules/ModuleConfigFactoryAnimatorBoard.hpp>
-#include <modules/ModuleConfigFactoryOrpheus.hpp>
-#include <modules/ModuleConfigFactoryPicoFlexx.hpp>
+#include <modules/ModuleConfigFactoryEuropa.hpp>
 #include <modules/ModuleConfigFactoryPicoMonstar.hpp>
 #include <modules/ModuleConfigFactoryPmdModule238x.hpp>
 #include <modules/ModuleConfigFactoryPmdModule277x.hpp>
-#include <modules/ModuleConfigFactorySalome.hpp>
+#include <modules/ModuleConfigFactoryPmdModule287x.hpp>
 #include <modules/ModuleConfigFactorySelene.hpp>
+#include <modules/ModuleConfigFactoryX1.hpp>
 
 #include <modules/CommonProcessingParameters.hpp>
 #include <modules/ModuleConfigPicoMonstarCommon.hpp>
-#include <modules/ModuleConfigOrpheusCommon.hpp>
 
 using namespace royale::usb::config;
 using namespace royale::config;
 using namespace royale::factory;
 
-namespace
-{
-    auto factoryAnimatorBoard = std::make_shared<ModuleConfigFactoryAnimatorBoard> ();
-}
-
 static const UsbProbeDataList usbProbeDataRoyale
 {
-    { 0x1c28, 0xc012, BridgeType::ENCLUSTRA, std::make_shared<ModuleConfigFactoryPicoFlexx>()                                },
-    { 0x058b, 0x00a1, BridgeType::AMUNDSEN,  factoryAnimatorBoard                                                            },
-    { 0x058b, 0x00a6, BridgeType::UVC,       factoryAnimatorBoard                                                            },
-    { 0x058b, 0x00a7, BridgeType::UVC,       factoryAnimatorBoard                                                            },
-    { 0x1c28, 0xC018, BridgeType::UVC,       std::make_shared<ModuleConfigFactoryFixed> (moduleconfig::PicoMonstar1)         },
-    { 0x1c28, 0xC019, BridgeType::UVC,       std::make_shared<ModuleConfigFactoryFixed> (moduleconfig::PicoMonstar2)         },
+    { 0x1c28, 0xc012, BridgeType::ENCLUSTRA, std::make_shared<ModuleConfigFactoryFixed> (moduleconfig::PicoFlexxU6)          },
     { 0x1c28, 0xC025, BridgeType::AMUNDSEN,  std::make_shared<ModuleConfigFactoryPicoMonstar>()                              },
-    { 0x1c28, 0xc028, BridgeType::AMUNDSEN,  std::make_shared<ModuleConfigFactorySalome>()                                   },
-    { 0x1c28, 0xc029, BridgeType::UVC,       std::make_shared<ModuleConfigFactorySalome>()                                   },
-    { 0x1c28, 0xc02D, BridgeType::AMUNDSEN,  std::make_shared<ModuleConfigFactoryFixed> (moduleconfig::X18502W)              },
     { 0x1c28, 0xc031, BridgeType::AMUNDSEN,  std::make_shared<ModuleConfigFactorySelene>()                                   },
-    { 0x1c28, 0xc032, BridgeType::AMUNDSEN,  std::make_shared<ModuleConfigFactoryOrpheus>()                                  },
     { 0x1c28, 0xc033, BridgeType::AMUNDSEN,  std::make_shared<ModuleConfigFactoryPmdModule238x>()                            },
-    { 0x1c28, 0xc036, BridgeType::AMUNDSEN,  std::make_shared<ModuleConfigFactoryPmdModule277x>()                            },
+    { 0x1c28, 0xc039, BridgeType::AMUNDSEN,  std::make_shared<ModuleConfigFactoryPmdModule277x>()                            },
+    { 0x1c28, 0xc03A, BridgeType::AMUNDSEN,  std::make_shared<ModuleConfigFactoryX1> ()                                      },
+    { 0x1c28, 0xc03B, BridgeType::UVC,       std::make_shared<ModuleConfigFactoryEuropa>()                                   },
+    { 0x1c28, 0xc040, BridgeType::UVC,       std::make_shared<ModuleConfigFactoryPmdModule287x>()                            },
 };
 
 royale::usb::config::UsbProbeDataList royale::config::getUsbProbeDataRoyale()
@@ -79,6 +66,20 @@ std::shared_ptr<royale::factory::IProcessingParameterMapFactory> royale::config:
         { { emptyProductId, CommonIdVideo }, { CommonProcessingParamsVideo } },
         { { emptyProductId, CommonIdFastAcquisition }, { CommonProcessingParamsFastAcquisition } },
         { { emptyProductId, CommonIdVeryFastAcquisition }, { CommonProcessingParamsVeryFastAcquisition } },
+
+
+        { { emptyProductId, CommonIdVideoExtendedCBF }, { CommonProcessingParamsVideoExtended } },
+        { { emptyProductId, CommonIdVideoExtendedNG }, { CommonProcessingParamsVideoExtendedNG } },
+        { { emptyProductId, CommonIdVideoExtendedNGB }, { CommonProcessingParamsVideoExtended } },
+        { { emptyProductId, CommonIdVideoHalfCBF }, { CommonProcessingParamsVideoHalf } },
+        { { emptyProductId, CommonIdVideoHalfNG }, { CommonProcessingParamsVideoHalfNG } },
+        { { emptyProductId, CommonIdVideoHalfNGB }, { CommonProcessingParamsVideoHalf } },
+
+        { { emptyProductId, CommonIdAF }, { CommonProcessingParamsVideo } },
+        { { emptyProductId, CommonIdAR }, { CommonProcessingParamsVideo } },
+        { { emptyProductId, CommonIdIR }, { CommonProcessingParamsIR } },
+        { { emptyProductId, CommonIdFaceID }, { CommonProcessingParamsIR, CommonProcessingParamsVideo } },
     };
+
     return std::make_shared<ProcessingParameterMapFactory> (defaultVector, CommonId2Frequencies);
 }

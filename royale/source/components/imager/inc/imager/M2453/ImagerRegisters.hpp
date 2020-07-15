@@ -16,15 +16,13 @@ namespace royale
 {
     namespace imager
     {
-        /* This namespace only contains register addresses common to all M2453 design steppings,
-        * and also the M2455 A11. */
-        namespace same_in_M2453_and_M2455
+        namespace M2453
         {
-            const uint16_t PIXMEM =    0x0000; //!< The start address of the pixel memory
-            const uint16_t CFGCNT =    0x9000; //!< The start address of the configuration container section
-            const uint16_t SPICFG =    0xA087; //!< SPI Enable
+            const uint16_t PIXMEM = 0x0000; //!< The start address of the pixel memory
+            const uint16_t CFGCNT = 0x9000; //!< The start address of the configuration container section
+            const uint16_t SPICFG = 0xA087; //!< SPI Enable
             const uint16_t SPIWRADDR = 0xA088; //!< Identifies the address from where commands and data shall be written to SPI
-            const uint16_t SPIRADDR =  0xA089; //!< Identifies the address where data read from SPI shall be written
+            const uint16_t SPIRADDR = 0xA089; //!< Identifies the address where data read from SPI shall be written
 
             /**
             * SPI Command Length
@@ -32,14 +30,14 @@ namespace royale
             * Bit 13:13 ER: Enable Read - enables sampling from SDI for read commands
             * Bit 8:0   SPI_LEN: Total number of bytes to be transferred - consists of Header + Payload
             */
-            const uint16_t SPILEN =    0xA08A;
+            const uint16_t SPILEN = 0xA08A;
 
-            const uint16_t SPITRIG =   0xA08B; //!< SPI Trigger Register
+            const uint16_t SPITRIG = 0xA08B; //!< SPI Trigger Register
             const uint16_t SPISTATUS = 0xA08C; //!< SPI Status
 
-            const uint16_t CFGCNT_S00_EXPOTIME  = 0x9000;  //!< First sequence entry exposure time (prescaler + counter)
+            const uint16_t CFGCNT_S00_EXPOTIME = 0x9000;  //!< First sequence entry exposure time (prescaler + counter)
             const uint16_t CFGCNT_S00_FRAMETIME = 0x9001;  //!< First sequence entry frame time
-            const uint16_t CFGCNT_S01_EXPOTIME  = 0x9002;  //!< Second sequence entry exposure time (prescaler + counter)
+            const uint16_t CFGCNT_S01_EXPOTIME = 0x9002;  //!< Second sequence entry exposure time (prescaler + counter)
             // ...the list goes on
             const size_t nSequenceEntries = 64;
 
@@ -50,21 +48,12 @@ namespace royale
             */
             const uint16_t CFGCNT_FLAGS = 0x9402;
 
+            const uint16_t ANAIP_PLL_RAMP_TIME = 0xA037;
+            const uint16_t ANAIP_PRODUCTCODE = 0xA0A4;
             const uint16_t ANAIP_DESIGNSTEP = 0xA0A5; //!< Design step register
-        }
 
-        namespace M2453
-        {
-            using namespace royale::imager::same_in_M2453_and_M2455;
-        }
-
-        /* This namespace only contains register addresses common to all M2453 design steppings, but
-        * not the M2455. This is separated so that it doesn't get used accidentally in the abstract
-        * class ImagerM2453, which is also used for M2455. */
-        namespace M2453_ONLY
-        {
             const uint16_t DMEM_CONFIG_CHANGED_COUNTER = 0x8330; //!< 12 bit reconfig counter. Not safe to read while capturing!
-            const uint16_t MEMPAGE                     = 0x8429; //!< Select IRAM page
+            const uint16_t MEMPAGE = 0x8429; //!< Select IRAM page
         }
 
         namespace M2453_A11
@@ -89,7 +78,7 @@ namespace royale
             const uint16_t RESTARTV_EN                      = 0x8452; // iSM restart vector for enable & restart
             const uint16_t ISM_CTRL                         = 0x8401; // iSM control register
 
-            const uint16_t MB0_FRAMETIME = 0x91D2; //!< MB0 framerate also master framerate for interleaved mode
+            const uint16_t MB0_FRAMETIME = 0x91D3; //!< MB0 framerate also master framerate for interleaved mode
         }
     }
 }

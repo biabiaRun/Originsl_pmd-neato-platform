@@ -37,6 +37,7 @@ public:
     void setPointScaleFactor (const float &val);
     void setScreenResYHalf (const float &val);
     void colorRangeChanged();
+    bool isGray();
 
     /**
     *  Set the the distance range
@@ -49,6 +50,7 @@ public:
 
 protected:
     virtual void initGeometry () override;
+    QVector4D getColor (royale::DepthPoint curPoint, royale::IntermediatePoint curIntPoint);
 
 
     const royale::DepthData *m_currentDataset;

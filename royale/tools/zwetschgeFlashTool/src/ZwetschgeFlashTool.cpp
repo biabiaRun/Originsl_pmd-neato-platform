@@ -212,6 +212,8 @@ void ZwetschgeFlashTool::openCamera()
     lblCameraName->setText (camName.c_str());
     lblImagerSerial->setText (m_serialNumber.c_str());
 
+    showCameraInfo();
+
     pbOpen->setText ("Close camera");
     pbLoadFile->setEnabled (true);
     pbWriteToFlash->setEnabled (false);
@@ -715,4 +717,21 @@ void ZwetschgeFlashTool::loadProtectedArea (std::shared_ptr<royale::pal::IStorag
     lblADCOffset->setText (QString::number (adcOffset));
     lblRCOTrim->setText (QString::number (rcoTrim));
     lblProtCRC->setText (QString::number (crc));
+}
+
+void ZwetschgeFlashTool::showCameraInfo()
+{
+    Vector<Pair<String, String>> camInfos;
+    m_cameraDevice->getCameraInfo (camInfos);
+
+    for (auto curInfo : camInfos)
+    {
+        if (curInfo.first == "IMAGER")
+        {
+            if (!curInfo.second.empty())
+            {
+                lblImager->setText (curInfo.second.c_str());
+            }
+        }
+    }
 }

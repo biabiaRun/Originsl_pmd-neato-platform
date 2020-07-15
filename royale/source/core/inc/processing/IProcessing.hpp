@@ -14,9 +14,11 @@
 #include <royale/IDepthImageListener.hpp>
 #include <royale/ISparsePointCloudListener.hpp>
 #include <royale/IIRImageListener.hpp>
+#include <royale/IDepthIRImageListener.hpp>
 
 #include <royale/FilterLevel.hpp>
 #include <royale/IExtendedDataListener.hpp>
+#include <royale/IEventListener.hpp>
 #include <royale/String.hpp>
 #include <royale/LensParameters.hpp>
 #include <royale/ProcessingFlag.hpp>
@@ -40,6 +42,7 @@ namespace royale
                 depthImageListener (nullptr),
                 sparsePointCloudListener (nullptr),
                 irImageListener (nullptr),
+                depthIrImageListener (nullptr),
                 extendedListener (nullptr)
             {}
 
@@ -49,6 +52,7 @@ namespace royale
                 depthImageListener = nullptr;
                 sparsePointCloudListener = nullptr;
                 irImageListener = nullptr;
+                depthIrImageListener = nullptr;
                 extendedListener = nullptr;
             }
 
@@ -56,6 +60,7 @@ namespace royale
             royale::IDepthImageListener *depthImageListener;
             royale::ISparsePointCloudListener *sparsePointCloudListener;
             royale::IIRImageListener *irImageListener;
+            royale::IDepthIRImageListener *depthIrImageListener;
             royale::IExtendedDataListener *extendedListener;
         };
 
@@ -226,6 +231,26 @@ namespace royale
             *  Please have a look at the royale::FilterLevel enum to see which levels are available.
             */
             virtual royale::FilterLevel getFilterLevel (royale::StreamId streamId) const = 0;
+
+            /**
+            *  Register listener for event notifications.
+            */
+            virtual void registerEventListener (royale::IEventListener *listener) = 0;
+
+            /**
+            *  Unregisters listener for event notifications.
+            */
+            virtual void unregisterEventListener() = 0;
+
+            /**
+            *  When the processing is deactivated only the raw listeners will be called.
+            */
+            virtual void setProcessingActivated (bool activated) = 0;
+
+            /**
+            *  Returns the current activation state of the processing.
+            */
+            virtual bool getProcessingActivated() = 0;
         };
     }
 }

@@ -34,6 +34,11 @@ This sample can also be used as a tool in other workflows.  It prints the list o
 command-line argument.  For UVC and Amundsen devices (e.g. pico maxx and pico monstar), it also
 prints the USB firmware version.
 
+sampleQtViewer
+----------------
+
+This C++ example shows how to create a Qt GUI that will display the gray images from a connected camera.
+
 sampleRetrieveData
 ------------------
 
@@ -107,11 +112,18 @@ sampleOpenCV
 ------------
 
 This C++ example shows how to capture image data, fill OpenCV images and display the data with HighGUI.
-It was tested with OpenCV 2.4.13.
+It was tested with OpenCV 2.4.13 and OpenCV 4.1.1.
 
 To compile this you need to point CMake to your OpenCV installation folder, and that version of
 OpenCV must have been compiled with a C++ ABI version that's compatible to both Royale and Qt (there
 is more documentation about this in a comment at the top of the .cpp file).
+
+OpenCV can be downloaded here: https://opencv.org/releases/
+
+On Windows you have to generate OpenCV with CMake and compile it (VS 2017 was tested).
+After compilation add the enviromental variable OPENCV_DIR with the path of the build folder.
+Restart your PC.
+The sample should now be added to the project when you generate Royale in CMake the next time.
 
 sampleOpenNI2Driver
 -------------------

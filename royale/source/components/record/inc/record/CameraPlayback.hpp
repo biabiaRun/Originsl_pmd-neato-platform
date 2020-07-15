@@ -139,15 +139,21 @@ namespace royale
             ROYALE_API uint32_t currentFrame() override;
             ROYALE_API void pause() override;
             ROYALE_API void resume() override;
+            ROYALE_API royale::CameraStatus setPlaybackRange (uint32_t first, uint32_t last) override;
+            ROYALE_API void getPlaybackRange (uint32_t &first, uint32_t &last) override;
 
             ROYALE_API void registerStopListener (royale::IPlaybackStopListener *listener) override;
             ROYALE_API void unregisterStopListener() override;
 
             ROYALE_API uint16_t getFileVersion() override;
+            ROYALE_API uint32_t getMajorVersion() override;
+            ROYALE_API uint32_t getMinorVersion() override;
+            ROYALE_API uint32_t getPatchVersion() override;
+            ROYALE_API uint32_t getBuildVersion() override;
 
         private:
 
-            void aquisitionFunction();
+            royale::CameraStatus aquisitionFunction();
 
             void internalCallback (std::vector<royale::common::ICapturedRawFrame *> &frames,
                                    const royale::usecase::UseCaseDefinition &definition,
@@ -167,6 +173,8 @@ namespace royale
 
             royale::CameraStatus setupListeners() override;
 
+            royale::CameraStatus fillStreamParameters();
+
         private:
             FileReaderDispatcher m_reader;
             royale::collector::IFrameCaptureListener *m_captureListener;
@@ -182,6 +190,11 @@ namespace royale
             std::vector<uint32_t> m_capturedExposureTimes;
             royale::Vector<uint32_t> m_modulationFrequencies;
             royale::Vector<royale::StreamId> m_streamIds;
+            uint32_t m_rangeStart, m_rangeEnd;
+            std::map<StreamId, bool> m_startParametersSet;
+
+            // Used during initialization to signal the thread not to reset the use case every time
+            bool m_ignoreUseCaseChange;
 
             // Parameters set by setProcessingParameters function. These override
             // the ones saved in the recording. By default this map is empty and the

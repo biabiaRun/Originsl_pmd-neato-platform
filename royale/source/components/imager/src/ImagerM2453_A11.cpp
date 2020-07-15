@@ -33,18 +33,11 @@ std::vector < uint16_t > ImagerM2453_A11::getSerialRegisters()
     return efuseValues;
 }
 
-void ImagerM2453_A11::initialize()
+DesignStepInfo ImagerM2453_A11::getDesignStepInfo()
 {
-
-    uint16_t regDs = 0;
-
-    m_bridge->readImagerRegister (M2453::ANAIP_DESIGNSTEP, regDs);
-
-    if (0x0A11 != regDs &&
-            0x0A12 != regDs)
-    {
-        throw Exception ("wrong design step");
-    }
-
-    ImagerM2453::initialize();
+    DesignStepInfo info;
+    info.ANAIP_DESIGNSTEP_Address = M2453::ANAIP_DESIGNSTEP;
+    info.designSteps.push_back (0x0A11);
+    info.designSteps.push_back (0x0A12);
+    return info;
 }

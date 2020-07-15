@@ -64,7 +64,7 @@ void StorageI2cEeprom::readStorage (std::size_t startAddr, std::vector<uint8_t> 
     }
 
     // Split bigger buffers in to smaller reads, to match the buffer size in the CX3
-    const std::size_t BLOCK_SIZE = std::min(m_access->maximumDataSize(), recvBuffer.size());
+    const std::size_t BLOCK_SIZE = std::min (m_access->maximumDataSize(), recvBuffer.size());
     std::vector<uint8_t> block (BLOCK_SIZE);
 
     for (std::size_t i = 0; i + BLOCK_SIZE <= recvBuffer.size(); i += BLOCK_SIZE)

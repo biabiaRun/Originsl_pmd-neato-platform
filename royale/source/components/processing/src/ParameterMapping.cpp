@@ -66,6 +66,19 @@ namespace
         mapping.add (ParameterKey::USE_FILL_HOLES, ProcessingFlag::UseHoleFilling_Bool);
         mapping.add (ParameterKey::LOWER_EXPOSURE_LIMIT, ProcessingFlag::AutoExpoMin_Int);
         mapping.add (ParameterKey::UPPER_EXPOSURE_LIMIT, ProcessingFlag::AutoExpoMax_Int);
+        mapping.add (ParameterKey::USE_GRAY_IMAGE_FALLBACK_AMPLITUDE, ProcessingFlag::UseGrayImageFallbackAmplitude_Bool);
+        mapping.add (ParameterKey::GRAY_IMAGE_MEAN_MAP, ProcessingFlag::GrayImageMeanMap_Int);
+        mapping.add (ParameterKey::NOISE_FILTER_SIGMA_D, ProcessingFlag::NoiseFilterSigmaD_Float);
+        mapping.add (ParameterKey::NOISE_FILTER_ITERATIONS, ProcessingFlag::NoiseFilterIterations_Int);
+        mapping.add (ParameterKey::FLYING_PIXEL_ANGLE_LIMIT, ProcessingFlag::FlyingPixelAngleLimit_Float);
+        mapping.add (ParameterKey::FLYING_PIXEL_AMP_THRESHOLD, ProcessingFlag::FlyingPixelAmpThreshold_Float);
+        mapping.add (ParameterKey::FLYING_PIXEL_NEIGHBORS_MIN, ProcessingFlag::FlyingPixelMinNeighbors_Int);
+        mapping.add (ParameterKey::FLYING_PIXEL_NEIGHBORS_MAX, ProcessingFlag::FlyingPixelMaxNeighbors_Int);
+        mapping.add (ParameterKey::FLYING_PIXEL_NOISE_RATIO_THRESH, ProcessingFlag::FlyingPixelNoiseRatioThresh_Float);
+        mapping.add (ParameterKey::SMOOTHING_RESET_THRESHOLD, ProcessingFlag::SmoothingFilterResetThreshold_Float);
+        mapping.add (ParameterKey::CC_THRESH, ProcessingFlag::CCThresh_Int);
+        mapping.add (ParameterKey::PHASE_NOISE_THRESHOLD, ProcessingFlag::PhaseNoiseThresh_Float);
+        mapping.add (ParameterKey::STRAYLIGHT_THRESHOLD, ProcessingFlag::StraylightThreshold_Float);
         return mapping;
     }
 

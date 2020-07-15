@@ -67,6 +67,8 @@ namespace royale
             ROYALE_API royale::CameraStatus unregisterSparsePointCloudListener() override;
             ROYALE_API royale::CameraStatus registerIRImageListener (royale::IIRImageListener *listener) override;
             ROYALE_API royale::CameraStatus unregisterIRImageListener() override;
+            ROYALE_API royale::CameraStatus registerDepthIRImageListener (royale::IDepthIRImageListener *listener) override;
+            ROYALE_API royale::CameraStatus unregisterDepthIRImageListener() override;
 
             ROYALE_API royale::CameraStatus registerExposureListener (royale::IExposureListener *listener) override;
             ROYALE_API royale::CameraStatus registerExposureListener (royale::IExposureListener2 *listener) override;
@@ -84,6 +86,11 @@ namespace royale
 
             ROYALE_API royale::CameraStatus setFilterLevel (const royale::FilterLevel level, royale::StreamId streamId = 0) override;
             ROYALE_API royale::CameraStatus getFilterLevel (royale::FilterLevel &level, royale::StreamId streamId = 0) const override;
+
+            /**
+             * If recording should be enabled, a recording engine must be set
+             */
+            ROYALE_API virtual void setRecordingEngine (std::unique_ptr<royale::IRecord> recording);
 
             // Level 2
             ROYALE_API royale::CameraStatus setCallbackData (uint16_t cbData) override = 0;

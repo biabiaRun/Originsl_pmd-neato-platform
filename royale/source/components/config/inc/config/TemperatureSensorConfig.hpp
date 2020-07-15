@@ -59,12 +59,24 @@ namespace royale
                 * ImConnectedTemperatureSensor::NTC to enable
                 * temperature read out by the imager.
                 */
-                PSEUDODATA,
+                PSD_NTC,
+                /**
+                * The temperature will be read out by the imager/firmware
+                * and written to the pseudo data. A module using this
+                * should also set ImagerConfig::tempSensor to
+                * ImConnectedTemperatureSensor::SIC to enable
+                * temperature read out by the imager.
+                */
+                PSD_SIC,
                 /**
                 * ADS1013 ADC (http://www.ti.com/product/ADS1013) connected
                 * to a NTC.
                 */
-                ADS1013_NTC
+                ADS1013_NTC,
+                /**
+                * Texas Instruments TMP103 I2C temperature sensor.
+                */
+                TMP103,
             };
 
             TemperatureSensorType type;

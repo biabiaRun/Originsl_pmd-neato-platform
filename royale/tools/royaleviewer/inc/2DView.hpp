@@ -40,9 +40,11 @@ public:
     void switchToAmplitudeBuffer(); // obsolete - to remove!
     void switchToGrayBuffer (bool uniform);
     void switchToOverlay();
+    void switchToFlag();
     void colorRangeChanged() override;
     void prepareBackgroundImage ();
     const QImage &currentImage();
+    void setIRMode (bool irMode);
 
     /**
     *  Set the alignment mode of the image in 2dView
@@ -61,6 +63,7 @@ public:
     *  @param cameraStart The status of the camera, open or closed
     */
     void setFilterMinMax (float filterMin, float filterMax, bool cameraStart);
+    void clearPixelInfos();
 
 signals:
     void closeLicense();
@@ -91,6 +94,7 @@ private:
     bool                      m_uniform;
     bool                      m_showGrayimage;
     bool                      m_showOverlayimage;
+    bool                      m_showFlagimage;
     PixelInfoView            *m_pixelInfoView;
     PixelInfoManager         *m_pixelInfoManager;
     QImage                   *m_backgroundImage;
@@ -104,4 +108,5 @@ private:
     int                       m_leftBlank;
     float                     m_filterMin;
     float                     m_filterMax;
+    bool                      m_irMode;
 };

@@ -46,7 +46,7 @@ namespace royale
 
             void initialize() override;
             void startCapture() override;
-            void stopCapture() override;
+            uint16_t stopCapture() override;
             void reconfigure (const ImagerUseCaseDefinition &useCase, uint16_t &reconfigIndex) override;
 
         protected:

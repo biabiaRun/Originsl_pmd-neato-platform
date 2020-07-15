@@ -1,31 +1,71 @@
+#****************************************************************************
+# Copyright (C) 2019 pmdtechnologies ag & Infineon Technologies
+#
+# THIS CODE AND INFORMATION ARE PROVIDED "AS IS" WITHOUT WARRANTY OF ANY
+# KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
+# PARTICULAR PURPOSE.
+#
+#****************************************************************************
+
 IF (${ROYALE_TARGET_PLATFORM} STREQUAL ANDROID)
     RETURN()
 ENDIF()
 
 ROYALE_FIND_HOST_PACKAGE(SWIG QUIET)
 
-SET(Python_ADDITIONAL_VERSIONS "3.5;3.6")
-FIND_PACKAGE(PythonInterp 3 QUIET)
-FIND_PACKAGE(PythonLibs 3 QUIET)
+SET(Python_ADDITIONAL_VERSIONS ${ROYALE_PYTHON_VERSION})
+FIND_PACKAGE(PythonLibs 3 REQUIRED)
 
 IF (NOT SWIG_FOUND OR
     NOT PYTHONLIBS_FOUND)
-    MESSAGE("SWIG not found. Python wrapper will not be built!")
+    MESSAGE(WARNING "SWIG not found. Python wrapper will not be built!")
     RETURN()
 ENDIF()
+
+MESSAGE(STATUS "Python libraries : ${PYTHONLIBS_VERSION_STRING}")
+
+if (POLICY CMP0086)
+  # UseSWIG honors SWIG_MODULE_NAME via -module flag
+  cmake_policy(SET CMP0086 NEW)
+endif()
 
 INCLUDE(${SWIG_USE_FILE})
 
 SET(CMAKE_SWIG_FLAGS "")
 SET(CMAKE_SWIG_OUTDIR ${PROJECT_BINARY_DIR}/lib)
 
+OPTION(ROYALE_USE_NUMPY_IN_ROYPY   "Use numpy.i for the Python wrapper" ON)
+
+if (NOT Numpy_FOUND)
+    find_package (Numpy)
+    if (Numpy_FOUND)
+        set_target_properties(${SWIG_MODULE_roypy_REAL_NAME} PROPERTIES SWIG_COMPILE_DEFINITIONS ACTIVATE_NUMPY)
+    else()
+        if (ROYALE_USE_NUMPY_IN_ROYPY)
+            MESSAGE(WARNING "Numpy activated but Python package was not found! Will disable Numpy usage")
+            set (ROYALE_USE_NUMPY_IN_ROYPY OFF CACHE BOOL "" FORCE)
+        endif()
+    endif()
+endif()
+
+
+if (ROYALE_USE_NUMPY_IN_ROYPY)
+    message(STATUS "Numpy version : ${Numpy_VERSION}")
+    ADD_DEFINITIONS(-DROYALE_ACTIVATE_NUMPY)
+    SET(CMAKE_SWIG_FLAGS -DROYALE_ACTIVATE_NUMPY)
+    SET(SWIG_INCLUDE_DIRECTORIES ${ROYALE_NUMPY_I_INCLUDE_DIR})
+endif ()
+
 INCLUDE_DIRECTORIES(${PYTHON_INCLUDE_PATH}
                     ${CMAKE_CURRENT_SOURCE_DIR}
                     ${LIBSPECTRE_INCLUDE_DIRS}
                     ${PYTHON_INCLUDE_DIRS}
-                    ${ROYALE_SOURCE_DIR}/src/contrib
+                    ${ROYALE_SOURCE_DIR}/contrib
                     ${ROYALE_SOURCE_DIR}/source/core/inc
                     ${ROYALE_SOURCE_DIR}/source/royale/inc
+                    ${Numpy_INCLUDE_DIR}
+                    ${ROYALE_NUMPY_I_INCLUDE_DIR}
                     )
 SET_SOURCE_FILES_PROPERTIES(roypy.i PROPERTIES
   CPLUSPLUS ON)
@@ -98,41 +138,41 @@ add_custom_command(
             ${ROYALE_RUNTIME_OUTPUT_DIRECTORY}/test_level2.py
     )   
 
-if(NOT ${ROYALE_TARGET_PLATFORM} STREQUAL ANDROID)
-    add_custom_target(hardware_test_roypy
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-        COMMAND "${PYTHON_EXECUTABLE}" ${ROYALE_RUNTIME_OUTPUT_DIRECTORY}/test_level1.py
-        COMMAND "${PYTHON_EXECUTABLE}" ${ROYALE_RUNTIME_OUTPUT_DIRECTORY}/test_level2.py
-        DEPENDS ${SWIG_MODULE_roypy_REAL_NAME}
-        )
-    set_target_properties(hardware_test_roypy PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD TRUE)
+add_custom_target(hardware_test_roypy
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    COMMAND "${PYTHON_EXECUTABLE}" ${ROYALE_RUNTIME_OUTPUT_DIRECTORY}/test_level1.py
+    COMMAND "${PYTHON_EXECUTABLE}" ${ROYALE_RUNTIME_OUTPUT_DIRECTORY}/test_level2.py
+    DEPENDS ${SWIG_MODULE_roypy_REAL_NAME}
+    )
+set_target_properties(hardware_test_roypy PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD TRUE)
 
-    set_target_properties(hardware_test_roypy
-       PROPERTIES
-       FOLDER tests/royale
-       )
+set_target_properties(hardware_test_roypy
+   PROPERTIES
+   FOLDER tests/royale
+   )
 
-    install(TARGETS ${SWIG_MODULE_roypy_REAL_NAME}
-        DESTINATION ${ROYALE_INSTALL_PYTHON_DIR})
+install(TARGETS ${SWIG_MODULE_roypy_REAL_NAME}
+    DESTINATION ${ROYALE_INSTALL_PYTHON_DIR})
 
-    install(FILES "${CMAKE_SWIG_OUTDIR}/roypy.py"
-        DESTINATION ${ROYALE_INSTALL_PYTHON_DIR})
-    install(FILES "${ROYALE_SOURCE_DIR}/samples/python/README.md"
-        DESTINATION ${ROYALE_INSTALL_PYTHON_DIR})
-    install(FILES "${ROYALE_SOURCE_DIR}/samples/python/sample_camera_info.py"
-        DESTINATION ${ROYALE_INSTALL_PYTHON_DIR})
-    install(FILES "${ROYALE_SOURCE_DIR}/samples/python/sample_record_rrf.py"
-        DESTINATION ${ROYALE_INSTALL_PYTHON_DIR})
-    install(FILES "${ROYALE_SOURCE_DIR}/samples/python/sample_retrieve_data.py"
-        DESTINATION ${ROYALE_INSTALL_PYTHON_DIR})
-    install(FILES "${ROYALE_SOURCE_DIR}/samples/python/sample_retrieve_depth_image.py"
-        DESTINATION ${ROYALE_INSTALL_PYTHON_DIR})        
-    install(FILES "${ROYALE_SOURCE_DIR}/samples/python/roypy_sample_utils.py"
-        DESTINATION ${ROYALE_INSTALL_PYTHON_DIR})
-    install(FILES "${ROYALE_SOURCE_DIR}/samples/python/roypy_platform_utils.py"
-        DESTINATION ${ROYALE_INSTALL_PYTHON_DIR})
+install(FILES "${CMAKE_SWIG_OUTDIR}/roypy.py"
+    DESTINATION ${ROYALE_INSTALL_PYTHON_DIR})
+    
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/roypy.i"
+    DESTINATION "${ROYALE_INSTALL_PYTHON_DIR}/swig")
 
-    SET(ROYALE_INSTALL_TO_PYTHON_FOLDER ON CACHE BOOL "" FORCE)
-endif()
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/roypy.h"
+    DESTINATION "${ROYALE_INSTALL_PYTHON_DIR}/swig")
+    
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.template"
+    DESTINATION "${ROYALE_INSTALL_PYTHON_DIR}/swig"
+    RENAME CMakeLists.txt)
+
+configure_file ("${CMAKE_CURRENT_SOURCE_DIR}/README.md" "${CMAKE_CURRENT_BINARY_DIR}/README.md")
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/README.md"
+    DESTINATION ${ROYALE_INSTALL_PYTHON_DIR})
+    
+SET(ROYALE_INSTALL_TO_PYTHON_FOLDER ON CACHE BOOL "" FORCE)
+
+add_subdirectory(samples)
 
 MARK_AS_ADVANCED(ROYALE_INSTALL_TO_PYTHON_FOLDER)

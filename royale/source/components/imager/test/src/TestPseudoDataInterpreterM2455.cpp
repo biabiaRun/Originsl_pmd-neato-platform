@@ -81,6 +81,18 @@ TEST (TestPseudoDataInterpreterM2455, DonnaRawMode)
     uint32_t eyeSafetyError = 0;
     ASSERT_NO_THROW (interpreter.getEyeSafetyError (sample, eyeSafetyError));
     EXPECT_TRUE (eyeSafetyError);
+
+    //Test raw temperature values reading
+    auto values = interpreter.getTemperatureRawValues (sample);
+    ASSERT_THAT (static_cast<int> (values.size()), Eq(4));
+    uint16_t &vRef1 = values[0];
+    uint16_t &vRef2 = values[1];
+    uint16_t &vNtc1 = values[2];
+    uint16_t &vNtc2 = values[3];
+    EXPECT_THAT (vRef1, Eq (0x07da));
+    EXPECT_THAT (vNtc1, Eq (0x0815));
+    EXPECT_THAT (vRef2, Eq (0x07e3));
+    EXPECT_THAT (vNtc2, Eq (0x07e0));
 }
 
 /**

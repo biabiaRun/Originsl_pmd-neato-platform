@@ -225,7 +225,7 @@ namespace royale
             royale::config::ImagerType::M2450_A12_AIO,
             19200000,
             royale::access::imager::M2450_A12::BaseConfigPicoMonstar,
-            0.0f,
+            0.00012332f, // => IFDEL = 0x403A
             royale::config::ImageDataTransferType::MIPI_2LANE,
             royale::config::ImagerConfig::Trigger::GPIO14
         };

@@ -30,6 +30,11 @@ namespace royale
     namespace collector
     {
         /**
+         * Defines the amount of buffering that is used, e.g. double buffering or quadruple buffering
+         */
+        static const unsigned int BUFFER_MULT_FACTOR = 4u;
+
+        /**
          * The IBufferCaptureListener superinterface is how the IBridgeDataReceiver provides images
          * to be processed by the Royale Core.  This interface provides the other methods that are
          * called internally from the Royale Core, and the frame-releaser to release buffers after

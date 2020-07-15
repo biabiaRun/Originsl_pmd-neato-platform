@@ -16,6 +16,7 @@
 #include <QPainter>
 #include <QScrollArea>
 #include <QTabBar>
+#include <qtextbrowser.h>
 #include <QTextStream>
 
 LicenseView::LicenseView (QWidget *parent) : PMDView (parent),
@@ -31,15 +32,7 @@ LicenseView::LicenseView (QWidget *parent) : PMDView (parent),
 
     tryToAddLicense ("royale_license", "Royale");
     tryToAddLicense ("royaleviewer_license", "RoyaleViewer");
-    tryToAddLicense ("cypress_license", "Cypress");
-    tryToAddLicense ("gradle-wrapper_license", "Gradle-wrapper");
-    tryToAddLicense ("jquery_license", "JQuery");
-    tryToAddLicense ("kissfft_license", "KissFFT");
-    tryToAddLicense ("lgpl-2.1", "LibUSB");
-    tryToAddLicense ("packedarray_license", "Packed Array");
-    tryToAddLicense ("sizzle_license", "Sizzle");
-    tryToAddLicense ("gpl-3.0", "GPL 3.0");
-    tryToAddLicense ("lgpl-3.0", "LGPL 3.0");
+    tryToAddLicense ("used_licenses", "Used licenses");
 }
 
 void LicenseView::tryToAddLicense (const QString &name, const QString &displayName)
@@ -58,21 +51,15 @@ void LicenseView::tryToAddLicense (const QString &name, const QString &displayNa
         }
         licenseFile.close();
 
-        QLabel *newLicenseLabel = new QLabel();
-        //newLicenseLabel->setTextInteractionFlags (Qt::TextSelectableByMouse);
+        QTextBrowser *newLicenseLabel = new QTextBrowser();
         newLicenseLabel->setMaximumWidth (this->width());
         newLicenseLabel->setAlignment (Qt::AlignTop);
         newLicenseLabel->setStyleSheet ("color: white;");
         newLicenseLabel->setText (content);
-        newLicenseLabel->setWordWrap (true);
         newLicenseLabel->setFocusPolicy (Qt::FocusPolicy::NoFocus);
 
-        QScrollArea *scrollArea = new QScrollArea();
-        scrollArea->setAlignment (Qt::AlignHCenter);
-        scrollArea->setWidget (newLicenseLabel);
-
         const QString name = "   " + displayName + "   ";
-        ui.tabWidget->addTab (scrollArea, name);
+        ui.tabWidget->addTab (newLicenseLabel, name);
         newLicenseLabel->show();
 
         m_count++;

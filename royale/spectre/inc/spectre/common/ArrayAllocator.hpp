@@ -31,9 +31,9 @@ namespace spectre
 
             template<typename T>
             SPECTRE_COMMON_API void callDelete (T *ptr);
-        }
+        } // namespace details
 
-    }
-}
+    } // namespace common
+} // namespace spectre
 
 #endif /*__ARRAYALLOCATOR_HPP__*/

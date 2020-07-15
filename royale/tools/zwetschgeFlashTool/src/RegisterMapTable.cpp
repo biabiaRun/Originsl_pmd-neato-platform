@@ -10,12 +10,19 @@
 
 #include <RegisterMapTable.hpp>
 
+#include <qclipboard.h>
+#include <QMenu>
+
 RegisterMapTable::RegisterMapTable()
 {
     setupUi (this);
 
     tblRegisterMap->horizontalHeader()->setSectionResizeMode (QHeaderView::Stretch);
     tblRegisterMap->setRowCount (0);
+
+    this->setContextMenuPolicy (Qt::CustomContextMenu);
+    connect (this, SIGNAL (customContextMenuRequested (const QPoint &)),
+             this, SLOT (showContextMenu (const QPoint &)));
 }
 
 RegisterMapTable::~RegisterMapTable()
@@ -44,4 +51,35 @@ void RegisterMapTable::addRegisterMapList (const royale::imager::TimedRegisterLi
         addEntry (curEntry);
     }
     tblRegisterMap->resizeRowsToContents();
+}
+
+void RegisterMapTable::showContextMenu (const QPoint &pos)
+{
+    QMenu contextMenu (tr ("Context menu"), this);
+
+    QAction copyAction ("Copy to clipboard", this);
+    connect (&copyAction, SIGNAL (triggered()), this, SLOT (copyToClipboard()));
+    contextMenu.addAction (&copyAction);
+
+    contextMenu.exec (mapToGlobal (pos));
+}
+
+void RegisterMapTable::copyToClipboard()
+{
+    QClipboard *clip = QApplication::clipboard();
+    QString tableContent = "";
+
+    auto rowCount = tblRegisterMap->rowCount();
+    for (auto i = 0; i < rowCount; ++i)
+    {
+        auto addressItem = tblRegisterMap->item (i, 0);
+        auto valueItem = tblRegisterMap->item (i, 1);
+        auto sleepItem = tblRegisterMap->item (i, 2);
+
+        tableContent += addressItem->text() + ";" +
+                        valueItem->text() + ";" +
+                        sleepItem->text() + "\n";
+    }
+
+    clip->setText (tableContent);
 }

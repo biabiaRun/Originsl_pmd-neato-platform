@@ -57,6 +57,7 @@ namespace royale
             void shutDownSequencer() override;
 
         private:
+            bool hasNtc();
             bool m_currentModeIsMixedMode;
 
             std::unique_ptr<IImagerModeStrategy> m_strategy;

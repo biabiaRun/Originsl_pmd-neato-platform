@@ -16,6 +16,7 @@
 #include <pal/Access2I2cDeviceAdapter.hpp>
 
 #include <temperature/TemperatureSensorTMP102.hpp>
+#include <temperature/TemperatureSensorTMP103.hpp>
 #include <temperature/TemperatureSensorMCP98x43.hpp>
 #include <temperature/TemperatureSensorADS1013_NTC.hpp>
 
@@ -32,7 +33,8 @@ std::shared_ptr<royale::hal::ITemperatureSensor> TemperatureSensorFactory::creat
 {
     std::shared_ptr<royale::hal::ITemperatureSensor> tempSensor;
 
-    if (sensorConfig.type == TemperatureSensorConfig::TemperatureSensorType::PSEUDODATA)
+    if (sensorConfig.type == TemperatureSensorConfig::TemperatureSensorType::PSD_NTC
+            || sensorConfig.type == TemperatureSensorConfig::TemperatureSensorType::PSD_SIC)
     {
         return nullptr;
     }
@@ -65,6 +67,9 @@ std::shared_ptr<royale::hal::ITemperatureSensor> TemperatureSensorFactory::creat
                 break;
             case TemperatureSensorConfig::TemperatureSensorType::ADS1013_NTC:
                 tempSensor = createADC1013TemperatureSensor (device, sensorConfig);
+                break;
+            case TemperatureSensorConfig::TemperatureSensorType::TMP103:
+                tempSensor.reset (new royale::sensors::TemperatureSensorTMP103 (device));
                 break;
 
             default:

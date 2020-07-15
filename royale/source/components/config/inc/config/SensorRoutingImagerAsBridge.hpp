@@ -41,6 +41,10 @@ namespace royale
              * The M2455, which doesn't need firmware to act as an SPI bus master.
              */
             M2455_SPI,
+            /**
+             * The M2457, which doesn't need firmware to act as an SPI bus master.
+             */
+            M2457_SPI,
         };
 
         /**

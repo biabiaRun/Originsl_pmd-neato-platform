@@ -22,6 +22,7 @@
 #include <royale/IDepthImageListener.hpp>
 #include <royale/ISparsePointCloudListener.hpp>
 #include <royale/IIRImageListener.hpp>
+#include <royale/IDepthIRImageListener.hpp>
 #include <royale/IExtendedDataListener.hpp>
 #include <royale/IEventListener.hpp>
 #include <royale/LensParameters.hpp>
@@ -307,6 +308,23 @@ namespace royale
          *  the ICameraDevice.
          */
         virtual royale::CameraStatus unregisterIRImageListener() = 0;
+
+        /**
+        *  LEVEL 1
+        *  Once registering the data listener, depth and IR image data is sent via the callback function.
+        *
+        *  \param listener interface which needs to implement the callback method
+        */
+        virtual royale::CameraStatus registerDepthIRImageListener (royale::IDepthIRImageListener *listener) = 0;
+
+        /**
+        *  LEVEL 1
+        *  Unregisters the DepthIR image listener
+        *
+        *  It's not necessary to unregister this listener (or any other listener) before deleting
+        *  the ICameraDevice.
+        */
+        virtual royale::CameraStatus unregisterDepthIRImageListener() = 0;
 
         /**
          *  LEVEL 1

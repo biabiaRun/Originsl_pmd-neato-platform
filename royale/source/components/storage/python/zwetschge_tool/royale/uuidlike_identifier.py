@@ -31,12 +31,6 @@ def hashUuidlikeIdentifier (s):
     >>> hashUuidlikeIdentifier ("example 5 phase")
     UUID('6578616d-706c-6520-3520-70686485d74a')
 
-    >>> hashUuidlikeIdentifier ("example 9 phase")
-    UUID('6578616d-706c-6520-3920-706810ef778d')
-
-    >>> hashUuidlikeIdentifier ("This doesn't look like a GUID")
-    UUID('54686973-2064-6f65-736e-2774212a3da4')
-
     >>> hashUuidlikeIdentifier ("This string doesn't look like a GUID, and is longer than a GUID is expected to be")
     UUID('54686973-2073-7472-696e-67209920adb6')
     """
@@ -82,12 +76,3 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument ("sources", metavar="sources", nargs='*', type=str, help="strings to create hashes of")
     options = parser.parse_args()
-
-    # run the unit tests (will be silent unless they fail)
-    doctest.testmod()
-
-    for s in options.sources:
-        print ("%s : {%s}" % (s, hashUuidlikeIdentifier (s)))
-
-if __name__ == "__main__":
-    main ()

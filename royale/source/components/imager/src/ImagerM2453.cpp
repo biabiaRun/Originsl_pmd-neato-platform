@@ -12,21 +12,9 @@
 #include <imager/M2453/ImagerRegisters.hpp>
 #include <imager/M2453/PseudoDataInterpreter.hpp>
 
-#include <common/exceptions/InvalidValue.hpp>
 #include <common/exceptions/LogicError.hpp>
 #include <common/exceptions/NotImplemented.hpp>
-#include <common/exceptions/RuntimeError.hpp>
-#include <common/exceptions/Timeout.hpp>
-#include <common/exceptions/WrongState.hpp>
-#include <common/MakeUnique.hpp>
 #include <common/NarrowCast.hpp>
-
-#include <algorithm>
-#include <array>
-#include <cmath>
-#include <iostream>
-#include <iomanip>
-#include <thread>
 
 using namespace std;
 using namespace royale::imager;
@@ -69,260 +57,18 @@ namespace
 }
 
 ImagerM2453::ImagerM2453 (const ImagerParameters &params) :
-    m_bridge {params.bridge},
-    m_registerAccess {common::makeUnique<ImagerRegisterAccess> (params.bridge) },
-    m_externalConfig {params.externalConfig},
-    m_systemFrequency {params.systemFrequency},
-    m_executingUseCaseIdentifier {},
-    m_cachedConfigChangeCounter {0},
-    m_cachedUseCaseChangeCounter {0},
-    m_usesInternalCurrentMonitor {params.usesInternalCurrentMonitor},
-    m_lastStopTime{}
+    FlashDefinedImagerComponent (params)
 {
-    if (m_bridge == nullptr)
-    {
-        throw LogicError ("nullref exception");
-    }
-
-    if (!m_externalConfig)
-    {
-        throw RuntimeError ("this imager needs to have an external configuration provided");
-    }
-
-    if (!m_externalConfig->getUseCaseList().size())
-    {
-        throw RuntimeError ("the external configuration needs to contain at least one use case");
-    }
-
-    m_imagerState = ImagerState::Virgin;
 }
 
-bool ImagerM2453::configChangePending()
+ExpoTimeRegInfo ImagerM2453::getExpoTimeRegInfo()
 {
-    uint16_t flags;
-    m_bridge->readImagerRegister (M2453::CFGCNT_FLAGS, flags);
-
-    // Bit 0: config_changed.
-    // Bit 1: use_case_changed
-    return (flags & 3u) != 0u;
-}
-
-// This should only be called when configChangePending() returned false and the imager is capturing
-uint16_t ImagerM2453::triggerConfigChange()
-{
-    m_bridge->writeImagerRegister (M2453::CFGCNT_FLAGS, 0x0001u); // config_changed
-
-    auto prevConfigChangedCounter = m_cachedConfigChangeCounter++;
-    m_cachedConfigChangeCounter &= 0x0FFFu; // 12 bits
-
-    return prevConfigChangedCounter;
-}
-
-// This should only be called when configChangePending() returned false and the imager is capturing
-uint16_t ImagerM2453::triggerUseCaseChange()
-{
-    m_bridge->writeImagerRegister (M2453::CFGCNT_FLAGS, 0x0002u); // use_case_changed
-
-    auto prevConfigChangedCounter = m_cachedUseCaseChangeCounter++;
-    m_cachedUseCaseChangeCounter &= 0x0FFFu; // 12 bits
-
-    return prevConfigChangedCounter;
-}
-
-void ImagerM2453::initialize()
-{
-    if (ImagerState::PowerUp != m_imagerState)
-    {
-        throw WrongState();
-    }
-
-    m_registerAccess->transferRegisterMapAuto (m_externalConfig->getInitializationMap());
-
-    //transfer the firmware (no-op if no firmware provided)
-    m_registerAccess->transferRegisterMapAuto (m_externalConfig->getFirmwarePage1());
-    m_registerAccess->transferRegisterMapAuto (m_externalConfig->getFirmwarePage2());
-    m_registerAccess->transferRegisterMapAuto (m_externalConfig->getFirmwareStartMap());
-
-    m_imagerState = ImagerState::Ready;
-}
-
-string ImagerM2453::getSerialNumber()
-{
-    //read efuses and create an unique string that identifies the sensor
-    std::vector < uint16_t > vals = getSerialRegisters();
-
-    return ImagerM2453Serial (vals).toString();
-}
-
-void ImagerM2453::wake()
-{
-    if (ImagerState::PowerDown != m_imagerState)
-    {
-        throw WrongState();
-    }
-
-    this_thread::sleep_for (chrono::microseconds (1));
-    m_bridge->setImagerReset (false);
-
-    m_imagerState = ImagerState::PowerUp;
-}
-
-void ImagerM2453::sleep()
-{
-    if (ImagerState::Virgin != m_imagerState &&
-            ImagerState::PowerUp != m_imagerState &&
-            ImagerState::Ready != m_imagerState)
-    {
-        throw WrongState();
-    }
-
-    //set reset line to power down the imager
-    m_bridge->setImagerReset (true);
-
-    m_cachedConfigChangeCounter = 0u;
-    m_cachedUseCaseChangeCounter = 0u;
-
-    m_imagerState = ImagerState::PowerDown;
-    m_lastStopTime = WaitClockType::now();
-}
-
-void ImagerM2453::startCapture()
-{
-    if (ImagerState::Ready != m_imagerState)
-    {
-        throw WrongState();
-    }
-
-    const auto &useCaseData = getUseCaseDataByIdentifier (m_executingUseCaseIdentifier);
-    auto waitUntil = m_lastStopTime + useCaseData.waitTime;
-    auto now = WaitClockType::now();
-    if (waitUntil > now)
-    {
-        m_bridge->sleepFor (std::chrono::duration_cast<std::chrono::microseconds> (waitUntil - now));
-    }
-
-    m_registerAccess->transferRegisterMapAuto (m_externalConfig->getStartMap());
-
-    m_imagerState = ImagerState::Capturing;
-}
-
-void ImagerM2453::reconfigureExposureTimes (const std::vector<uint32_t> &exposureTimes, uint16_t &reconfigIndex)
-{
-    if (ImagerState::Capturing != m_imagerState)
-    {
-        throw WrongState();
-    }
-
-    const auto &useCaseData = getUseCaseDataByIdentifier (m_executingUseCaseIdentifier);
-    if (useCaseData.modulationFrequencies.size() > M2453::nSequenceEntries)
-    {
-        throw LogicError ("Imager config has too many sequence entries!");
-    }
-    if (exposureTimes.size() != useCaseData.modulationFrequencies.size())
-    {
-        throw invalid_argument ("Number of exposure times doesn't fit current usecase");
-    }
-
-    std::map < uint16_t, uint16_t > regMap;
-
-    auto nExposureTimes = exposureTimes.size();
-    const auto expoTimeStride = M2453::CFGCNT_S01_EXPOTIME - M2453::CFGCNT_S00_EXPOTIME;
-    for (size_t idx = 0; idx < nExposureTimes; ++idx)
-    {
-        auto regVal = calcRegExposure (exposureTimes.at (idx), useCaseData.modulationFrequencies.at (idx));
-        auto reg = static_cast<uint16_t> (M2453::CFGCNT_S00_EXPOTIME + idx * expoTimeStride);
-        regMap[reg] = regVal;
-    }
-
-    // Prevent exposure changes if there is still a change pending.
-    // (we might also block here)
-    if (configChangePending())
-    {
-        throw RuntimeError ("Can't update exposure times while config change is still pending");
-    }
-
-    // Now actually write to the imager.
-    for (const auto &r : regMap)
-    {
-        m_bridge->writeImagerRegister (r.first, r.second);
-    }
-
-    // and trigger the update.
-    reconfigIndex = triggerConfigChange();
-}
-
-void ImagerM2453::reconfigureTargetFrameRate (uint16_t targetFrameRate, uint16_t &reconfigIndex)
-{
-    throw NotImplemented();
-}
-
-uint16_t ImagerM2453::stopCapture()
-{
-    if (ImagerState::Capturing != m_imagerState)
-    {
-        throw WrongState();
-    }
-
-    m_registerAccess->transferRegisterMapAuto (m_externalConfig->getStopMap());
-
-    m_imagerState = ImagerState::Ready;
-    m_lastStopTime = WaitClockType::now();
-    return 0u;
-}
-
-const IImagerExternalConfig::UseCaseData &ImagerM2453::getUseCaseDataByIdentifier (const ImagerUseCaseIdentifier &useCaseIdentifier) const
-{
-    for (const auto &useCaseData : m_externalConfig->getUseCaseList())
-    {
-        if (useCaseData.guid == useCaseIdentifier)
-        {
-            return useCaseData;
-        }
-    }
-
-    throw invalid_argument ("A valid use case identifier must be provided to this function call");
-}
-
-ImagerVerificationStatus ImagerM2453::verifyUseCase (const ImagerUseCaseIdentifier &useCaseIdentifier)
-{
-    try
-    {
-        const auto &useCaseData = getUseCaseDataByIdentifier (useCaseIdentifier);
-
-        if (useCaseData.sequentialRegisterHeader.flashConfigAddress >> 24)
-        {
-            return ImagerVerificationStatus::FLASH_CONFIG;
-        }
-    }
-    catch (const invalid_argument &)
-    {
-        return ImagerVerificationStatus::USECASE_IDENTIFIER;
-    }
-
-    return ImagerVerificationStatus::SUCCESS;
-}
-
-void ImagerM2453::executeUseCase (const ImagerUseCaseIdentifier &useCaseIdentifier)
-{
-    if (ImagerState::Ready != m_imagerState)
-    {
-        throw WrongState();
-    }
-
-    m_executingUseCaseIdentifier = ImagerUseCaseIdentifier{};
-
-    const auto &useCaseData = getUseCaseDataByIdentifier (useCaseIdentifier);
-
-    if (!useCaseData.sequentialRegisterHeader.empty())
-    {
-        doFlashToImagerUseCaseTransfer (useCaseData);
-    }
-    else
-    {
-        m_registerAccess->transferRegisterMapAuto (useCaseData.registerMap);
-    }
-
-    m_executingUseCaseIdentifier = useCaseData.guid;
+    ExpoTimeRegInfo info;
+    info.nSequenceEntries = M2453::nSequenceEntries;
+    info.CFGCNT_S00_EXPOTIME_Address = M2453::CFGCNT_S00_EXPOTIME;
+    info.CFGCNT_S01_EXPOTIME_Address = M2453::CFGCNT_S01_EXPOTIME;
+    info.CFGCNT_FLAGS_Address = M2453::CFGCNT_FLAGS;
+    return info;
 }
 
 void ImagerM2453::doFlashToImagerUseCaseTransfer (const IImagerExternalConfig::UseCaseData &useCaseData)
@@ -379,48 +125,4 @@ void ImagerM2453::doFlashToImagerBlockTransfer (uint32_t flashAddress, uint16_t 
 
     //wait for the transfer to finish
     m_registerAccess->pollUntil (M2453::SPISTATUS, 1u, DEFAULT_TIME_BLOCK_TRANSFER, POLLING_INTERVAL);
-}
-
-uint16_t ImagerM2453::calcRegExposure (uint32_t expoTime, uint32_t modfreq) const
-{
-    static const std::array<uint16_t, 4> prescaleMap = { { 1, 8, 32, 128 } };
-
-    auto texpo = [ = ] (uint16_t preScaler)
-    {
-        return std::floor (static_cast<double> (expoTime) * static_cast<double> (modfreq) / static_cast<double> (1.0e6 * preScaler));
-    };
-
-    for (std::size_t preScaler = 0; preScaler < prescaleMap.size(); preScaler++)
-    {
-        if (texpo (prescaleMap[preScaler]) <= (double) 0x3FFF)
-        {
-            return static_cast<uint16_t> (static_cast<uint16_t> (texpo (prescaleMap[preScaler])) | preScaler << 14);
-        }
-    }
-
-    // \todo JIRA-3090 this throw is unreachable, because the time was already checked in isValidExposureTime
-    throw OutOfBounds ("Exposure time can not be represented to the imager");
-}
-
-vector<size_t> ImagerM2453::getMeasurementBlockSizes() const
-{
-    for (const auto &useCaseData : m_externalConfig->getUseCaseList())
-    {
-        if (useCaseData.guid == m_executingUseCaseIdentifier)
-        {
-            return{ useCaseData.imageStreamBlockSizes };
-        }
-    }
-
-    throw LogicError ("No use case was executed before");
-}
-
-void ImagerM2453::setLoggingListener (IImageSensorLoggingListener *)
-{
-    throw NotImplemented();
-}
-
-void ImagerM2453::setExternalTrigger (bool)
-{
-    throw InvalidValue();
 }

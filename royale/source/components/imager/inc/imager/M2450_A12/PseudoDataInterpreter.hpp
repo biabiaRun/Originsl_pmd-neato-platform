@@ -96,12 +96,7 @@ namespace royale
                     return adcValue * k + d;
                 }
 
-                void getTemperatureRawValues (const common::ICapturedRawFrame &frame,
-                                              uint16_t &vRef1,
-                                              uint16_t &vNtc1,
-                                              uint16_t &vRef2,
-                                              uint16_t &vNtc2,
-                                              uint16_t &offset) const override
+                std::vector<uint16_t> getTemperatureRawValues (const common::ICapturedRawFrame &) const override
                 {
                     throw royale::common::NotImplemented ("Not supported");
                 }

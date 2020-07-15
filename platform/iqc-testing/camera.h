@@ -10,24 +10,33 @@
 #include <CameraFactory.hpp>
 
 
-class DepthDataListener : public royale::IDepthDataListener
+class MyRawListener : public royale::IExtendedDataListener
 {
 public:
-    DepthDataListener() :
+    MyRawListener() :
         m_count (0)
     {
     }
 
-    void onNewData (const royale::DepthData *data) override
+    void onNewData (const royale::IExtendedData *data) override
     {
         m_count++;
-        m_streamIds.insert (data->streamId);
-        m_expoTimes = data->exposureTimes;
+
+        if (data->hasDepthData()) {
+          auto depth = data->getDepthData();
+          m_streamIds.insert (depth->streamId);
+          m_expoTimes = depth->exposureTimes;
+        }
+        if (data->hasRawData()) {
+          auto raw = data->getRawData();
+          m_cur_temp.push_back(raw->illuminationTemperature);
+        }
     }
 
     std::set<royale::StreamId> m_streamIds;
     royale::Vector<uint32_t> m_expoTimes;
     int m_count;
+    std::vector<float> m_cur_temp;
 };
 
 class Camera
@@ -41,7 +50,7 @@ public:
     }
 
     std::unique_ptr<royale::ICameraDevice> camera_; // The camera device
-    DepthDataListener depthListener_;
+    MyRawListener rawListener_;
     int access_level_;
     std::string id_;                                // Unique ID for the camera device
     royale::String use_case_;                       // Camera use_case_

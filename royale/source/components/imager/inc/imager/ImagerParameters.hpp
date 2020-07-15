@@ -12,6 +12,7 @@
 
 #include <hal/IBridgeImager.hpp>
 #include <config/IImagerExternalConfig.hpp>
+#include <config/ImConnectedTemperatureSensor.hpp>
 #include <imager/ImagerRawFrame.hpp>
 
 #include <map>
@@ -67,7 +68,7 @@ namespace royale
             const std::shared_ptr<royale::hal::IBridgeImager> bridge;
             const std::shared_ptr<const IImagerExternalConfig> externalConfig;
             const bool useSuperframe;
-            const bool ntcSensorUsed;
+            const royale::config::ImConnectedTemperatureSensor tempSensor;
             const ImgTrigger externalTrigger;
             const ImgImageDataTransferType imageDataTransferType;
             const double interfaceDelay;

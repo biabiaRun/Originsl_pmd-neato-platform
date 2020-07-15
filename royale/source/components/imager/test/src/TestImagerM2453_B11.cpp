@@ -133,7 +133,8 @@ protected:
     */
     void createImager (std::shared_ptr<const royale::imager::IImagerExternalConfig> externalConfig)
     {
-        ImagerParameters params{ m_bridge, std::move (externalConfig), true, false,
+        ImagerParameters params{ m_bridge, std::move (externalConfig), true,
+                                 royale::config::ImConnectedTemperatureSensor::NONE,
                                  ImgTrigger::I2C, ImgImageDataTransferType::MIPI_2LANE, 0.f, {},
                                  SYSFREQ, ImagerRawFrame::ImagerDutyCycle::DC_50,
                                  ImgIlluminationPad::SE_P, 90000000, false };
@@ -234,7 +235,8 @@ protected:
 
 TEST (TestImagerM2453_B11_Nofixture, CreateImagerDirectly)
 {
-    ImagerParameters params{ nullptr, nullptr, true, false,
+    ImagerParameters params{ nullptr, nullptr, true,
+                             royale::config::ImConnectedTemperatureSensor::NONE,
                              ImgTrigger::I2C, ImgImageDataTransferType::MIPI_2LANE, 0.f, {},
                              SYSFREQ, ImagerRawFrame::ImagerDutyCycle::DC_50,
                              ImgIlluminationPad::SE_P, 90000000, false };
@@ -391,20 +393,10 @@ TEST_F (TestImagerM2453_B11_Hardcoded, NotSupportSetExternalTrigger)
     ASSERT_THROW (m_imager->setExternalTrigger (false), InvalidValue);
 }
 
-/**
- * The M2453_B11 supports this, although the M2453_A11 does not.
- */
-TEST_F (TestImagerM2453_B11_Lena, SupportReconfigureTargetFrameRate)
+TEST_F (TestImagerM2453_B11_Lena, NotSupportReconfigureTargetFrameRate)
 {
     uint16_t idx;
-    ASSERT_THROW (m_imager->reconfigureTargetFrameRate (0u, idx), WrongState);
-
-    ASSERT_NO_THROW (m_imager->wake());
-    ASSERT_NO_THROW (m_imager->initialize());
-    ASSERT_NO_THROW (m_imager->executeUseCase (m_extCfgUseCase1));
-    ASSERT_NO_THROW (m_imager->startCapture());
-
-    ASSERT_NO_THROW (m_imager->reconfigureTargetFrameRate (1u, idx));
+    ASSERT_THROW (m_imager->reconfigureTargetFrameRate (0u, idx), NotImplemented);
 }
 
 TEST_F (TestImagerM2453_B11_Hardcoded, MeasurementBlocksNoExecutingUseCase)
@@ -513,4 +505,37 @@ TEST_F (TestImagerM2453_B11_Uncreated, FlashTransferNonDefaultLocation)
         // ASSERT_TRUE (imagerRegisters.count (loadAddress)) << "Software imager changed behavior, but not to the imagerAddress";
         // ASSERT_EQ (flashTestData, imagerRegisters.at (loadAddress));
     }
+}
+
+TEST_F (TestImagerM2453_B11_Hardcoded, FlashTransferConfigTest)
+{
+    //put a dummy test configuration into the flash
+    static_assert (flashConfigSmallSizeInRegisters == 1, "Config does not match test code");
+    const uint16_t flashTestData = 0x1234;
+    pushMapBe16 (*m_simImager->getFlashMemorySpace(), flashConfigAddress, flashTestData);
+
+    uint16_t lowerAddress, upperAddress;
+
+    upperAddress = static_cast<uint16_t> ( (flashConfigAddress & 0xFF0000) >> 16);
+    lowerAddress = static_cast<uint16_t> (flashConfigAddress & 0x00FFFF);
+
+    m_simImager->writeRegister (M2453_B11::SFR_CFGCNT_TESTRES, 0xAAAA);
+
+    //execute the flash based use case
+    ASSERT_NO_THROW (m_imager->wake());
+    ASSERT_NO_THROW (m_imager->initialize());
+    ASSERT_NO_THROW (m_imager->executeUseCase (flashBasedSmallUseCaseId));
+
+    //the configuration must have been copied from the flash into the imager memory space
+    const auto imagerRegisters = m_simImager->getImagerRegisters();
+    ASSERT_TRUE (imagerRegisters.count (M2453_B11::SFR_CFGCNT_GENERIC_FW_PARAM_0));
+    ASSERT_EQ (lowerAddress, imagerRegisters.at (M2453_B11::SFR_CFGCNT_GENERIC_FW_PARAM_0));
+    ASSERT_TRUE (imagerRegisters.count (M2453_B11::SFR_CFGCNT_GENERIC_FW_PARAM_1));
+    ASSERT_EQ (upperAddress, imagerRegisters.at (M2453_B11::SFR_CFGCNT_GENERIC_FW_PARAM_1));
+    ASSERT_TRUE (imagerRegisters.count (M2453_B11::FUNCNUM));
+    ASSERT_EQ (0x0007, imagerRegisters.at (M2453_B11::FUNCNUM));
+    ASSERT_TRUE (imagerRegisters.count (M2453_B11::RESTARTV_EN));
+    ASSERT_EQ (0x0004, imagerRegisters.at (M2453_B11::RESTARTV_EN));
+    ASSERT_TRUE (imagerRegisters.count (M2453_B11::ISM_CTRL));
+    ASSERT_EQ (0x0008, imagerRegisters.at (M2453_B11::ISM_CTRL));
 }

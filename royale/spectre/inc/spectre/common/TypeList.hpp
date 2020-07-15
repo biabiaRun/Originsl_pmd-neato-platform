@@ -16,9 +16,10 @@ namespace spectre
     {
         /// Template which holds a list of types (typelist)
         /**
-         * The TypeList holds a list of types. It allows to traverse through the list
-         * using the head typedef (which is the first type in the list), and the tail
-         * typedef which defines a new type list without the current head.
+         * The TypeList holds a list of types. It allows to traverse through the
+         * list using the head typedef (which is the first type in the list),
+         * and the tail typedef which defines a new type list without the
+         * current head.
          *
          * *NOTE:* For convenience the last entry of the TypeList still defines
          * a tail entry returning the same entry. To check for the last entry,
@@ -44,5 +45,5 @@ namespace spectre
 
             static const bool last = true;
         };
-    }
-}
+    } // namespace common
+} // namespace spectre

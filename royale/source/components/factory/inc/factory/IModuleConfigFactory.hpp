@@ -51,14 +51,19 @@ namespace royale
              * Given an initialized bridge factory, the factory method should
              * return a ModuleConfig that corresponds to the connected hardware.
              *
-             * Implementations are allowd to instantiate bridge interfaces in
+             * Implementations are allowed to instantiate bridge interfaces in
              * the bridge factory and access the hardware if necessary.
              *
+             * If no ModuleConfig is found and the access level is 3 or 4 this might
+             * return a default ModuleConfig.
+             *
              * \param bridgeFactory The bridge factory for the device, already initialized.
+             * \param accessLevel The access level to open the device
              * \return A complete ModuleConfig, or nullptr if it cannot be determined.
              */
             virtual std::shared_ptr<const royale::config::ModuleConfig>
-            probeAndCreate (royale::factory::IBridgeFactory &bridgeFactory) const = 0;
+            probeAndCreate (royale::factory::IBridgeFactory &bridgeFactory,
+                            royale::CameraAccessLevel accessLevel = royale::CameraAccessLevel::L3) const = 0;
 
             /**
              * Return a possibly-incomplete list of all ModuleConfigs that could be returned by

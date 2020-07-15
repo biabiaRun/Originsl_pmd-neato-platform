@@ -99,25 +99,25 @@ double LinuxSystemInfo::getProcCpuUsage ()
     {
         return 0.0;
     }
-    utime = atoll (part);
+    utime = static_cast<unsigned long long> (atoll (part));
     part = strtok (NULL, " ");
     if (part == nullptr)
     {
         return 0.0;
     }
-    stime = atoll (part);
+    stime = static_cast<unsigned long long> (atoll (part));
     part = strtok (NULL, " ");
     if (part == nullptr)
     {
         return 0.0;
     }
-    cutime = atoll (part);
+    cutime = static_cast<unsigned long long> (atoll (part));
     part = strtok (NULL, " ");
     if (part == nullptr)
     {
         return 0.0;
     }
-    cstime = atoll (part);
+    cstime = static_cast<unsigned long long> (atoll (part));
 
     unsigned long long preProcTime = preUtime + preStime + preCutime + preCstime;
     unsigned long long procTime = utime + stime + cutime + cstime;

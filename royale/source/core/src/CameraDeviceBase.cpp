@@ -12,6 +12,8 @@
 #include <common/FileSystem.hpp>
 #include <common/exceptions/APIExceptionHandling.hpp>
 #include <common/RoyaleLogger.hpp>
+#include <royale/RecordDummy.hpp>
+#include <common/MakeUnique.hpp>
 
 using namespace royale;
 using namespace royale;
@@ -29,7 +31,7 @@ CameraDeviceBase::CameraDeviceBase (CameraAccessLevel level, const std::string &
     m_currentUseCaseName ("NOT_VALID"),
     m_callbackData ( (uint16_t) cbData),
     m_accessLevel (level),
-    m_recording (nullptr),
+    m_recording (makeUnique<RecordDummy>()),
     m_recordStopListener (nullptr),
     m_processing (processing),
     m_exposureLimits (0, 0),
@@ -140,6 +142,17 @@ CameraStatus CameraDeviceBase::unregisterIRImageListener() ROYALE_API_EXCEPTION_
     return setupListeners();
 } ROYALE_API_EXCEPTION_SAFE_END
 
+CameraStatus CameraDeviceBase::registerDepthIRImageListener (IDepthIRImageListener *listener) ROYALE_API_EXCEPTION_SAFE_BEGIN
+{
+    return setSingleListener<IDepthIRImageListener> (listener, &m_listeners.depthIrImageListener);
+} ROYALE_API_EXCEPTION_SAFE_END
+
+CameraStatus CameraDeviceBase::unregisterDepthIRImageListener() ROYALE_API_EXCEPTION_SAFE_BEGIN
+{
+    m_listeners.depthIrImageListener = nullptr;
+    return setupListeners();
+} ROYALE_API_EXCEPTION_SAFE_END
+
 CameraStatus CameraDeviceBase::registerDataListenerExtended (IExtendedDataListener *listener) ROYALE_API_EXCEPTION_SAFE_BEGIN
 {
     ROYALE_ACCESS_LEVEL_CHECK (CameraAccessLevel::L2)
@@ -174,12 +187,16 @@ CameraStatus CameraDeviceBase::unregisterDataListener() ROYALE_API_EXCEPTION_SAF
 CameraStatus CameraDeviceBase::registerEventListener (royale::IEventListener *listener) ROYALE_API_EXCEPTION_SAFE_BEGIN
 {
     m_eventListener = listener;
+    m_processing->registerEventListener (m_eventListener);
+    m_recording->registerEventListener (m_eventListener);
     return CameraStatus::SUCCESS;
 } ROYALE_API_EXCEPTION_SAFE_END
 
 CameraStatus CameraDeviceBase::unregisterEventListener() ROYALE_API_EXCEPTION_SAFE_BEGIN
 {
     m_eventListener = nullptr;
+    m_processing->unregisterEventListener();
+    m_recording->unregisterEventListener();
     return CameraStatus::SUCCESS;
 } ROYALE_API_EXCEPTION_SAFE_END
 
@@ -415,3 +432,15 @@ CameraStatus CameraDeviceBase::getProcessingParameters (ProcessingParameterVecto
     parameters = ProcessingParameterVector::fromStdMap<ProcessingFlag, Variant> (parameterMap);
     return CameraStatus::SUCCESS;
 } ROYALE_API_EXCEPTION_SAFE_END
+
+void CameraDeviceBase::setRecordingEngine(std::unique_ptr<IRecord> recording)
+{
+    if (recording)
+    {
+        m_recording = std::move (recording);
+    }
+    else
+    {
+        m_recording = makeUnique<RecordDummy>();
+    }
+}

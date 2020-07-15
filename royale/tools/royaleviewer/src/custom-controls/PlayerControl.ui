@@ -71,6 +71,38 @@
        </property>
       </widget>
      </item>
+     <item row="3" column="0" rowspan="1" colspan="1">
+      <widget class="QSpinBox" name="rangeStart">
+       <property name="Visible">
+        <bool>false</bool>
+       </property>
+       <property name="styleSheet">
+         <string notr="true">
+           background-color: rgb(0, 0, 0);
+           color: rgb(255, 255, 255);font: 10pt;
+         </string>
+       </property>
+       <property name="alignment">
+         <set>Qt::AlignRight</set>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="2" rowspan="1" colspan="1">
+      <widget class="QSpinBox" name="rangeEnd">
+       <property name="Visible">
+        <bool>false</bool>
+       </property>
+       <property name="styleSheet">
+         <string notr="true">
+           background-color: rgb(0, 0, 0);
+           color: rgb(255, 255, 255);font: 10pt;
+         </string>
+       </property>
+       <property name="alignment">
+         <set>Qt::AlignRight</set>
+       </property>
+      </widget>
+     </item>
      <item row="0" column="1">
       <widget class="PMDButton" name="playStopButton">
        <property name="focusPolicy">

@@ -18,12 +18,14 @@ DataSelectorView::DataSelectorView (QWidget *parent) : PMDView (parent)
     ui.grayButton->resize (1.0f, 1.0f);
     ui.uniformButton->resize (1.0f, 1.0f);
     ui.overlayButton->resize (1.0f, 1.0f);
+    ui.flagButton->resize (1.0f, 1.0f);
     layout()->setSizeConstraint (QLayout::SetMaximumSize);
 
     QObject::connect (ui.distanceButton, SIGNAL (clicked()), this, SLOT (distanceButtonAction()));
     QObject::connect (ui.grayButton, SIGNAL (clicked()), this, SLOT (grayButtonAction()));
     QObject::connect (ui.uniformButton, SIGNAL (clicked()), this, SLOT (uniButtonAction()));
     QObject::connect (ui.overlayButton, SIGNAL (clicked()), this, SLOT (overlayButtonAction()));
+    QObject::connect (ui.flagButton, SIGNAL (clicked()), this, SLOT (flagButtonAction()));
 }
 
 void DataSelectorView::distanceButtonAction()
@@ -51,6 +53,10 @@ void DataSelectorView::overlayButtonAction()
     emit dataSelectorSwitched (DataSelector_Overlay);
 }
 
+void DataSelectorView::flagButtonAction()
+{
+    emit dataSelectorSwitched (DataSelector_Flagged);
+}
 
 void DataSelectorView::displayUniformMode (bool visible)
 {
@@ -58,4 +64,9 @@ void DataSelectorView::displayUniformMode (bool visible)
     // If the 2D widget is active we should not display the uniform
     // option
     ui.uniformButton->setVisible (visible);
+}
+
+void DataSelectorView::displayflagged (bool visible)
+{
+    ui.flagButton->setVisible (visible);
 }

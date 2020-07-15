@@ -50,7 +50,7 @@
      <property name="spacing">
       <number>0</number>
      </property>
-     <item row="3" column="0">
+     <item row="2" column="0">
       <widget class="QLabel" name="label">
        <property name="styleSheet">
         <string notr="true">color: rgb(255, 255, 255);</string>
@@ -106,7 +106,7 @@
        </property>
       </widget>
      </item>
-     <item row="4" column="0">
+     <item row="3" column="0">
       <widget class="QLabel" name="label_5">
        <property name="styleSheet">
         <string notr="true">color: rgb(255, 255, 255);</string>
@@ -116,7 +116,7 @@
        </property>
       </widget>
      </item>
-     <item row="3" column="1">
+     <item row="2" column="1">
       <widget class="QLabel" name="grayLabel">
        <property name="styleSheet">
         <string notr="true">color: rgb(255, 255, 255);</string>
@@ -129,31 +129,8 @@
        </property>
       </widget>
      </item>
-     <item row="4" column="1">
+     <item row="3" column="1">
       <widget class="QLabel" name="confidenceLabel">
-       <property name="styleSheet">
-        <string notr="true">color: rgb(255, 255, 255);</string>
-       </property>
-       <property name="text">
-        <string>TextLabel</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="0">
-      <widget class="QLabel" name="label_4">
-       <property name="styleSheet">
-        <string notr="true">color: rgb(255, 255, 255);</string>
-       </property>
-       <property name="text">
-        <string>noise</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="1">
-      <widget class="QLabel" name="noiseLabel">
        <property name="styleSheet">
         <string notr="true">color: rgb(255, 255, 255);</string>
        </property>

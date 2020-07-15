@@ -47,12 +47,14 @@ set(SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/TestSensorRoutingConfig.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/TestStatus.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/TestString.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/TestStringFunctions.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/TestTemperatureMonitor.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/TestTemperatureSensorCheckAdapter.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/TestUseCase.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/TestUseCaseArbitraryPhases.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/TestUseCaseDefFactoryProcessingOnly.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/TestUseCaseDefinition.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/TestUseCaseFaceID.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/TestUseCaseFourPhase.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/TestUseCaseSlave.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/TestUuidlikeIdentifier.cpp"
@@ -93,22 +95,24 @@ add_test(
     )
 
 if(ROYALE_ENABLE_COV)
+    SET(COVERAGE_LCOV_EXCLUDES '/usr/include/*' '${ROYALE_SOURCE_DIR}/contrib/*' '${ROYALE_SOURCE_DIR}/spectre/*' '${ROYALE_SOURCE_DIR}/source/core/test/*')
+
     if(ROYALE_COVERAGE_GCOVR)
-        SETUP_TARGET_FOR_COVERAGE_COBERTURA(
-            coverage_test_royalecore
-            test_royalecore
-            coverage_test_royalecore
+        SETUP_TARGET_FOR_COVERAGE_GCOVR_XML(
+            NAME coverage_royalecore
+            EXECUTABLE test_royalecore
+            DEPENDENCIES test_royalecore
             )
     else()
-        SETUP_TARGET_FOR_COVERAGE(
-            coverage_test_royalecore
-            test_royalecore
-            coverage_test_royalecore
+        SETUP_TARGET_FOR_COVERAGE_LCOV(
+            NAME coverage_royalecore
+            EXECUTABLE test_royalecore
+            DEPENDENCIES test_royalecore
             )
     endif()
 
-    SET_TARGET_PROPERTIES(coverage_test_royalecore
+    SET_TARGET_PROPERTIES(coverage_royalecore
         PROPERTIES
-        FOLDER coverage_test_royalecore
+        FOLDER coverage_royalecore
         )
 endif()

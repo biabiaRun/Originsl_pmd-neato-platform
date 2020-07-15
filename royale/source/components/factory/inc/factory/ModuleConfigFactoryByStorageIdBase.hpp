@@ -78,7 +78,7 @@ namespace royale
              * active.
              */
             ROYALE_API std::shared_ptr<royale::config::ModuleConfig> readAndCreate (royale::hal::INonVolatileStorage &storage,
-                    bool cacheOnDisk) const;
+                    bool cacheOnDisk, royale::CameraAccessLevel accessLevel = royale::CameraAccessLevel::L3) const;
 
             /**
              * If a defaultId was provided return the default config with its FlashMemoryType set

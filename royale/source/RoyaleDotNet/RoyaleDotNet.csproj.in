@@ -9,7 +9,7 @@
     <AppDesignerFolder>@CMAKE_CURRENT_BIN_DIR@\Properties</AppDesignerFolder>
     <RootNamespace>RoyaleDotNet</RootNamespace>
     <AssemblyName>RoyaleDotNet</AssemblyName>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
   </PropertyGroup>
@@ -104,6 +104,7 @@
     <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\ExposureMode.cs" />
     <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\ExtendedData.cs" />
     <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\ExtendedDataListener.cs" />
+    <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\FilterLevel.cs" />
     <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\IntermediateData.cs" />
     <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\IRImage.cs" />
     <Compile Include="@DOT_NET_WRAPPER_SRC_DIR@\IRImageListener.cs" />

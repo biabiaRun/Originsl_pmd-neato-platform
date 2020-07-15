@@ -81,9 +81,47 @@ namespace RoyaleDotNet
         UseFlagSBI_Bool,
         ///Enable/Disable the hole filling algorithm
         UseHoleFilling_Bool,
+
+        Reserved1,
+        Reserved2,
+        Reserved3,
+        Reserved4,
+        Reserved5,
+        Reserved6,
+        Reserved7,
+        Reserved8,
+
         ///The minimum value for the auto exposure algorithm
         AutoExpoMin_Int,
         ///The maximum value for the auto exposure algorithm
         AutoExpoMax_Int,
+        ///The type of processing used by Spectre
+        SpectreProcessingType_Int,
+        ///Uses the fallback image in the gray image pipeline as amplitude image
+        UseGrayImageFallbackAmplitude_Bool,
+        ///Value where the mean of the gray image is mapped to
+        GrayImageMeanMap_Int,
+        ///SigmaD
+        NoiseFilterSigmaD_Float,
+        ///Iterations of the noise filter
+        NoiseFilterIterations_Int,
+        ///Angle limit of the flying pixel algorithm
+        FlyingPixelAngleLimit_Float,
+        ///Amplitude threshold of the flying pixel algorithm
+        FlyingPixelAmpThreshold_Float,
+        ///Minimum neighbors for the flying pixel algorithm
+        FlyingPixelMinNeighbors_Int,
+        ///Maximum neighbors for the flying pixel algorithm
+        FlyingPixelMaxNeighbors_Int,
+        ///Noiseratio threshold
+        FlyingPixelNoiseRatioThresh_Float,
+        ///Reset value for the smoothing
+        SmoothingFilterResetThreshold_Float,
+        ///Connected components threshold
+        CCThresh_Int,
+        ///PhaseNoise threshold
+        PhaseNoiseThresh_Float,
+        ///Straylight threshold
+        StraylightThreshold_Float,
     };
 }

@@ -57,9 +57,10 @@ namespace royale
 #if defined(TARGET_PLATFORM_ANDROID)
             std::vector<std::unique_ptr<royale::factory::ICameraCoreBuilder>> probeDevices (uint32_t androidUsbDeviceFD,
                     uint32_t androidUsbDeviceVid,
-                    uint32_t androidUsbDevicePid);
+                    uint32_t androidUsbDevicePid,
+                    royale::CameraAccessLevel accessLevel);
 #else
-            std::vector<std::unique_ptr<royale::factory::ICameraCoreBuilder>> probeDevices();
+            std::vector<std::unique_ptr<royale::factory::ICameraCoreBuilder>> probeDevices (royale::CameraAccessLevel accessLevel);
 #endif
             /**
              * Set the event listener for this bridge controller. For the events which could occur,

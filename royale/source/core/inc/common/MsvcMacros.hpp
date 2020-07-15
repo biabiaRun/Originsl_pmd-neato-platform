@@ -10,6 +10,9 @@
 
 #pragma once
 
+#include <sys/stat.h>
+#include <sys/types.h>
+
 #if defined (ROYALE_TARGET_PLATFORM_WINDOWS)
 #define fseek64_royale _fseeki64
 #define ftell64_royale _ftelli64
@@ -29,6 +32,11 @@
 
 
 #ifdef WIN32
+
+// chmod
+#define chmod_royale( path, mode, chmoderror ) \
+chmoderror = _chmod(path, mode); \
+if (chmoderror) chmoderror = errno
 
 // sprintf
 #define sprintf_royale( buf, str, len ) \
@@ -56,9 +64,9 @@ sprintf_s ( buf, len, str,  val1, val2, val3, val4, val5, val6 )
 strncpy_s ( dst, len, msg, max )
 
 // fopen
-#define fopen_royale( file, filename, mode ) \
-auto fopenerror = fopen_s( &file, filename, mode ); \
-if (fopenerror) file = 0;
+#define fopen_royale( file, filename, mode, fopenerror ) \
+fopenerror = fopen_s( &file, filename, mode ); \
+if (fopenerror) file = 0
 
 // fread
 #define fread_royale( buf, bufsize, elsize, elcount, file ) \
@@ -109,6 +117,11 @@ _localtime64_s( tinfo, rtime )
 
 #else
 
+// chmod
+#define chmod_royale( path, mode, chmoderror ) \
+chmoderror = chmod(path, mode); \
+if (chmoderror) chmoderror = errno
+
 // sprintf
 #define sprintf_royale( buf, str, len ) \
 sprintf ( buf, str )
@@ -134,8 +147,10 @@ sprintf ( buf, str, val1, val2, val3, val4, val5 )
 strncpy ( dst, msg, max )
 
 // fopen
-#define fopen_royale( file, filename, mode ) \
-file = fopen ( filename, mode )
+#define fopen_royale( file, filename, mode, fopenerror ) \
+errno = 0;  \
+file = fopen ( filename, mode ); \
+fopenerror = errno
 
 // fread
 #define fread_royale( buf, bufsize, elsize, elcount, file ) \

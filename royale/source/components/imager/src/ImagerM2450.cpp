@@ -12,6 +12,7 @@
 #include <common/exceptions/NotImplemented.hpp>
 
 #include <imager/ImagerM2450.hpp>
+#include <imager/M2450/ImagerConstants.hpp>
 #include <imager/M2450_A11/ImagerRegisters.hpp>
 #include <imager/M2450_A11/ImagerBaseConfig.hpp>
 #include <imager/ModPllStrategyM2450_A12.hpp>
@@ -24,6 +25,7 @@
 
 using namespace royale::common;
 using namespace royale::imager;
+using namespace royale::imager::M2450;
 
 const std::map < ImagerRawFrame::ImagerDutyCycle, std::map < uint16_t, uint16_t > > ImagerM2450::PSMAPPING_CLK4 =
 {
@@ -164,6 +166,11 @@ bool ImagerM2450::isValidExposureTime (bool mixedModeActive, size_t overallRawFr
     return regExposure <= 65535.0; //compare if value fits into expo register
 }
 
+/*
+* This function calculates the exact time one raw frame takes during the whole processing.
+* The function shows the different phases of the process and calculates the single values to sum them up at the end.
+* The comments mean the cells in the frame rate calculation excel sheet, since the calculations here are based on this.
+*/
 bool ImagerM2450::calcRawFrameRateTime (
     const ImagerUseCaseDefinition &useCase,
     uint32_t expoTime,
@@ -183,25 +190,55 @@ bool ImagerM2450::calcRawFrameRateTime (
 
     const double fFrameRate = useCase.getRawFrameRate();
 
+    const double clk_illu_equ = FSYSCLK / static_cast<double> (modfreq);
+
+    //==============================================
+    // SequenceCfg Time
+    //==============================================
+
+    //The sequence configuration takes different time depending on if it is the first frame or not (pll locking different)
+    //D76 / D156
+    const double tSeqConfig = isFirstRawFrame ? sequenceCfgTime_1stFrame : sequenceCfgTime_regFrame;
+
+    //==============================================
+    // Exposure Time
+    //==============================================
+
     //calculate exposure register value
     const auto exposureTime = static_cast<double> (expoTime);
     const double regExposure = std::floor (exposureTime * static_cast<double> (modfreq) / static_cast<double> (8.0f * 1.0e6));
 
-    //clk_illu_equ = (1 / rawFrameSet.modulationFrequency) / (1 / FSYSCLK)
-    const double clk_illu_equ = FSYSCLK / static_cast<double> (modfreq);
+    //Calculate the active exposure clock cycles. This consists of the configured exposure time + some additional delays like warmup, ...
+    // J78
+    double cycExposure = std::ceil ( (6 + exposurePreIlluCyc + exposureWarmupCyc + (8 * exposurePreModScaleCyc) + (8.0 * regExposure) + 1 + exposureRhDelayCyc) * clk_illu_equ + 3);
 
-    //cycActiveExposure =
-    //  CEILING((6 + PREILLU(10) + WARMUP(30) + 8 * PREMODSCALE(16) + 8 * regExposure + 1 + RHDELAY(5))*clk_illu_equ + 3; 1)
-    const double cycActiveExposure = std::ceil ( (46.0 + (128.0) + (8.0 * regExposure) + 6.0) * clk_illu_equ + 3.0);
+    //Add the exposure unit start cycles (J77)
+    cycExposure += std::ceil (1 + 2 * clk_illu_equ + 1);
 
-    //tExposure = (cycexpo-up + cycActiveExpo) / fSys = (11 + cycActiveExposure) / fSys
-    const double tExposure = (11.0 + cycActiveExposure) / (FSYSCLK);
+    //Calculate complete exposure time (D79)
+    const double tExposure = cycExposure / FSYSCLK;
 
-    //some constants that change only when interface/SYSCLK changes, lets summarize them:
-    // tToFrameStart = tSequenceConfig + tExposure + tPowerUp + tIfTriggerAndReadout + tPrepareForFrameStart
-    //note: the first frame takes more time (pll locking)
-    const double tSeqConfig = isFirstRawFrame ? 1.15725e-05 : 2.025e-07;
-    const double tToFrameStart = static_cast<double> (tSeqConfig + tExposure + 2.331e-05 + 9e-08 + 1.155e-06);
+    //==============================================
+    // Powerup
+    //==============================================
+
+    //Nothing to calculate, use constant powerUpTime
+
+    //==============================================
+    // Interface trigger and readout config
+    //==============================================
+
+    //Nothing to calculate, use constant ifTrigAndReadoutCfgTime
+
+    //==============================================
+    // Prepare for frame start
+    //==============================================
+
+    //Nothing to calculate, use constant prepareFrameStartTime
+
+    //==============================================
+    // Readout
+    //==============================================
 
     //calculate effective tx pixel
     const bool hasDarkPixels = false;
@@ -212,21 +249,26 @@ bool ImagerM2450::calcRawFrameRateTime (
     const double effectiveTxRows =
         1.0 + sizeRow + static_cast<double> ( (hasDarkPixels ? 1. : 0.) * 16.0);
 
+    //get some delay values which can be different for different imagers (function implemented in sub class)
     double cyc_ss_lblank;
     double cycIfdelay;
     double cycAdcSocd;
     double cycAdcOddd;
     getReadoutDelays (cycIfdelay, cyc_ss_lblank, cycAdcSocd, cycAdcOddd);
 
-    const double cyc_ss_dark = cycAdcSocd + cycAdcOddd;
-    const double cyc_ss_precharge = hasDarkPixels ? 2. : (cycAdcSocd + cycAdcOddd);
-    const double cyc_readout = hasDarkPixels ? 0. : (2. * cycAdcSocd) + cycAdcOddd;
-    const double cycRegLineConst = cyc_ss_lblank + cyc_ss_dark + cyc_ss_precharge + cyc_readout + cycIfdelay + 17.;
+    const double cyc_ss_dark = cycAdcSocd + cycAdcOddd; //J216 = F25 + F26
+    const double cyc_ss_precharge = hasDarkPixels ? 2. : (cycAdcSocd + cycAdcOddd); //J217 = 2 or F25 + F26
+    const double cyc_readout = hasDarkPixels ? 0. : (2. * cycAdcSocd) + cycAdcOddd; //J218 = 0 or (2 * F25) + F26
+    const double cyc_dummy = (dummyConvCyc + 1) * (cycAdcSocd + cycAdcOddd);        //L179
+    const double cyc_adc_conv = effectiveTxPixels / 16 * (cycAdcSocd + cycAdcOddd); //L210
+    //The number of additional cycles that the first line takes longer (differences in J178+J179 vs. J202)
+    const double cyc_diffFirstLine = cyc_dummy + cycAdcSocd + cycAdcOddd - cyc_ss_lblank;
 
     double cycInterface = 0.;
 
     const auto imagerDataTransferType = m_imagerParams.imageDataTransferType;
 
+    //Formula in J210/211:
     switch (imagerDataTransferType)
     {
         case ImgImageDataTransferType::PIF:
@@ -236,6 +278,7 @@ bool ImagerM2450::calcRawFrameRateTime (
             cycInterface = 77. + (effectiveTxPixels * 2.) + 52.; //only valid for disabled short packets
             break;
         case ImgImageDataTransferType::MIPI_2LANE:
+            //J211       = 74  + J33               + 55   => MIPI, 2-Lane, disabled short packets
             cycInterface = 74. + effectiveTxPixels + 55.; //only valid for disabled short packets
             break;
         default:
@@ -243,16 +286,33 @@ bool ImagerM2450::calcRawFrameRateTime (
             break;
     }
 
-    //number of cycles of a "regular line with interface"
-    const double cycRegLineWithInterface = (cycRegLineConst + cycInterface) + 3.;
+    //L189:
+    const double cyc_wait = std::ceil ( (cyc_ss_precharge + cyc_readout + cc_binstatCyc + binstatCyc + cycIfdelay + cc_iftrigCyc + cycInterface) / (cycAdcSocd + cycAdcOddd)) * (cycAdcSocd + cycAdcOddd) - (cycAdcSocd + cycAdcOddd + cyc_adc_conv);
 
-    //n-lines readout time (note: simplified, normally first line would take a few cycles more)
-    const double cycNLinesReadout = (cycRegLineWithInterface + (effectiveTxRows - 1.0) * (cycRegLineWithInterface));
+    //L190:
+    const double cycEndOnOddHandling = cycAdcSocd + cycAdcOddd; //assumes: endOnOdd setting fits cyc_wait
+
+    //number of cycles of a "regular line with interface" => H111 / H134 / H191 / H214
+    //The calculation is a little bit reduced and does not reflect the excel calculation one-to-one. But it produces the same result.
+    const double cycRegLineWithInterface = cyc_ss_lblank + cyc_ss_dark + cyc_ss_precharge + cyc_adc_conv + cyc_wait + cycEndOnOddHandling;
+
+    //n-lines readout cycles and time (binning assumed to be "1") => H145 / H225
+    const double cycNLinesReadout = (effectiveTxRows - 1) * cycRegLineWithInterface + cyc_diffFirstLine;  //The first line takes more cycles so add the diff once
     const double tNLinesReadout = cycNLinesReadout / FSYSCLK;
+
+    //==============================================
+    // Shutdown and framerate
+    //==============================================
+
     const double tShutDownAndFramerate = 50.0 / FSYSCLK;
 
+    //==============================================
+    // Sum up complete frame
+    //==============================================
+
     //calculate raw frame time (assuming there is no frame rate delay counter active)
-    rawFrameTime = tToFrameStart + tNLinesReadout + tShutDownAndFramerate;
+    //This is the sum of all the single phases before
+    rawFrameTime = tSeqConfig + tExposure + powerUpTime + ifTrigAndReadoutCfgTime + prepareFrameStartTime + tNLinesReadout + tShutDownAndFramerate;
 
     bool rawFameRateFeasible = true;
 
@@ -290,4 +350,20 @@ void ImagerM2450::adjustRowCount (uint16_t &row)
 {
     // add one line because pseudodata line replaces the first line
     row++;
+}
+
+bool ImagerM2450::isFirstFrame (const std::vector<ImagerRawFrame> &rfList, size_t index) const
+{
+    if (index == 0)
+    {
+        return true;
+    }
+
+    if (rfList.at (index - 1).isEndOfLinkedMeasurement)
+    {
+        return true;
+    }
+
+    //all remaining cases
+    return false;
 }

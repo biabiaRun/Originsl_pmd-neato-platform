@@ -674,6 +674,28 @@ ROYALE_CAPI royale_camera_status royale_camera_device_set_external_trigger_v330 
     return (royale_camera_status) instance->setExternalTrigger (use_external_trigger);
 }
 
+ROYALE_CAPI royale_camera_status royale_camera_device_set_filter_level_v32400 (royale_camera_handle handle, royale_stream_id stream_id, royale_filter_level filter_level)
+{
+    GET_INSTANCE_AND_RETURN_VALUE_IF_NULL (ROYALE_STATUS_INVALID_HANDLE);
+
+    return (royale_camera_status) instance->setFilterLevel ( (FilterLevel) filter_level);
+}
+
+ROYALE_CAPI royale_camera_status royale_camera_device_get_filter_level_v32400 (royale_camera_handle handle, royale_stream_id stream_id, royale_filter_level *filter_level)
+{
+    GET_INSTANCE_AND_RETURN_VALUE_IF_NULL (ROYALE_STATUS_INVALID_HANDLE);
+
+    FilterLevel fl;
+    auto status = instance->getFilterLevel (fl, (StreamId) stream_id);
+
+    if (status == CameraStatus::SUCCESS)
+    {
+        *filter_level = (royale_filter_level) fl;
+    }
+
+    return (royale_camera_status) status;
+}
+
 // ----------------------------------------------------------------------------------------------
 // Level 2: Experienced users (Laser Class 1 guaranteed) - activation key required
 // ----------------------------------------------------------------------------------------------

@@ -30,5 +30,7 @@ protected:
 
     VertexData  *m_vertices;
     GLushort    *m_indices;
-
+    bool         m_updateGeometry;
+    float        m_fovx;
+    float        m_fovy;
 };

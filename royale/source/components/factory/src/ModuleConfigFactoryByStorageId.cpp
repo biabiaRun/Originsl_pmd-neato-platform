@@ -30,7 +30,8 @@ ModuleConfigFactoryByStorageId::ModuleConfigFactoryByStorageId (const std::share
 }
 
 std::shared_ptr<const royale::config::ModuleConfig>
-ModuleConfigFactoryByStorageId::probeAndCreate (royale::factory::IBridgeFactory &bf) const
+ModuleConfigFactoryByStorageId::probeAndCreate (royale::factory::IBridgeFactory &bf,
+        royale::CameraAccessLevel accessLevel) const
 {
     try
     {
@@ -38,7 +39,7 @@ ModuleConfigFactoryByStorageId::probeAndCreate (royale::factory::IBridgeFactory 
                        NonVolatileStorageFactoryConstraint::CONTROLLED_LIFETIME);
         if (storage)
         {
-            auto modConfig = readAndCreate (* (storage), m_memoryConfig.useCaching);
+            auto modConfig = readAndCreate (* (storage), m_memoryConfig.useCaching, accessLevel);
             if (modConfig != nullptr)
             {
                 auto extConfFile = modConfig->imagerConfig.externalConfigFileConfig;

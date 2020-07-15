@@ -29,10 +29,12 @@ void v1::FileReader::open (const std::string &filename)
 {
     close();
 
-    fopen_royale_rrf (m_file, filename.c_str(), "rb");
+    int fopenerror = 0;
+    fopen_royale_rrf (m_file, filename.c_str(), "rb", fopenerror);
     if (!m_file)
     {
-        throw (std::invalid_argument ("Could not open recording"));
+        throw (std::invalid_argument (std::string ("Could not open recording : ")
+                                      + std::string (strerror_royale_rrf (fopenerror))));
     }
 
     fseek64_royale_rrf (m_file, 0, SEEK_SET);

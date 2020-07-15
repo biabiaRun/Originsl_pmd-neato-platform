@@ -10,7 +10,7 @@
 
 ; START CPACK CONSTANTS --------------------------------------------------------------------
     ; These are all Constants set in cmake and loaded in via cpack.
-    ; If you want to include your own CPACK variables, its good to name them CMAKE_\S*
+    ; If you want to include your own CPACK variables, its good to name them CPACK_\S*
     ; and include them here for a better overview.
     
     !define CPACK_PACKAGE_NAME                   "@CPACK_PACKAGE_NAME@"
@@ -41,7 +41,7 @@
 
 
 
-; START REQUIRED FILES -----------------------------------
+; START REQUIRED FILES ------------------------------------------------------
     ; You can include .nsi and .nsh from the NSIS.template.in directory using
     ; !include "${CPACK_MODULE_PATH}\yourFile.nsh" or
     ; !include "${CPACK_MODULE_PATH}\yourFile.nsi"
@@ -49,17 +49,17 @@
     !include "MUI2.nsh"
     !include "x64.nsh"
     !include "WinVer.nsh"
-    !include FileFunc.nsh
+    !include "FileFunc.nsh"
     !include "${CPACK_MODULE_PATH}\FileAssociation.nsh"
     !include "${CPACK_MODULE_PATH}\DriverInstallation.nsi"
     !include "${CPACK_MODULE_PATH}\EstimatedSize.nsi"
     !include "${CPACK_MODULE_PATH}\MUILanguages.nsi"
     !include "${CPACK_MODULE_PATH}\UninstallPreviousVersions.nsh"
-; END REQUIRED FILES -------------------------------------
+; END REQUIRED FILES --------------------------------------------------------
 
 
 
-; START REAL-CONSTANTS ------------------------------------------------------------------------------------
+; START REAL-CONSTANTS -----------------------------------------------------------------------------------------------
     ; The Following Constants are defined for a better overview.
     ; Its not recommended to use structures like "${CPACK_PACKAGE_NAME}${CPACK_PACKAGE_VERSION}" in multiple positions
     ; because there is no good way to change them. So we use this section to define these structures.
@@ -93,11 +93,11 @@
     !define VI_VERSION_VALUE_LEGALCOPY          "© ${VI_VERSION_VALUE_COMPANY}"
     !define VI_VERSION_VALUE_FILEDESCRIPTION    "${SW_APPLICATION_NAME} installer"
     !define VI_VERSION_VALUE_FILEVERSION        "${CPACK_PACKAGE_VERSION}"
-; END REAL-CONSTANTS --------------------------------------------------------------------------------------
+; END REAL-CONSTANTS -------------------------------------------------------------------------------------------------
 
 
 
-; START GENERAL SETTINGS ------------------------------------------------------------------------------------------
+; START GENERAL SETTINGS --------------------------------------------------------------------------
     ; see http://nsis.sourceforge.net/Docs/Chapter2.html#compilercommands , 2.3.7 Compiler Commands
     
     Name          "${CPACK_PACKAGE_NAME}"
@@ -121,26 +121,24 @@
     VIAddVersionKey     "LegalCopyright"     "${VI_VERSION_VALUE_LEGALCOPY}"
     VIAddVersionKey     "FileDescription"    "${VI_VERSION_VALUE_FILEDESCRIPTION}"
     VIAddVersionKey     "FileVersion"        "${VI_VERSION_VALUE_FILEVERSION}"
-; END GENERAL SETTINGS -------------------------------------------------------------------------------------------
+; END GENERAL SETTINGS ----------------------------------------------------------------------------
 
 
 
-; START Dump Log FILES -----------------------------------
+; START Dump Log FILES ------------------------
     !include "${CPACK_MODULE_PATH}\DumpLog.nsi"
-; END Dump Log FILES -------------------------------------
+; END Dump Log FILES --------------------------
 
 
 
 ; START MUI SETTINGS ----------------
-    
-    
     !define MUI_ABORTWARNING
     !define MUI_COMPONENTSPAGE_NODESC
 ; END MUI SETTINGS ------------------
 
 
 
-; START PAGES --------------------------------------------------------
+; START PAGES ----------------------------------------------------
     ; PAGE ICONS FROM CPACK
     ; CPACK INSERT START : CPACK_NSIS_INSTALLER_MUI_ICON_CODE
     @CPACK_NSIS_INSTALLER_MUI_ICON_CODE@
@@ -161,11 +159,11 @@
     ; uninstaller
     !insertmacro MUI_UNPAGE_CONFIRM
     !insertmacro MUI_UNPAGE_INSTFILES
-; END PAGES ----------------------------------------------------------
+; END PAGES ------------------------------------------------------
 
 
 
-; START INSTALL SECTIONS -----------------------------------------------------------------------------------
+; START INSTALL SECTIONS --------------------------------------------------------------------------------------------
     Section "-Install" install
         SetOutPath "$INSTDIR"
         
@@ -185,7 +183,7 @@
     Section "Startmenu Shortcuts" startmenu
         ; CPACK INSERT START : CPACK_NSIS_CREATE_ICONS
         Var /GLOBAL STARTMENU_FOLDER
-        StrCpy $STARTMENU_FOLDER  "${SW_APPLICATION_NAME}"
+        StrCpy $STARTMENU_FOLDER "${SW_APPLICATION_NAME}"
         @CPACK_NSIS_CREATE_ICONS@
         ; CPACK INSERT END : CPACK_NSIS_CREATE_ICONS
     SectionEnd
@@ -195,7 +193,7 @@
     SectionEnd
     
     Section "File Association" fileAssociation
-        ${RegisterExtension} "${SW_APPLICATION_PATH}" ".rrf" "RFF-File"
+        ${RegisterExtension} "${SW_APPLICATION_PATH}" ".rrf" "RRF-File"
     SectionEnd
     
     Section "-Uninstall Registration" uninstallerReg
@@ -231,11 +229,11 @@
             Call DumpLog
         ${EndIf}
     SectionEnd
-; END INSTALL SECTIONS ------------------------------------------------------------------------------------
+; END INSTALL SECTIONS ----------------------------------------------------------------------------------------------
 
 
 
-; START UNINSTALL SECTIONS ----------------------------------------
+; START UNINSTALL SECTIONS ---------------------------------
     Section un.install
         ; CPACK INSERT START : CPACK_NSIS_DELETE_FILES
         @CPACK_NSIS_DELETE_FILES@
@@ -275,18 +273,18 @@
     Section un.uninstallerReg
         DeleteRegKey SHCTX "${SW_REG_UNDIRECTORY}"
     SectionEnd
-; END UNINSTALL SECTIONS -----------------------------------------
+; END UNINSTALL SECTIONS -----------------------------------
 
 
 
-; START LANGUAGES -----------------
+; START LANGUAGES ---------------------------------------------
     ; externalized macro-collection for all supported languages
     !insertmacro InsertMUILanguages
-; END LANGUAGES -------------------
+; END LANGUAGES -----------------------------------------------
 
 
 
-; START CALLBACKFUNCTIONS ------------------------------------------------------------------------------------------------
+; START CALLBACKFUNCTIONS --------------------------------------------------------------------------------------------------
     ; You can create callback functions (which have special names),
     ; that will be called by the installer at certain points in the install.
     ; see http://nsis.sourceforge.net/Docs/Chapter4.html#callbacks
@@ -317,4 +315,4 @@
     Function un.onInit
         !insertmacro MUI_LANGDLL_DISPLAY
     FunctionEnd
-; END CALLBACKFUNCTIONS --------------------------------------------------------------------------------------------------
+; END CALLBACKFUNCTIONS ----------------------------------------------------------------------------------------------------

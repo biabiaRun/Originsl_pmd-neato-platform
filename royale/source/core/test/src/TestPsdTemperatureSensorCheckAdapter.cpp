@@ -1,5 +1,6 @@
 #include <device/PsdTemperatureSensorCheckAdapter.hpp>
 #include <StubTemperatureSensor.hpp>
+#include <MockRawFrame.hpp>
 #include <gmock/gmock.h>
 
 using namespace royale;
@@ -7,20 +8,12 @@ using testing::_;
 using testing::AtLeast;
 using testing::Return;
 using testing::Eq;
+using sensors::test::MockRawFrame;
 
 class MockTemperatureChecker : public device::ITemperatureAcceptor
 {
 public:
     MOCK_CONST_METHOD1 (acceptTemperature, void (float temp));
-};
-
-class MockRawFrame : public common::ICapturedRawFrame
-{
-public:
-    MockRawFrame() = default;
-    virtual ~MockRawFrame() = default;
-    MOCK_METHOD0 (getImageData, uint16_t *());
-    MOCK_CONST_METHOD0 (getPseudoData, const uint16_t *());
 };
 
 class MockPsdTemperatureSensor : public hal::IPsdTemperatureSensor

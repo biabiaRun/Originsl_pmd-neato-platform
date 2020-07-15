@@ -32,19 +32,23 @@ QListView::item:selected[separator='true'] {
 
 QToolTip {
     font-size:14pt;
+    background-color: rgb(35, 93, 125);
+    color:white;
 }
 
+
 QListView::item:selected {
-    background-color:transparent;
+    background:transparent;
     color:white;
     border:1px;
 }
 
 QListView::item {
-    background-color:transparent;
+    background:transparent;
     color:black;
     border:1px;
 }
+
 
 QScrollBar::handle:vertical {
     border: 1px solid black;

@@ -10,19 +10,27 @@
 
 #pragma once
 
-#include <storage/SpiBusMasterM2453.hpp>
+#include <storage/SpiBusMasterFlashBasedDevice.hpp>
+#include <hal/IBridgeImager.hpp>
+
+#include <cstdint>
+#include <memory>
 
 namespace royale
 {
     namespace storage
     {
         /**
-         * The SpiBusMasterM2455 is currently implemented as an alias to the SpiBusMasterM2453.
-         *
-         * For read-only functionality the behavior is the same, for writing the correct
-         * ImagerAsBridgeType must be passed to SpiBusMasterM2453's constructor, as it enables a
-         * small workaround.
+         * This class is the special bus master implementation for the M2455.
          */
-        using SpiBusMasterM2455 = SpiBusMasterM2453;
+        class SpiBusMasterM2455 : public SpiBusMasterFlashBasedDevice
+        {
+        public:
+            ROYALE_API SpiBusMasterM2455 (std::shared_ptr<royale::hal::IBridgeImager> access);
+            ~SpiBusMasterM2455 () override;
+
+        private:
+            void initializeOnce() override;
+        };
     }
 }

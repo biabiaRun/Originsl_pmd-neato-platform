@@ -37,6 +37,7 @@ without any of the features that can be enabled in those files.
 | `cx3_amundsen_orpheus`         | 1c28 c032 | `skycha_two_lane`  | PMD      | Orpheus                              | PMD's Orpheus family                          |
 | `cx3_amundsen_pmdmodule`       | 1c28 c033 | `skycha_two_lane`  | PMD      | pmdModule                            | PMD module                                    |
 | `cx3_amundsen_pmdmodule277x`   | 1c28 c039 | `skycha_two_lane`  | PMD      | pmdModule277x                        | PMD module 277x                               |
+| `cx3_amundsen_x1_1`            | 1c28 c03a | `skycha_two_lane`  | PMD      | X1.1                                 | PMD's X1.1                                    |
 
 The difference between UVC and Amundsen images
 ----------------------------------------------

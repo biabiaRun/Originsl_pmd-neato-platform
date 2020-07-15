@@ -48,7 +48,8 @@ ModuleConfigFactoryByStorageIdBase::findConfig (const royale::Vector<uint8_t> &i
 }
 
 std::shared_ptr<royale::config::ModuleConfig>
-ModuleConfigFactoryByStorageIdBase::readAndCreate (royale::hal::INonVolatileStorage &storage, bool cacheOnDisk) const
+ModuleConfigFactoryByStorageIdBase::readAndCreate (royale::hal::INonVolatileStorage &storage, bool cacheOnDisk,
+        royale::CameraAccessLevel accessLevel) const
 {
     std::shared_ptr<royale::config::ModuleConfig> config = nullptr;
 
@@ -62,8 +63,15 @@ ModuleConfigFactoryByStorageIdBase::readAndCreate (royale::hal::INonVolatileStor
     }
     if (config == nullptr && !m_defaultId.empty())
     {
-        LOG (DEBUG) << "Falling back to default module config";
-        config = findConfig (m_defaultId);
+        if (accessLevel >= royale::CameraAccessLevel::L3)
+        {
+            LOG (DEBUG) << "Falling back to default module config";
+            config = findConfig (m_defaultId);
+        }
+        else
+        {
+            LOG (DEBUG) << "Not using the default module config as the access level is not high enough";
+        }
     }
 
     if (config)

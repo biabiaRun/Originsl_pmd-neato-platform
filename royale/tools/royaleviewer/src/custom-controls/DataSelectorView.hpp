@@ -19,6 +19,7 @@
 #define DataSelector_Gray      (2)
 #define DataSelector_GrayUni   (3)
 #define DataSelector_Overlay   (4)
+#define DataSelector_Flagged   (5)
 
 class PushButton;
 
@@ -30,6 +31,7 @@ public:
     explicit DataSelectorView (QWidget *parent = 0);
 
     void displayUniformMode (bool visible);
+    void displayflagged (bool visible);
 
 protected slots:
     void distanceButtonAction();
@@ -37,6 +39,7 @@ protected slots:
     void grayButtonAction();
     void uniButtonAction();
     void overlayButtonAction();
+    void flagButtonAction();
 signals:
     void dataSelectorSwitched (int mode);
 protected:
@@ -45,4 +48,5 @@ protected:
     PushButton *m_distButton;
     PushButton *m_uniButton;
     PushButton *m_overlayButton;
+    PushButton *m_flagButton;
 };

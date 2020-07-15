@@ -8,7 +8,6 @@
  *
 \****************************************************************************/
 
-
 #ifndef __PARAMETERKEY_HPP__
 #define __PARAMETERKEY_HPP__
 
@@ -19,27 +18,29 @@ namespace spectre
     namespace common
     {
 
-#define SPECTRE_ENUM_NAME(KEY,...) KEY,
+#define SPECTRE_ENUM_NAME(KEY, ...) KEY,
         /**
          * @brief Parameters supported by Spectre
          *
          * This enumeration lists all parameters supported by Spectre.
-         * However, it is not guaranteed that each parameter listed here is supported
-         * by each Spectre instance. To query a list parameters supported by a specific
-         * Spectre instance use ISpectre::configuration(), and then Configuration::getParameters(), if you
-         * are using the libSpectre API. If you are using libProcessing directly check the relevant
-         * IProcessingDescriptor.
+         * However, it is not guaranteed that each parameter listed here is
+         * supported by each Spectre instance. To query a list parameters
+         * supported by a specific Spectre instance use
+         * ISpectre::configuration(), and then Configuration::getParameters(),
+         * if you are using the libSpectre API. If you are using libProcessing
+         * directly check the relevant IProcessingDescriptor.
          */
         enum class ParameterKey
         {
-            /*!Used to marks invalid parameters*/UNDEFINED,
-            /*!Modulation scheme*/MODULATION_SCHEME,
-            /*!Allows customized control of the basic reconfiguration process*/CUSTOM_BASIC_CONTROL,
-            SPECTRE_PARAMETERS (SPECTRE_ENUM_NAME)
-            NUM_ENTRIES
+            /*!Used to marks invalid parameters*/ UNDEFINED,
+            /*!Modulation scheme*/ MODULATION_SCHEME,
+            /*!Allows customized control of the basic reconfiguration process*/
+            CUSTOM_BASIC_CONTROL,
+            /*!Allows to set the processing type*/ PROCESSING_TYPE,
+            SPECTRE_PARAMETERS (SPECTRE_ENUM_NAME) NUM_ENTRIES
         };
 #undef SPECTRE_ENUM_NAME
-    }  // common
-}  // spectre
+    } // namespace common
+} // namespace spectre
 
 #endif /*__PARAMETERKEY_HPP__*/

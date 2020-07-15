@@ -1,6 +1,7 @@
-#include <gtest/gtest.h>
+#include <gmock/gmock.h>
 
 #include <common/ICapturedRawFrame.hpp>
+#include <common/exceptions/NotImplemented.hpp>
 #include <imager/M2450_A12/PseudoDataInterpreter.hpp>
 
 #include <memory>
@@ -89,4 +90,13 @@ TEST (TestPseudoDataInterpreterM2450, MiraCE)
     TpdiCapturedRawFrame sample8 {SAMPLE_8};
     ASSERT_EQ (8, interpreter.getFrameNumber (sample8));
     ASSERT_EQ (0, interpreter.getSequenceIndex (sample8));
+}
+
+TEST (TestPseudoDataInterpreterM2450, getTemperatureRawDataNotImplemented)
+{
+    TpdiCapturedRawFrame sample8 {SAMPLE_8};
+    royale::imager::M2450_A12::PseudoDataInterpreter interpreter;
+
+    ASSERT_THROW(interpreter.getTemperatureRawValues(sample8), royale::common::NotImplemented);
+
 }

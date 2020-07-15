@@ -33,7 +33,7 @@
   <td id="projectlogo"><img alt="Logo" src="pmdlogo.png"/></td>
   <td style="padding-left: 0.5em;">
    <div id="projectname">Spectre API Documentation
-   &#160;<span id="projectnumber">4.1.0.222</span>
+   &#160;<span id="projectnumber">4.7.0.319</span>
    </div>
    <div id="projectbrief">Time-Of-Flight reference implementation</div>
   </td>
@@ -114,9 +114,9 @@ Spectre's Public C++ API</div></div>
 <div class="line">        <span class="keyword">auto</span> config = spectre-&gt;configuration();</div>
 <div class="line">        <span class="keyword">auto</span> numFreqs = config.getParameterByKey(ParameterKey::NUM_FREQUENCIES);</div>
 <div class="line">        <span class="keyword">auto</span> freq1 = config.getParameterByKey(ParameterKey::FREQUENCY_1);</div>
-<div class="line">        numFreqs.setValue(<a class="code" href="namespacespectre.html#a47d216705cec2810cd1152d0d156170f" title="Instantiation of Variant template used for Parameters.">ParameterVariant</a>(static_cast&lt;uint32_t&gt;(1u)));</div>
+<div class="line">        numFreqs.setValue(<a class="code" href="namespacespectre.html#a151a6e42afb546c96052a170514b1828" title="Instantiation of Variant template used for Parameters.">ParameterVariant</a>(static_cast&lt;uint32_t&gt;(1u)));</div>
 <div class="line">        <span class="comment">// Set YOUR modulation frequency here</span></div>
-<div class="line">        freq1.setValue(<a class="code" href="namespacespectre.html#a47d216705cec2810cd1152d0d156170f" title="Instantiation of Variant template used for Parameters.">ParameterVariant</a>(static_cast&lt;uint32_t&gt;(6024000u)));</div>
+<div class="line">        freq1.setValue(<a class="code" href="namespacespectre.html#a151a6e42afb546c96052a170514b1828" title="Instantiation of Variant template used for Parameters.">ParameterVariant</a>(static_cast&lt;uint32_t&gt;(6024000u)));</div>
 <div class="line">        <span class="keywordflow">if</span> (!(config.setParameter(numFreqs) &amp;&amp; config.setParameter(freq1) &amp;&amp; spectre-&gt;reconfigure(config)))</div>
 <div class="line">        {</div>
 <div class="line">            <span class="keywordflow">throw</span> <span class="stringliteral">&quot;Could not reconfigure Spectre&quot;</span>;</div>
@@ -158,7 +158,7 @@ Spectre's Public C++ API</div></div>
 </div><!-- fragment --> </div></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Tue Mar 26 2019 15:04:18 for Spectre API Documentation by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Thu Mar 19 2020 15:57:03 for Spectre API Documentation by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.3.1
 </small></address>

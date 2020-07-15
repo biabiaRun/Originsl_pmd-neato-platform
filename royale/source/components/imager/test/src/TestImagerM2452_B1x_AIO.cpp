@@ -117,7 +117,8 @@ protected:
         ASSERT_NE (m_bridge, nullptr) << "Bridge instance is null.";
 
         {
-            ImagerParameters params{ m_bridge, nullptr, true, false,
+            ImagerParameters params{ m_bridge, nullptr, true,
+                                     royale::config::ImConnectedTemperatureSensor::NONE,
                                      ImgTrigger::I2C, ImgImageDataTransferType::MIPI_2LANE, 0.0000006f, {},
                                      SYSFREQ, ImagerRawFrame::ImagerDutyCycle::DC_50,
                                      ImgIlluminationPad::SE_P, 90000000, false };
@@ -187,14 +188,14 @@ protected:
 
 TEST_F (TestImagerM2452_B1x_AIO, CreateImagerDirectly)
 {
-    ImagerParameters params1{ nullptr, nullptr, false, false, ImgTrigger::I2C, ImgImageDataTransferType::PIF, 0., {}, 0u, ImagerRawFrame::ImagerDutyCycle::DC_0, ImgIlluminationPad::SE_P, 0u, false };
+    ImagerParameters params1{ nullptr, nullptr, false, royale::config::ImConnectedTemperatureSensor::NONE, ImgTrigger::I2C, ImgImageDataTransferType::PIF, 0., {}, 0u, ImagerRawFrame::ImagerDutyCycle::DC_0, ImgIlluminationPad::SE_P, 0u, false };
 
     ASSERT_THROW (new ImagerM2452_B1x_AIO (params1), LogicError);
 }
 
 TEST_F (TestImagerM2452_B1x_AIO, UnsupportedTransmissionMode)
 {
-    ImagerParameters params{ m_bridge, nullptr, false, false,
+    ImagerParameters params{ m_bridge, nullptr, false, royale::config::ImConnectedTemperatureSensor::NONE,
                              ImgTrigger::I2C, ImgImageDataTransferType::MIPI_2LANE, 0.0000006f, {},
                              SYSFREQ, ImagerRawFrame::ImagerDutyCycle::DC_50,
                              ImgIlluminationPad::SE_P, 90000000, false };

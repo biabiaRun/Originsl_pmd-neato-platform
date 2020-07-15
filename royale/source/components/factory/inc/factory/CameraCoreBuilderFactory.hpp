@@ -22,7 +22,7 @@ namespace royale
         class CameraCoreBuilderFactory
         {
         public:
-            CameraCoreBuilderFactory() = default;
+            CameraCoreBuilderFactory() = delete;
             CameraCoreBuilderFactory (royale::usb::config::BridgeType type,
                                       const royale::config::ModuleConfig &config);
             std::unique_ptr<royale::factory::ICameraCoreBuilder> operator() ();

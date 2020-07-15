@@ -7,8 +7,12 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/inc
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../source/royale/inc
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../source/core/inc
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../source/core/inc/common
   ${CMAKE_CURRENT_SOURCE_DIR}/../../source/components/record/inc
   ${CMAKE_CURRENT_SOURCE_DIR}/../../source/components/record/clibs/inc
+  ${CMAKE_SOURCE_DIR}/source/core/inc
 )
 
 set(SOURCES
@@ -28,7 +32,7 @@ set(UI_FILES
   )
 
 link_directories(
-	${PROCESSING_SPECTRE_LIB_DIR}
+    ${PROCESSING_SPECTRE_LIB_DIR}
     )
 
 qt5_wrap_ui(UI_HEADERS ${UI_FILES})
@@ -56,13 +60,13 @@ SET_TARGET_PROPERTIES( rrfTool
     )
 
 include_directories( SYSTEM
-	${Qt5Widgets_INCLUDE_DIRS}
-	${Qt5OpenGL_INCLUDE_DIRS}
-	)
+    ${Qt5Widgets_INCLUDE_DIRS}
+    ${Qt5OpenGL_INCLUDE_DIRS}
+    )
 
 target_link_libraries(rrfTool Qt5::Widgets)
 
-target_link_libraries(rrfTool rrfReaderLib rrfWriterLib ${QT_LIBRARIES})
+target_link_libraries(rrfTool royale rrfReaderLib rrfWriterLib ${QT_LIBRARIES})
 
 SOURCE_GROUP( "inc" FILES ${HEADERS} ${MOC_HEADERS})
 SOURCE_GROUP( "src" FILES ${SOURCES})

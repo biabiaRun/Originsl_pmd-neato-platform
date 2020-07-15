@@ -10,6 +10,8 @@
 
 #include <rrftool.hpp>
 
+#include <common/FileSystem.hpp>
+
 #include <stdint.h>
 
 RRFTool::RRFTool()
@@ -46,6 +48,7 @@ void RRFTool::on_actionOpenFile_triggered()
     fillInfoBox();
     actionSaveAs->setEnabled (true);
     actionCloseFile->setEnabled (true);
+    actionExportRaw->setEnabled (true);
 }
 
 void RRFTool::on_actionSaveAs_triggered()
@@ -93,6 +96,39 @@ void RRFTool::on_actionSaveAs_triggered()
     QApplication::restoreOverrideCursor();
 }
 
+void RRFTool::on_actionExportRaw_triggered()
+{
+    QString outputFolder = QFileDialog::getExistingDirectory (this, tr ("Choose output folder"),
+                           "",
+                           QFileDialog::ShowDirsOnly
+                           | QFileDialog::DontResolveSymlinks);
+
+    if (outputFolder.isEmpty())
+    {
+        return;
+    }
+
+    QApplication::setOverrideCursor (Qt::WaitCursor);
+
+    const struct royale_fileinformation_v3 *fileInfo = royale_get_fileinformation (m_fileReadHandle);
+
+    if (!fileInfo)
+    {
+        QApplication::restoreOverrideCursor();
+        QMessageBox::warning (this, this->windowTitle(), "Couldn't retrieve file information!");
+        return;
+    }
+
+    progressBar->setVisible (true);
+    if (!exportRaw (fileInfo, outputFolder))
+    {
+        QMessageBox::warning (this, this->windowTitle(), "Error outputting frames!");
+    }
+    progressBar->setVisible (false);
+
+    QApplication::restoreOverrideCursor();
+}
+
 void RRFTool::on_actionExit_triggered()
 {
     on_actionCloseFile_triggered();
@@ -108,6 +144,7 @@ void RRFTool::on_actionCloseFile_triggered()
 
     actionSaveAs->setEnabled (false);
     actionCloseFile->setEnabled (false);
+    actionExportRaw->setEnabled (false);
 }
 
 void RRFTool::fillInfoBox()
@@ -207,6 +244,69 @@ bool RRFTool::saveFrames (const royale_rrf_handle &outHandle)
             QMessageBox::warning (this, this->windowTitle(), "Error writing frame " + QString::number (i) + "!");
             return false;
         }
+
+        if (royale_free_frame (&curFrame) != royale_rrf_api_error::RRF_NO_ERROR)
+        {
+            QApplication::restoreOverrideCursor();
+            QMessageBox::warning (this, this->windowTitle(), "Error freeing frame " + QString::number (i) + "!");
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool RRFTool::exportRaw (const struct royale_fileinformation_v3 *fileinfo, const QString outDir)
+{
+    uint32_t numFrames = royale_get_num_frames (m_fileReadHandle);
+
+    if (!numFrames)
+    {
+        return true;
+    }
+
+    royale::Vector<uint8_t> calibData;
+    calibData.resize (fileinfo->calibrationDataSize);
+    memcpy (&calibData[0], &fileinfo->calibrationData[0], calibData.size());
+    QString calName = outDir + "/cal.jgf";
+    royale::common::writeVectorToFile (calName.toLatin1().data(), calibData);
+
+    progressBar->setMaximum (numFrames);
+
+    for (uint32_t i = 0u; i < numFrames; ++i)
+    {
+        progressBar->setValue (i);
+        if (royale_seek (m_fileReadHandle, i) != royale_rrf_api_error::RRF_NO_ERROR)
+        {
+            QApplication::restoreOverrideCursor();
+            QMessageBox::warning (this, this->windowTitle(), "Error seeking to frame " + QString::number (i) + "!");
+            return false;
+        }
+
+        struct royale_frame_v3 *curFrame;
+        if (royale_get_frame (m_fileReadHandle, &curFrame) != royale_rrf_api_error::RRF_NO_ERROR)
+        {
+            QApplication::restoreOverrideCursor();
+            QMessageBox::warning (this, this->windowTitle(), "Error reading frame " + QString::number (i) + "!");
+            return false;
+        }
+
+        // Output raw
+        auto nrRawFrames = curFrame->frameHeader.numRawFrames;
+        auto cols = curFrame->frameHeader.numColumns;
+        auto rows = curFrame->frameHeader.numRows;
+
+        royale::Vector<uint16_t> rawData;
+        rawData.resize (cols * (rows + 1) * nrRawFrames);
+
+        for (auto curRawFrame = 0u; curRawFrame < nrRawFrames; ++curRawFrame)
+        {
+            memcpy (&rawData[curRawFrame * cols * (rows + 1)], & (curFrame->pseudoData[curRawFrame]) [0], cols  * sizeof (uint16_t));
+            memcpy (&rawData[curRawFrame * cols * (rows + 1) + cols], & (curFrame->imageData [curRawFrame]) [0], cols * rows * sizeof (uint16_t));
+        }
+
+        QString fileName = outDir + "/" + QString::number (i) + ".raw";
+        royale::common::writeVectorToFile (fileName.toLatin1().data(), rawData);
 
         if (royale_free_frame (&curFrame) != royale_rrf_api_error::RRF_NO_ERROR)
         {

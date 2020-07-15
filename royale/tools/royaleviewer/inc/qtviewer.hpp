@@ -25,6 +25,7 @@
 #include <royale/IExtendedDataListener.hpp>
 #include <royale/IExposureListener2.hpp>
 #include <royale/IEventListener.hpp>
+#include <royale/IRecordStopListener.hpp>
 #include <royale/IReplay.hpp>
 #include <royale/Status.hpp>
 #include <royale/Vector.hpp>
@@ -45,11 +46,14 @@ struct QTViewerParameters
 {
     royale::String accessCode;
     std::string playbackFilename;
+    QString configFileName;
     royale::String calibrationFileName;
     bool autoConnect;
     bool autoExposure;
     QString startUseCase;
     bool cameraSlave;
+    float gammaValue;
+    bool enableGamma;
 };
 
 class QTViewer :
@@ -58,7 +62,8 @@ class QTViewer :
     public royale::IExtendedDataListener,
     public ISettingsMenu,
     public royale::IExposureListener2,
-    public royale::IEventListener
+    public royale::IEventListener,
+    public royale::IRecordStopListener
 {
     Q_OBJECT
 
@@ -92,6 +97,8 @@ public:
     void dragEnterEvent (QDragEnterEvent *event) override;
     void dropEvent (QDropEvent *event) override;
 
+    void onRecordingStopped (const uint32_t numFrames) override;
+
     /**
      * Creates m_cameraDevice (via connectCamera) and calls startCapture. On an error that should
      * disconnect, this will display an error to the user (possibly only in the message log) reset
@@ -115,7 +122,7 @@ protected:
     bool eventFilter (QObject *obj, QEvent *event) override;
 
 public slots:
-    void cameraButtonClicked ();
+    void cameraButtonClicked();
     void forceColorButtonClicked();
     void viewButtonClicked();
     void recButtonClicked();
@@ -129,7 +136,8 @@ public slots:
     void enableStreamIdDisplay (bool enabled);
     void enableValidPixelsNumber (bool enabled);
     void hideTool();
-
+    void resetGUI();
+    void enableRangeSpecDisplay (bool enabled);
     /**
     *  Determine the target 3dView which has sent the signal of cameraPositionChanged()
     *  and change the view in other windows the same as in the target one.
@@ -157,11 +165,17 @@ public slots:
     */
     void syncRotatingSpeedChanged (float speed);
 
+    /*
+    *  Synchronize the rotating center of the other 3dViews during "Lock View" and update the AutoRotationView
+    *
+    *  @param center The new center of auto rotation
+    */
+    void syncRotatingCenterChanged (float center);
+
     void onApplicationStateChanged (Qt::ApplicationState state);
     void updateFPS();
     void updateValidPixelsNumber();
     void exposureChanged (int newExposure);
-    void framerateChanged (int newFramerate);
     void distColorRangeChanged (float minValue, float maxValue);
     void grayColorRangeChanged (int minValue, int maxValue);
     void autoColorRangeUpdate();
@@ -177,10 +191,14 @@ public slots:
     void onRCenterChanged (const float center);
 
     void rewind();
+    void rewindWhenRange();
     void playbackStopPlay (bool play);
     void forward();
+    void forwardWhenRange();
     void seekTo (int frame);
+    void seekToWhenRange (int frame);
     void repeat();
+    void rangePlay (int firstFrame, int lastFrame);
 
     void changePipelineParameter (royale::Pair<royale::ProcessingFlag, royale::Variant> parameter);
 
@@ -205,14 +223,12 @@ public slots:
     void readRegister (QString registerStr);
     void writeRegister (QString registerStr, uint16_t value);
 
-    void loadFile ();
+    void loadFile();
 
     void filterLevelChanged (const royale::FilterLevel &level, royale::StreamId streamId);
 
 signals:
     void exposureLimitsChanged (int min, int max);
-    void framerateLimitsChanged (int min, int max);
-    void framerateValue (int val);
     void logMessage (const QString &msg);
     void autoColorRangeFinished (float minDist, float maxDist, uint16_t minGray, uint16_t maxGray, royale::StreamId streamId);
 
@@ -279,6 +295,9 @@ private:
     void closeCameraOrRecording();
     void updateCameraButton();
 
+    // To load a .cfg file into the viewer
+    void loadConfig (QString const &configFile);
+
     /*
     *  Initial Settings of Color Range, Filter (Min/Max) Auto Rotation (3D)
     *  If menu settings are changed before camera starts, the changed settings will be used directly after camera has started.
@@ -291,7 +310,11 @@ private:
 
     void checkForNewAccessCode();
 
+    bool checkIfIRMode (const royale::ProcessingParameterVector &parameters);
+
     QString getSavePath();
+
+    void updateLensParameters (int viewIdx = -1);
 
     std::unique_ptr<royale::ICameraDevice>          m_cameraDevice;
     std::string                                     m_serialNumber;
@@ -306,7 +329,7 @@ private:
     std::vector<TwoDView *>                         m_2dViews;
     std::vector<ThreeDView *>                       m_3dViews;
     royale::Vector<royale::StreamId>                m_streamIds;
-    std::map<royale::StreamId, int>                 m_streamIdMap;
+    std::map<royale::StreamId, unsigned>            m_streamIdMap;
 
     bool                                            m_forceCapturingOnNextStateChange;
     bool                                            m_isConnected;
@@ -327,6 +350,7 @@ private:
     bool                                            m_showDistance;
     bool                                            m_showGrayimage;
     bool                                            m_showOverlayimage;
+    bool                                            m_showFlagimage;
     bool                                            m_isRecording;
     std::map<royale::StreamId, bool>                m_firstData;
     std::map<royale::StreamId, bool>                m_hasData;
@@ -339,6 +363,7 @@ private:
     royale::String                                  m_accessCode;
     std::string                                     m_playbackFilename;
     royale::String                                  m_calibrationFileName;
+    QString                                         m_configFileName;
     bool                                            m_autoConnect;
     bool                                            m_autoExposure;
     bool                                            m_cameraSlave;
@@ -350,8 +375,11 @@ private:
 
     std::map<royale::StreamId, rangeFilterSetting>  m_rangeFilterSettings;
     std::map<royale::StreamId, autoRotationSetting> m_autoRotationSettings;
+    std::map<royale::StreamId, bool>                m_irMode;
 
     static int const                                m_maxStreams;
+
+    std::map <royale::StreamId, royale::ProcessingParameterVector> m_defaultParameters;
 
     QSettings                                      *m_appSettings;
     royale::StreamId                                m_streamIdInMenu;
@@ -369,4 +397,10 @@ private:
 
     QString                                         m_lastLoadFolder;
     QString                                         m_saveFolder;
+
+    std::vector<uint16_t>                           m_currentHeight;
+    std::vector<uint16_t>                           m_currentWidth;
+
+    bool                                            m_enableGammaCorrection;
+    float                                           m_gammaValue;
 };

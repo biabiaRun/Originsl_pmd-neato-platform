@@ -38,7 +38,6 @@ set(SOURCES
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Depth3d.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Frustum.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Math0.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/PLYWriter.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/PixelInfoManager.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Renderable.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/custom-controls/AutoRotationView.cpp"
@@ -49,7 +48,6 @@ set(SOURCES
   "${CMAKE_CURRENT_SOURCE_DIR}/src/custom-controls/ExposureView.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/custom-controls/FilterLevelView.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/custom-controls/FilterMinMaxView.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/custom-controls/FramerateView.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/custom-controls/HelpView.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/custom-controls/LicenseView.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/custom-controls/ListView.cpp"
@@ -76,7 +74,6 @@ set(HEADERS
   "${CMAKE_CURRENT_SOURCE_DIR}/inc/Frustum.hpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/inc/Math0.hpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/inc/MutexTryLocker.hpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/inc/PLYWriter.hpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/inc/PixelInfoManager.hpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/inc/Renderable.hpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/custom-controls/AutoRotationView.hpp"
@@ -87,7 +84,6 @@ set(HEADERS
   "${CMAKE_CURRENT_SOURCE_DIR}/src/custom-controls/ExposureView.hpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/custom-controls/FilterLevelView.hpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/custom-controls/FilterMinMaxView.hpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/custom-controls/FramerateView.hpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/custom-controls/HelpView.hpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/custom-controls/LicenseView.hpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/custom-controls/ListView.hpp"
@@ -115,7 +111,6 @@ set(MOC_HEADERS
   "${CMAKE_CURRENT_SOURCE_DIR}/src/custom-controls/ExposureView.hpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/custom-controls/FilterLevelView.hpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/custom-controls/FilterMinMaxView.hpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/custom-controls/FramerateView.hpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/custom-controls/HelpView.hpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/custom-controls/LicenseView.hpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/custom-controls/ListView.hpp"
@@ -138,7 +133,6 @@ set(UI_FILES
   "${CMAKE_CURRENT_SOURCE_DIR}/src/custom-controls/ExposureView.ui"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/custom-controls/FilterLevelView.ui"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/custom-controls/FilterMinMaxView.ui"
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/custom-controls/FramerateView.ui"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/custom-controls/HelpView.ui"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/custom-controls/LicenseView.ui"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/custom-controls/ListView.ui"
@@ -165,8 +159,6 @@ if(${ROYALE_S7_WORKAROUND})
   set(SOURCES ${SOURCES} "${CMAKE_CURRENT_SOURCE_DIR}/src/Depth3dSamsungS7.cpp")
 endif(${ROYALE_S7_WORKAROUND})
 
-
-
 link_directories(
     ${PROCESSING_SPECTRE_LIB_DIR}
     )
@@ -175,15 +167,7 @@ qt5_wrap_ui(UI_HEADERS ${UI_FILES})
 qt5_wrap_cpp(MOCED_HEADERS ${MOC_HEADERS})
 
 set(ROYALE_VIEWER_LICENSES "<file alias=\"royale_license\">${ROYALE_LICENSE_PATH}</file>\n")
-if(${ROYALE_PLAYBACK_ONLY})
-  set(LICENSE_LIST "gradle-wrapper_license;jquery_license;kissfft_license;packedarray_license;sizzle_license;gpl-3.0;lgpl-2.1;lgpl-3.0")
-else()
-  set(LICENSE_LIST "cypress_license;gradle-wrapper_license;jquery_license;kissfft_license;packedarray_license;sizzle_license;gpl-3.0;lgpl-2.1;lgpl-3.0")
-endif()
-
-foreach(curlicense ${LICENSE_LIST})
-  string(CONCAT ROYALE_VIEWER_LICENSES ${ROYALE_VIEWER_LICENSES} "<file alias=\"${curlicense}\">${ROYALE_SOURCE_DIR}/doc/licenses/${curlicense}.txt</file>\n")
-endforeach()
+string(CONCAT ROYALE_VIEWER_LICENSES ${ROYALE_VIEWER_LICENSES} "<file alias=\"used_licenses\">${ROYALE_USED_LICENSES_FILE}</file>\n")
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/assets.qrc.in" "${CMAKE_CURRENT_BINARY_DIR}/assets.qrc")
 
@@ -272,8 +256,10 @@ include_directories( SYSTEM
     ${Qt5Widgets_INCLUDE_DIRS}
     ${Qt5OpenGL_INCLUDE_DIRS}
     )
-
+    
 target_link_libraries(royaleviewer Qt5::Widgets Qt5::OpenGL)
+
+target_link_libraries(royaleviewer importExportHelperLib)
 
 target_link_libraries(royaleviewer royale ${QT_LIBRARIES} ${OPENGL_LIBRARIES})
 
@@ -323,21 +309,23 @@ IF (${ROYALE_TARGET_PLATFORM} STREQUAL ANDROID)
     install(FILES "${CMAKE_CURRENT_BINARY_DIR}/bin/QtApp-release-signed.apk" DESTINATION ${ROYALE_INSTALL_BIN_DIR} RENAME RoyaleViewer.apk)
     install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/misc/README_Android.md" DESTINATION ${ROYALE_INSTALL_BIN_DIR} RENAME README.md)
 ELSEIF (${ROYALE_TARGET_PLATFORM} STREQUAL APPLE)
-    INCLUDE("${ROYALE_SOURCE_DIR}/cmake/DeployQt5.cmake")
+    INCLUDE("${ROYALE_SOURCE_DIR}/contrib/deployQt5/DeployQt5.cmake")
+    get_filename_component(LIBUSB_LIBRARY_NAME ${LIBUSB_LIBRARY_NAMES} NAME)
+    set(LIBUSB_INSTALL_DIR "${ROYALE_INSTALL_BIN_DIR}/royaleviewer.app/Contents/Frameworks/")
     install(TARGETS royaleviewer
         BUNDLE DESTINATION ${ROYALE_INSTALL_BIN_DIR})
-    install_qt5_executable("${ROYALE_INSTALL_BIN_DIR}/royaleviewer.app" "" "" "${CMAKE_LIBRARY_OUTPUT_DIRECTORY};${CMAKE_INSTALL_PREFIX}/${ROYALE_INSTALL_BIN_DIR};${_qt5Widgets_install_prefix}/lib;${PROCESSING_SPECTRE_SUBFOLDER}" "" "")
+    install(FILES ${LIBUSB_LIBRARY_NAMES} DESTINATION "${LIBUSB_INSTALL_DIR}")
+    install_qt5_executable("${ROYALE_INSTALL_BIN_DIR}/royaleviewer.app" "" "${LIBUSB_INSTALL_DIR}/${LIBUSB_LIBRARY_NAME}" "${CMAKE_LIBRARY_OUTPUT_DIRECTORY};${CMAKE_INSTALL_PREFIX}/${ROYALE_INSTALL_BIN_DIR};${_qt5Widgets_install_prefix}/lib;${PROCESSING_SPECTRE_SUBFOLDER};${LIBUSB_LIBRARY_DIR}" "" "")
 ELSEIF(${ROYALE_TARGET_PLATFORM} STREQUAL WINDOWS)
-    INCLUDE("${ROYALE_SOURCE_DIR}/cmake/DeployQt5.cmake")
+    INCLUDE("${ROYALE_SOURCE_DIR}/contrib/deployQt5/DeployQt5.cmake")
     install(TARGETS royaleviewer
         RUNTIME DESTINATION ${ROYALE_INSTALL_BIN_DIR})
     install_qt5_executable("${ROYALE_INSTALL_BIN_DIR}/royaleviewer.exe" "" "" "${CMAKE_LIBRARY_OUTPUT_DIRECTORY};${_qt5Widgets_install_prefix}/bin;${PROCESSING_SPECTRE_SUBFOLDER}" "" "")
 ELSE () #LINUX
-    INCLUDE("${ROYALE_SOURCE_DIR}/cmake/DeployQt5.cmake")
     install(TARGETS royaleviewer
         RUNTIME DESTINATION ${ROYALE_INSTALL_BIN_DIR})
-    install_qt5_executable("${ROYALE_INSTALL_BIN_DIR}/royaleviewer" "" "" "${CMAKE_LIBRARY_OUTPUT_DIRECTORY};${_qt5Widgets_install_prefix}/lib;${PROCESSING_SPECTRE_SUBFOLDER}" "" "")
-
-    install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/misc/README_Linux.md" DESTINATION ${ROYALE_INSTALL_BIN_DIR} RENAME README.md)
-    install(PROGRAMS "${CMAKE_CURRENT_SOURCE_DIR}/misc/royaleviewer.sh" DESTINATION ${ROYALE_INSTALL_BIN_DIR})
+    if(NOT ROYALE_DEB_PACKAGING)
+        install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/misc/README_Linux.md" DESTINATION ${ROYALE_INSTALL_BIN_DIR} RENAME README.md)
+        install(PROGRAMS "${CMAKE_CURRENT_SOURCE_DIR}/misc/royaleviewer.sh" DESTINATION ${ROYALE_INSTALL_BIN_DIR})
+    endif()
 ENDIF()

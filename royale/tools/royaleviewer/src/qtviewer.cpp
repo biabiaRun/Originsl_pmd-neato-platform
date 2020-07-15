@@ -26,7 +26,6 @@
 #include <QtAndroidExtras/QAndroidJniObject>
 #include <QtAndroidExtras/QAndroidJniEnvironment>
 #endif
-#include "PLYWriter.hpp"
 #include <limits>
 #include <FileHelper.hpp>
 #include <RoyaleLogger.hpp>
@@ -34,6 +33,7 @@
 #include <usecase/HardcodedMaxStreams.hpp>
 
 #include <assert.h>
+#include <importExportHelperLib/plyHelper.hpp>
 
 using namespace royale;
 
@@ -50,7 +50,6 @@ using namespace royale;
 #include "ParameterView.hpp"
 #include "DataSelectorView.hpp"
 #include "ExposureView.hpp"
-#include "FramerateView.hpp"
 #include "HelpView.hpp"
 #include "LicenseView.hpp"
 #include "ListView.hpp"
@@ -73,7 +72,6 @@ struct Widgets
     ParameterView *parameterView;
     DataSelectorView *dataSelectorView;
     ExposureView *exposureView;
-    FramerateView *framerateView;
     HelpView *helpView;
     LicenseView *licenseView;
     ListView *usecaseView;
@@ -108,31 +106,33 @@ QTViewer::QTViewer (const QTViewerParameters &params) :
     m_accessCode (params.accessCode),
     m_playbackFilename (params.playbackFilename),
     m_calibrationFileName (params.calibrationFileName),
+    m_configFileName (params.configFileName),
     m_autoConnect (params.autoConnect),
     m_autoExposure (params.autoExposure),
     m_cameraSlave (params.cameraSlave),
     m_mode (params.startUseCase),
     m_flipHorizontal (false),
     m_flipVertical (false),
-    m_currentTemperature (0.0f)
+    m_currentTemperature (0.0f),
+    m_enableGammaCorrection (false)
 {
-    m_2d                              = true;
-    m_modeMixed                       = false;
+    m_2d = true;
+    m_modeMixed = false;
     m_forceCapturingOnNextStateChange = false;
-    m_isConnected                     = false;
-    m_isCurrentlyConnecting           = false;
-    m_showDistance                    = true;
-    m_showGrayimage                   = false;
-    m_showOverlayimage                = false;
-    m_isRecording                     = false;
-    m_replayControl                   = NULL;
-    m_isPlaybackActive                = true;
-    m_buttonsHidden                   = false;
-    m_showFPS                         = false;
-    m_showStreamId                    = false;
-    m_showValidPixelsNumber           = false;
-    m_updateValidPixelsNumber         = true;
-    m_logNotified                     = false;
+    m_isConnected = false;
+    m_isCurrentlyConnecting = false;
+    m_showDistance = true;
+    m_showGrayimage = false;
+    m_showOverlayimage = false;
+    m_isRecording = false;
+    m_replayControl = NULL;
+    m_isPlaybackActive = true;
+    m_buttonsHidden = false;
+    m_showFPS = false;
+    m_showStreamId = false;
+    m_showValidPixelsNumber = false;
+    m_updateValidPixelsNumber = true;
+    m_logNotified = false;
     m_dataMutex = new QMutex (QMutex::Recursive);
     m_currentExposureTime.clear();
     DisplaySupport::sharedInstance()->setAssetsPrefix (":/");
@@ -146,7 +146,7 @@ QTViewer::QTViewer (const QTViewerParameters &params) :
 
     m_accessLevel = royale::CameraManager::getAccessLevel (m_accessCode);
 
-    m_appSettings  = new QSettings (QString::fromStdString (royaleviewer::getOutputPath() + "/viewersettings.ini"), QSettings::IniFormat);
+    m_appSettings = new QSettings (QString::fromStdString (royaleviewer::getOutputPath() + "/viewersettings.ini"), QSettings::IniFormat);
 
     m_saveFolder = getSavePath();
     m_appSettings->setValue (qStrSaveFolder, m_saveFolder);
@@ -161,7 +161,19 @@ QTViewer::QTViewer (const QTViewerParameters &params) :
         m_accessCode = activationCode;
     }
 
+    if (m_accessLevel >= CameraAccessLevel::L2)
+    {
+        QString qConfig{ m_appSettings->value ("FilterSettings").toString() };
+        if (!qConfig.isEmpty())
+        {
+            m_configFileName = qConfig;
+        }
+    }
     setupUi (this);
+
+    m_enableGammaCorrection = params.enableGamma;
+    m_gammaValue = params.gammaValue;
+
     initViews();
     initAutoExposureModes (m_autoExposure);
     m_appName = qApp->applicationName();
@@ -220,7 +232,7 @@ QTViewer::QTViewer (const QTViewerParameters &params) :
 
     qApp->setApplicationName (m_appName);
     setWindowTitle (m_appName);
-    QObject::connect (&m_fpsTimer, SIGNAL (timeout ()), this, SLOT (updateFPS ()));
+    QObject::connect (&m_fpsTimer, SIGNAL (timeout()), this, SLOT (updateFPS()));
     m_fpsTimer.start (1000);
     QObject::connect (&m_validPixelsNumberTimer, SIGNAL (timeout()), this, SLOT (updateValidPixelsNumber()));
     m_validPixelsNumberTimer.start (500);
@@ -255,7 +267,6 @@ QTViewer::~QTViewer()
 
     delete widgets.usecaseView;
     delete widgets.exposureView;
-    delete widgets.framerateView;
 
     delete widgets.fileView;
     delete m_toolsPanel;
@@ -305,7 +316,7 @@ Java_org_pmdtec_qtviewer_ProbingActivity_SetActivationCode (JNIEnv *env,
 
 #endif
 
-void QTViewer::cameraButtonClicked ()
+void QTViewer::cameraButtonClicked()
 {
     closeLicense();
     if (!m_isConnected)
@@ -321,15 +332,7 @@ void QTViewer::cameraButtonClicked ()
     }
     else if (cameraButton->text() == qStrStopText)
     {
-        if (widgets.currentTool)
-        {
-            widgets.currentTool->hide();
-        }
-        widgets.toolsMenu->deselect();
-        if (m_toolsPanel && m_toolsPanel->isVisible())
-        {
-            toolsButton->click();
-        }
+        hideTool();
         if (m_helpPanel && m_helpPanel->isVisible())
         {
             helpButton->click();
@@ -347,7 +350,6 @@ CameraStatus QTViewer::initAndStart()
 #endif
 {
     CameraStatus ret;
-    LensParameters lensParams;
 #ifdef TARGET_PLATFORM_ANDROID
     ret = connectCamera (androidUsbDeviceFD, androidUsbDeviceVid, androidUsbDevicePid);
 #else
@@ -360,6 +362,8 @@ CameraStatus QTViewer::initAndStart()
     }
 
     widgets.helpView->addLogMessage ("Successfully connected to camera");
+
+    m_cameraDevice->registerRecordListener (this);
 
     if (m_cameraSlave)
     {
@@ -374,52 +378,76 @@ CameraStatus QTViewer::initAndStart()
         }
     }
 
+    m_cameraDevice->registerEventListener (this);
+
     // Initialize the camera.
     ret = m_cameraDevice->initialize();
 
     if (ret != CameraStatus::SUCCESS)
     {
-        widgets.helpView->addLogMessage ("Unable to initialize camera");
-
-        switch (ret)
+        if (!m_playbackFilename.empty())
         {
-            case CameraStatus::SUCCESS:
-                // Should not be possible at this point
-                return ret;
-            case CameraStatus::CALIBRATION_DATA_ERROR:
-                {
-                    QMessageBox::warning (this, "No calibration data found", "No calibration found for this camera module " + QString::fromStdString (m_serialNumber));
-                    widgets.helpView->addLogMessage ("No calibration found for this camera module " + QString::fromStdString (m_serialNumber) + "!");
-                    break;
-                }
-            case CameraStatus::DATA_NOT_FOUND:
-                if (!m_playbackFilename.empty())
-                {
-                    widgets.helpView->addLogMessage ("Unable to start playback! Data not found!");
-                }
-                widgets.helpView->addLogMessage ("Camera error : " + QString::number ( (int) ret));
-                break;
-            case CameraStatus::INSUFFICIENT_BANDWIDTH:
-                widgets.helpView->addLogMessage ("Insufficient bandwidth,");
-                widgets.helpView->addLogMessage ("please use a USB3 connection.");
-                QMessageBox::warning (this, "Connection bandwidth not sufficient", "The camera module must be connected to a USB3 port");
-                break;
-            case CameraStatus::NO_USE_CASES_FOR_LEVEL:
-                widgets.helpView->addLogMessage ("This camera doesn't offer use cases for the current access level!");
-                widgets.helpView->addLogMessage ("Please make sure that the correct product code is set.");
-                break;
-            default:
-                widgets.helpView->addLogMessage ("Camera error : " + QString::number ( (int) ret) + " " + QString (getErrorString (ret).c_str()));
-                widgets.helpView->addLogMessage ("Try to restart application");
-                widgets.helpView->addLogMessage ("and reconnect camera.");
-                break;
-        }
+            widgets.helpView->addLogMessage ("Unable to initialize recording");
 
-        ret = CameraStatus::DEVICE_NOT_INITIALIZED;
+            switch (ret)
+            {
+                case CameraStatus::CALIBRATION_DATA_ERROR:
+                    {
+                        widgets.helpView->addLogMessage ("No calibration found for this camera module " + QString::fromStdString (m_serialNumber) + "!");
+                        break;
+                    }
+                case CameraStatus::DATA_NOT_FOUND:
+                    if (!m_playbackFilename.empty())
+                    {
+                        widgets.helpView->addLogMessage ("Unable to start playback! Data not found!");
+                    }
+                    widgets.helpView->addLogMessage ("Playback error : " + QString::number ( (int) ret));
+                    break;
+                default:
+                    widgets.helpView->addLogMessage ("Playback error : " + QString::number ( (int) ret) + " " + QString (getErrorString (ret).c_str()));
+                    break;
+            }
+        }
+        else
+        {
+            widgets.helpView->addLogMessage ("Unable to initialize camera");
+
+            switch (ret)
+            {
+                case CameraStatus::CALIBRATION_DATA_ERROR:
+                    {
+                        QMessageBox::warning (this, "No calibration data found", "No calibration found for this camera module " + QString::fromStdString (m_serialNumber));
+                        widgets.helpView->addLogMessage ("No calibration found for this camera module " + QString::fromStdString (m_serialNumber) + "!");
+                        break;
+                    }
+                case CameraStatus::DATA_NOT_FOUND:
+                    if (!m_playbackFilename.empty())
+                    {
+                        widgets.helpView->addLogMessage ("Unable to start playback! Data not found!");
+                    }
+                    widgets.helpView->addLogMessage ("Camera error : " + QString::number ( (int) ret));
+                    break;
+                case CameraStatus::INSUFFICIENT_BANDWIDTH:
+                    widgets.helpView->addLogMessage ("Insufficient bandwidth,");
+                    widgets.helpView->addLogMessage ("please use a USB3 connection.");
+                    QMessageBox::warning (this, "Connection bandwidth not sufficient", "The camera module must be connected to a USB3 port");
+                    break;
+                case CameraStatus::NO_USE_CASES_FOR_LEVEL:
+                    widgets.helpView->addLogMessage ("This camera doesn't offer use cases for the current access level!");
+                    widgets.helpView->addLogMessage ("Please make sure that the correct product code is set.");
+                    break;
+                default:
+                    widgets.helpView->addLogMessage ("Camera error : " + QString::number ( (int) ret) + " " + QString (getErrorString (ret).c_str()));
+                    widgets.helpView->addLogMessage ("Try to restart application");
+                    widgets.helpView->addLogMessage ("and reconnect camera.");
+                    break;
+            }
+
+        }
 
         m_cameraDevice.reset (nullptr);
 
-        return ret;
+        return CameraStatus::DEVICE_NOT_INITIALIZED;
     }
 
     m_cameraDevice->registerDataListenerExtended (static_cast<IExtendedDataListener *> (this));
@@ -475,36 +503,6 @@ CameraStatus QTViewer::initAndStart()
     for (size_t i = 0; i < m_useCases.size(); ++i)
     {
         widgets.usecaseView->addItem (m_useCases.at (i).c_str());
-    }
-
-    // The lens parameters may not be available, in which case the 3DView will use its built-in
-    // default settings. A non-SUCCESS here doesn't disconnect the camera.
-    ret = m_cameraDevice->getLensParameters (lensParams);
-
-    if (ret == CameraStatus::SUCCESS)
-    {
-        uint16_t height;
-        ret = m_cameraDevice->getMaxSensorHeight (height);
-
-        uint16_t width;
-        auto ret2 = m_cameraDevice->getMaxSensorWidth (width);
-
-        if (ret == CameraStatus::SUCCESS &&
-                ret2 == CameraStatus::SUCCESS)
-        {
-            for (auto cur3DView : m_3dViews)
-            {
-                cur3DView->updateLensParameters (lensParams, width, height);
-            }
-        }
-    }
-    else
-    {
-        widgets.helpView->addLogMessage ("Unable to retrieve lens parameters, using standard ones");
-        for (auto cur3DView : m_3dViews)
-        {
-            cur3DView->resetLensParameters();
-        }
     }
 
     ret = startCapture();
@@ -651,8 +649,13 @@ void QTViewer::initViews()
     for (auto i = 0; i < m_maxStreams; ++i)
     {
         m_colorHelper.push_back (std::shared_ptr<ColorHelper> (new ColorHelper()));
-        m_3dViews[i] = new ThreeDView (m_colorHelper[i].get (), m_dataMutex, centralWidgetX);
+        m_3dViews[i] = new ThreeDView (m_colorHelper[i].get(), m_dataMutex, centralWidgetX);
         m_2dViews[i] = new TwoDView (m_colorHelper[i].get(), m_dataMutex, centralWidgetX, 0);
+
+        m_3dViews[i]->setGamma (m_gammaValue);
+        m_3dViews[i]->enableGammaCorrection (m_enableGammaCorrection);
+        m_2dViews[i]->setGamma (m_gammaValue);
+        m_2dViews[i]->enableGammaCorrection (m_enableGammaCorrection);
 
         m_3dViews[i]->installEventFilter (this);
         m_2dViews[i]->installEventFilter (this);
@@ -717,9 +720,14 @@ void QTViewer::initViews()
     QObject::connect (widgets.cameraPositionView, SIGNAL (cameraPositionPreset (int)), this, SLOT (cameraPositionPreset (int)));
 
     widgets.dataSelectorView = new DataSelectorView;
-    QObject::connect (widgets.dataSelectorView,   SIGNAL (dataSelectorSwitched (int)), this,                       SLOT (dataSelectorSwitched (int)));
+    QObject::connect (widgets.dataSelectorView, SIGNAL (dataSelectorSwitched (int)), this, SLOT (dataSelectorSwitched (int)));
 
     widgets.dataSelectorView->displayUniformMode (!m_2d);
+
+    if (m_accessLevel >= CameraAccessLevel::L2)
+    {
+        widgets.dataSelectorView->displayflagged (m_2d);
+    }
 
     widgets.usecaseView = new ListView;
     QObject::connect (widgets.usecaseView, SIGNAL (itemSelected (const QString &)), this, SLOT (useCaseSelected (const QString &)));
@@ -728,11 +736,6 @@ void QTViewer::initViews()
     QObject::connect (this, SIGNAL (exposureLimitsChanged (int, int)), widgets.exposureView, SLOT (minMaxChanged (int, int)));
     QObject::connect (widgets.exposureView, SIGNAL (exposureValueChanged (int)), this, SLOT (exposureChanged (int)));
     QObject::connect (widgets.exposureView, SIGNAL (exposureModeChanged (bool)), this, SLOT (autoExposureEnabled (bool)));
-
-    widgets.framerateView = new FramerateView;
-    QObject::connect (this, SIGNAL (framerateLimitsChanged (int, int)), widgets.framerateView, SLOT (minMaxChanged (int, int)));
-    QObject::connect (widgets.framerateView, SIGNAL (framerateValueChanged (int)), this, SLOT (framerateChanged (int)));
-    QObject::connect (this, SIGNAL (framerateValue (int)), widgets.framerateView, SLOT (valueChanged (int)));
 
     widgets.fileView = new OpenFileView;
     QObject::connect (widgets.fileView, SIGNAL (fileSelected (const std::string &)), this, SLOT (openPlaybackFile (const std::string &)));
@@ -757,7 +760,7 @@ void QTViewer::initViews()
     recButton->setCheckable (true);
 
     m_toolsPanel = new PMDView (this, 4, 4);
-    widgets.toolsMenu = new SettingsMenuView (m_accessLevel);
+    widgets.toolsMenu = new SettingsMenuView (m_accessLevel, this);
     m_toolsPanel->layout()->addWidget (widgets.toolsMenu);
     widgets.toolsMenu->setDelegate (this);
 
@@ -779,8 +782,8 @@ void QTViewer::initViews()
     QObject::connect (forceColorButton, SIGNAL (clicked()), this, SLOT (forceColorButtonClicked()));
     QObject::connect (widgets.colorRangeView, SIGNAL (forceButtonClicked()), forceColorButton, SLOT (click()));
     QObject::connect (cameraButton, SIGNAL (clicked (bool)), this, SLOT (cameraButtonClicked()));
-    QObject::connect (recButton,    SIGNAL (clicked (bool)), this, SLOT (recButtonClicked()));
-    QObject::connect (viewButton,    SIGNAL (clicked (bool)), this, SLOT (viewButtonClicked()));
+    QObject::connect (recButton, SIGNAL (clicked (bool)), this, SLOT (recButtonClicked()));
+    QObject::connect (viewButton, SIGNAL (clicked (bool)), this, SLOT (viewButtonClicked()));
 
     QObject::connect (widgets.toolsMenu, SIGNAL (enableLockView (bool)), m_3dViews[0], SLOT (onLockViewEnabled (bool)));
     QObject::connect (widgets.toolsMenu, SIGNAL (enableLockView (bool)), this, SLOT (hideTool()));
@@ -794,6 +797,8 @@ void QTViewer::initViews()
     QObject::connect (widgets.toolsMenu, SIGNAL (enableShowStreamId (bool)), this, SLOT (hideTool()));
     QObject::connect (widgets.toolsMenu, SIGNAL (enableShowValidPixelsNumber (bool)), this, SLOT (enableValidPixelsNumber (bool)));
     QObject::connect (widgets.toolsMenu, SIGNAL (enableShowValidPixelsNumber (bool)), this, SLOT (hideTool()));
+    QObject::connect (widgets.toolsMenu, SIGNAL (enableRangeSpecifier (bool)), this, SLOT (enableRangeSpecDisplay (bool)));
+    QObject::connect (widgets.toolsMenu, SIGNAL (enableRangeSpecifier (bool)), this, SLOT (hideTool()));
     for (auto i = 0; i < m_maxStreams; ++i)
     {
         QObject::connect (widgets.toolsMenu, SIGNAL (enableFrustumDisplay (bool)), m_3dViews[i], SLOT (frustumDisplayToggled (bool)));
@@ -805,6 +810,7 @@ void QTViewer::initViews()
         QObject::connect (m_3dViews[i], SIGNAL (cameraPositionChanged (const QMatrix4x4, const QMatrix4x4)), this, SLOT (setCameraPositionChanged (const QMatrix4x4, const QMatrix4x4)));
         QObject::connect (m_3dViews[i], SIGNAL (autoRotationStatusChanged (bool, bool, bool)), this, SLOT (setAutoRotationStatusChanged (bool, bool, bool)));
         QObject::connect (m_3dViews[i], SIGNAL (rotatingSpeedChanged (float)), this, SLOT (syncRotatingSpeedChanged (float)));
+        QObject::connect (m_3dViews[i], SIGNAL (rotatingCenterChanged (float)), this, SLOT (syncRotatingCenterChanged (float)));
 
         m_2dViews[i]->lower();
         m_3dViews[i]->lower();
@@ -832,13 +838,17 @@ void QTViewer::initViews()
     rightColumn->setContentsMargins (0, margin, margin, margin);
 
     movieControl->hide();
-    widgets.playerControl = new PlayerControl ();
+    widgets.playerControl = new PlayerControl();
     movieControl->layout()->addWidget (widgets.playerControl);
 
     QObject::connect (widgets.playerControl, SIGNAL (rewind()), this, SLOT (rewind()));
+    QObject::connect (widgets.playerControl, SIGNAL (rewindWhenRange()), this, SLOT (rewindWhenRange()));
     QObject::connect (widgets.playerControl, SIGNAL (playStop (bool)), this, SLOT (playbackStopPlay (bool)));
     QObject::connect (widgets.playerControl, SIGNAL (forward()), this, SLOT (forward()));
+    QObject::connect (widgets.playerControl, SIGNAL (forwardWhenRange()), this, SLOT (forwardWhenRange()));
     QObject::connect (widgets.playerControl, SIGNAL (seekTo (int)), this, SLOT (seekTo (int)));
+    QObject::connect (widgets.playerControl, SIGNAL (seekToWhenRange (int)), this, SLOT (seekToWhenRange (int)));
+    QObject::connect (widgets.playerControl, SIGNAL (rangePlay (int, int)), this, SLOT (rangePlay (int, int)));
 
     registerWidgetContainer->hide();
     if (m_accessLevel >= CameraAccessLevel::L3)
@@ -851,6 +861,16 @@ void QTViewer::initViews()
         QObject::connect (registerWidget, SIGNAL (writeRegister (QString, uint16_t)), this, SLOT (writeRegister (QString, uint16_t)));
         QObject::connect (this, SIGNAL (registerReadReturn (QString, uint16_t)), registerWidget, SLOT (registerReadReturn (QString, uint16_t)));
         QObject::connect (this, SIGNAL (registerWriteReturn (bool)), registerWidget, SLOT (registerWriteReturn (bool)));
+    }
+}
+
+void QTViewer::enableRangeSpecDisplay (bool enabled)
+{
+    widgets.playerControl->showRangeBox (enabled);
+    m_replayControl->setPlaybackRange (0, m_replayControl->frameCount());
+    if (enabled)
+    {
+        widgets.playerControl->setUpRange (1, m_replayControl->frameCount());
     }
 }
 
@@ -980,6 +1000,19 @@ void QTViewer::keyPressEvent (QKeyEvent *event)
                     forceColorButton->setChecked (true);
                     break;
                 }
+            case Qt::Key_G:
+                {
+                    m_enableGammaCorrection = !m_enableGammaCorrection;
+                    for (auto curView : m_2dViews)
+                    {
+                        curView->enableGammaCorrection (m_enableGammaCorrection);
+                    }
+                    for (auto curView : m_3dViews)
+                    {
+                        curView->enableGammaCorrection (m_enableGammaCorrection);
+                    }
+                    break;
+                }
             case Qt::Key_S:
                 {
                     cameraButton->click();
@@ -1100,7 +1133,7 @@ CameraStatus QTViewer::connectCamera (uint32_t androidUsbDeviceFD,
 CameraStatus QTViewer::connectCamera()
 #endif
 {
-    checkForNewAccessCode ();
+    checkForNewAccessCode();
     widgets.helpView->clearInfoMessage();
 
     royale::String accessCode = ROYALE_ACCESS_CODE_LEVEL2;
@@ -1174,7 +1207,7 @@ CameraStatus QTViewer::connectCamera()
                 widgets.helpView->addInfoMessage ("- " + QString::number (i + 1) + " -");
                 widgets.helpView->addInfoMessage ("Name : " + QString (cameraNames[i].c_str()));
                 widgets.helpView->addInfoMessage ("ID : " + QString (connectedCameras[i].c_str()));
-                items << QString (connectedCameras[i].c_str ());
+                items << QString (connectedCameras[i].c_str());
             }
 
             QInputDialog dlg;
@@ -1265,7 +1298,6 @@ CameraStatus QTViewer::startCapture()
         return CameraStatus::DISCONNECTED;
     }
     widgets.helpView->addLogMessage ("Starting camera capture");
-    m_cameraDevice->registerEventListener (this);
 
     return m_cameraDevice->startCapture();
 }
@@ -1304,7 +1336,7 @@ void QTViewer::onNewData (const royale::IExtendedData *data)
         auto curDepthData = data->getDepthData();
         auto curIntermediateData = data->getIntermediateData();
 
-        int curViewIdx = 0;
+        unsigned curViewIdx = 0;
         if (m_streamIdMap.find (curDepthData->streamId) == m_streamIdMap.end())
         {
             // This shouldn't happen, the stream ID was not registered
@@ -1313,6 +1345,17 @@ void QTViewer::onNewData (const royale::IExtendedData *data)
         else
         {
             curViewIdx = m_streamIdMap[curDepthData->streamId];
+        }
+
+        if (curViewIdx < m_currentHeight.size())
+        {
+            if (curDepthData->width != m_currentWidth[curViewIdx] ||
+                    curDepthData->height != m_currentHeight[curViewIdx])
+            {
+                m_currentWidth[curViewIdx] = curDepthData->width;
+                m_currentHeight[curViewIdx] = curDepthData->height;
+                updateLensParameters (curViewIdx);
+            }
         }
 
         m_currentData[curDepthData->streamId] = *curDepthData;
@@ -1601,18 +1644,13 @@ void QTViewer::settingSelected (const QString &name)
         tmppanel->updateStreams (m_streamIds);
         panel = tmppanel;
     }
-    else if (name == "Frame Rate")
-    {
-        panel = new PMDView (this, 3, 3);
-        panel->layout()->addWidget (widgets.framerateView);
-    }
     else if (name == "Load File")
     {
 #ifdef TARGET_PLATFORM_ANDROID
         panel = new PMDView (this, 3, 4);
         panel->layout()->addWidget (widgets.fileView);
 #else
-        loadFile ();
+        loadFile();
         hideTool();
 #endif
     }
@@ -1626,7 +1664,7 @@ void QTViewer::settingSelected (const QString &name)
 
     if (widgets.currentTool)
     {
-        widgets.currentTool ->hide();
+        widgets.currentTool->hide();
     }
     const int toolRow = 0;
     const int toolColumn = 1;
@@ -1725,6 +1763,7 @@ void QTViewer::dataSelectorSwitched (int mode)
             m_showDistance = true;
             m_showGrayimage = false;
             m_showOverlayimage = false;
+            m_showFlagimage = false;
             widgets.colorRangeView->setDistSliderMinMax (10, 450);
             widgets.colorRangeView->showGroups (true, false);
             for (auto i = 0; i < m_maxStreams; ++i)
@@ -1737,6 +1776,7 @@ void QTViewer::dataSelectorSwitched (int mode)
             m_showDistance = false;
             m_showGrayimage = true;
             m_showOverlayimage = false;
+            m_showFlagimage = false;
             widgets.colorRangeView->setGraySliderMinMax (0, 4095);
             widgets.colorRangeView->showGroups (false, true);
             for (auto i = 0; i < m_maxStreams; ++i)
@@ -1749,6 +1789,7 @@ void QTViewer::dataSelectorSwitched (int mode)
             m_showDistance = false;
             m_showGrayimage = true;
             m_showOverlayimage = false;
+            m_showFlagimage = false;
             widgets.colorRangeView->setGraySliderMinMax (0, 4095);
             widgets.colorRangeView->showGroups (false, true);
             for (auto i = 0; i < m_maxStreams; ++i)
@@ -1771,6 +1812,7 @@ void QTViewer::dataSelectorSwitched (int mode)
             m_showDistance = false;
             m_showGrayimage = false;
             m_showOverlayimage = true;
+            m_showFlagimage = false;
             widgets.colorRangeView->setDistSliderMinMax (10, 450);
             widgets.colorRangeView->setGraySliderMinMax (0, 4095);
             widgets.colorRangeView->showGroups (true, true);
@@ -1778,6 +1820,17 @@ void QTViewer::dataSelectorSwitched (int mode)
             {
                 m_2dViews[i]->switchToOverlay();
                 m_3dViews[i]->switchToOverlay();
+            }
+            break;
+
+        case DataSelector_Flagged:
+            m_showDistance = false;
+            m_showGrayimage = false;
+            m_showOverlayimage = false;
+            m_showFlagimage = true;
+            for (auto i = 0; i < m_maxStreams; ++i)
+            {
+                m_2dViews[i]->switchToFlag();
             }
             break;
     }
@@ -1857,7 +1910,7 @@ void QTViewer::layoutSubviews()
                 m_validPixelsNumberLabel[i]->hide();
             }
 
-            if (m_2d)
+            if (m_2d || m_irMode[m_streamIds[i]])
             {
                 m_2dViews[i]->show();
                 m_3dViews[i]->hide();
@@ -2005,7 +2058,16 @@ void QTViewer::recButtonClicked()
             for (auto i = 0u; i < m_streamIds.size(); ++i)
             {
                 const std::string plyPath = m_saveFolder.toStdString() + "/" + fileBaseName.arg (QString::number (i)).arg ("ply").toStdString();
-                PLYWriter::writePLY (plyPath, &m_currentData[m_streamIds[i]]);
+
+                std::ofstream fileOutput{};
+                fileOutput.open (plyPath);
+
+                if (fileOutput.is_open())
+                {
+                    importExportHelperLib::encodePLY (&m_currentData[m_streamIds[i]], fileOutput);
+                    fileOutput.close();
+                }
+
                 const std::string imagePath = m_saveFolder.toStdString() + "/" + fileBaseName.arg (QString::number (i)).arg ("png").toStdString();
                 widgets.helpView->addLogMessage ("Output in " + QString (plyPath.c_str()));
                 widgets.helpView->addLogMessage ("Output in " + QString (imagePath.c_str()));
@@ -2046,6 +2108,7 @@ void QTViewer::recButtonClicked()
                     widgets.helpView->addLogMessage ("Output in " + QString (filepath.c_str()));
                     m_isRecording = true;
                     recButton->setChecked (true);
+                    widgets.usecaseView->setEnabled (false);
                 }
                 else
                 {
@@ -2066,6 +2129,8 @@ void QTViewer::stopRecording()
 {
     if (m_cameraDevice->stopRecording() == royale::CameraStatus::SUCCESS)
     {
+        widgets.usecaseView->setEnabled (true);
+
         widgets.helpView->addLogMessage ("Raw recorder stopped.");
         m_isRecording = false;
         recButton->setChecked (false);
@@ -2101,7 +2166,7 @@ void QTViewer::updateStreamId()
     }
 }
 
-void QTViewer::updateValidPixelsNumber ()
+void QTViewer::updateValidPixelsNumber()
 {
     m_updateValidPixelsNumber = true;
     for (auto i = 0; i < (int) m_streamIds.size(); ++i)
@@ -2256,6 +2321,20 @@ void QTViewer::syncRotatingSpeedChanged (float speed)
     }
 }
 
+void QTViewer::syncRotatingCenterChanged (float center)
+{
+    ThreeDView *activeView = qobject_cast<ThreeDView *> (sender());
+    for (auto i = 0u; i < m_streamIds.size(); ++i)
+    {
+        if (activeView != m_3dViews[i])
+        {
+            m_3dViews[i]->setRotatingCenter (center, false);
+            m_autoRotationSettings[m_streamIds[i]].center = center;
+            streamIdAutoRotationViewChanged (m_streamIds[i]);
+        }
+    }
+}
+
 void QTViewer::enableSingleFrameRecording (bool enabled)
 {
     if (enabled == true && m_cameraDevice && m_isRecording)
@@ -2299,9 +2378,14 @@ void QTViewer::openPlaybackFile (const std::string &filename)
         movieControl->show();
         m_replayControl = dynamic_cast<IReplay *> (m_cameraDevice.get());
         widgets.playerControl->reset();
+        if (m_replayControl->getBuildVersion() == 0)
+        {
+            widgets.helpView->addLogMessage ("Warning : rrf file not recorded with an official version.");
+            QMessageBox::warning (this, this->windowTitle(), "Warning : rrf file not recorded with an official version.");
+        }
         if (m_replayControl)
         {
-            widgets.playerControl->setFrameCount (m_replayControl->frameCount ());
+            widgets.playerControl->setFrameCount (m_replayControl->frameCount());
             widgets.helpView->addLogMessage ("Successfully loaded : " + QString::fromStdString (filename));
             widgets.helpView->addLogMessage ("File version : " + QString::number (m_replayControl->getFileVersion()));
         }
@@ -2340,6 +2424,111 @@ inline bool endsWith (const royale::String &value, const royale::String &ending)
     return value.compare (value.length() - ending.length(), ending.length(), ending) == 0;
 }
 
+void QTViewer::loadConfig (QString const &configFile)
+{
+    std::ifstream ifs (configFile.toStdString());
+    std::string configString ( (std::istreambuf_iterator<char> (ifs)),
+                               (std::istreambuf_iterator<char>()));
+
+    std::regex streamRegex ("^(?!#)\\s*\\[([0-9]+)\\]\\s*([^\\[]*)");
+    std::regex keyValueRegex ("^(?!#)\\s*(\\S+)\\s*=\\s*(\\S+)\\s*");
+
+    std::smatch streamMatcher;
+    while (std::regex_search (configString, streamMatcher, streamRegex))
+    {
+        widgets.helpView->addLogMessage (configFile);
+
+        std::string streamIDString = streamMatcher[1];
+        std::string streamConfigString = streamMatcher[2];
+
+        royale::ProcessingParameterVector params;
+        auto streamID = static_cast<uint16_t> (atoi (streamIDString.c_str()));
+
+        std::smatch keyValueMatcher;
+        while (std::regex_search (streamConfigString, keyValueMatcher, keyValueRegex))
+        {
+            std::string keyString = keyValueMatcher[1];
+            std::string valueString = keyValueMatcher[2];
+
+            royale::String key = keyString;
+
+            try
+            {
+
+                if (keyString.compare ("ColorMappingRed") == 0)
+                {
+                    auto value = static_cast<float> (atof (valueString.c_str()));
+                    m_colorHelper[m_streamIdMap[m_streamIds[streamID]]]->setMinDist (value);
+                }
+                else if (keyString.compare ("ColorMappingBlue") == 0)
+                {
+                    auto value = static_cast<float> (atof (valueString.c_str()));
+                    m_colorHelper[m_streamIdMap[m_streamIds[streamID]]]->setMaxDist (value);
+                }
+                else if (keyString.compare ("AmplitudeIRColorMin") == 0)
+                {
+                    auto value = static_cast<uint16_t> (atoi (valueString.c_str()));
+                    m_colorHelper[m_streamIdMap[m_streamIds[streamID]]]->setMinVal (value);
+                }
+                else if (keyString.compare ("AmplitudeIRColorMax") == 0)
+                {
+                    auto value = static_cast<uint16_t> (atoi (valueString.c_str()));
+                    m_colorHelper[m_streamIdMap[m_streamIds[streamID]]]->setMaxVal (value);
+                }
+                else
+                {
+                    royale::ProcessingFlag processingFlag;
+
+                    if (royale::parseProcessingFlagName (key, processingFlag))
+                    {
+
+                        if (endsWith (key, "_Bool"))
+                        {
+                            bool variantValue = valueString.compare ("True") == 0;
+                            royale::Variant variant (variantValue);
+
+                            std::pair<royale::ProcessingFlag, royale::Variant> processingParameter (processingFlag, variant);
+                            params.push_back (processingParameter);
+                        }
+
+                        else if (endsWith (key, "_Int"))
+                        {
+                            int variantValue = atoi (valueString.c_str());
+                            royale::Variant variant (variantValue);
+
+                            std::pair<royale::ProcessingFlag, royale::Variant> processingParameter (processingFlag, variant);
+                            params.push_back (processingParameter);
+                        }
+
+                        else if (endsWith (key, "_Float"))
+                        {
+                            auto variantValue = static_cast<float> (atof (valueString.c_str()));
+                            royale::Variant variant (variantValue);
+
+                            std::pair<royale::ProcessingFlag, royale::Variant> processingParameter (processingFlag, variant);
+                            params.push_back (processingParameter);
+                        }
+                    }
+                }
+            }
+            catch (...)
+            {
+                widgets.helpView->addLogMessage ("config parameter can not be parsed");
+            }
+
+            streamConfigString = keyValueMatcher.suffix().str();
+        }
+
+        hideTool();
+
+        m_cameraDevice->setProcessingParameters (params, m_streamIds[streamID]);
+        widgets.parameterView->setCurrentParameters (params);
+        widgets.parameterView->parameterChanged();
+
+        configString = streamMatcher.suffix().str();
+    }
+}
+
 void QTViewer::dropEvent (QDropEvent *event)
 {
     if (event->mimeData()->urls().count() > 1)
@@ -2361,108 +2550,9 @@ void QTViewer::dropEvent (QDropEvent *event)
         }
         else if (localFile.endsWith (".cfg"))
         {
-            if (m_accessLevel >= CameraAccessLevel::L2)
+            if (m_accessLevel >= CameraAccessLevel::L2 && m_isConnected)
             {
-                std::ifstream ifs (localFile.toStdString());
-                std::string configString ( (std::istreambuf_iterator<char> (ifs)),
-                                           (std::istreambuf_iterator<char>()));
-
-                std::regex streamRegex ("^(?!#)\\s*\\[([0-9]+)\\]\\s*([^\\[]*)");
-                std::regex keyValueRegex ("^(?!#)\\s*(\\S+)\\s*=\\s*(\\S+)\\s*");
-
-                std::smatch streamMatcher;
-                while (std::regex_search (configString, streamMatcher, streamRegex))
-                {
-                    widgets.helpView->addLogMessage (localFile);
-
-                    std::string streamIDString = streamMatcher[1];
-                    std::string streamConfigString = streamMatcher[2];
-
-                    royale::ProcessingParameterVector params;
-                    auto streamID = static_cast<uint16_t> (atoi (streamIDString.c_str()));
-
-                    std::smatch keyValueMatcher;
-                    while (std::regex_search (streamConfigString, keyValueMatcher, keyValueRegex))
-                    {
-                        std::string keyString = keyValueMatcher[1];
-                        std::string valueString = keyValueMatcher[2];
-
-                        royale::String key = keyString;
-
-                        try
-                        {
-
-                            if (keyString.compare ("ColorMappingRed") == 0)
-                            {
-                                auto value = static_cast<float> (atof (valueString.c_str()));
-                                m_colorHelper[m_streamIdMap[m_streamIds[streamID]]]->setMinDist (value);
-                            }
-                            else if (keyString.compare ("ColorMappingBlue") == 0)
-                            {
-                                auto value = static_cast<float> (atof (valueString.c_str()));
-                                m_colorHelper[m_streamIdMap[m_streamIds[streamID]]]->setMaxDist (value);
-                            }
-                            else if (keyString.compare ("AmplitudeIRColorMin") == 0)
-                            {
-                                auto value = static_cast<uint16_t> (atoi (valueString.c_str()));
-                                m_colorHelper[m_streamIdMap[m_streamIds[streamID]]]->setMinVal (value);
-                            }
-                            else if (keyString.compare ("AmplitudeIRColorMax") == 0)
-                            {
-                                auto value = static_cast<uint16_t> (atoi (valueString.c_str()));
-                                m_colorHelper[m_streamIdMap[m_streamIds[streamID]]]->setMaxVal (value);
-                            }
-                            else
-                            {
-                                royale::ProcessingFlag processingFlag;
-
-                                if (royale::parseProcessingFlagName (key, processingFlag))
-                                {
-
-                                    if (endsWith (key, "_Bool"))
-                                    {
-                                        bool variantValue = valueString.compare ("True") == 0;
-                                        royale::Variant variant (variantValue);
-
-                                        std::pair<royale::ProcessingFlag, royale::Variant> processingParameter (processingFlag, variant);
-                                        params.push_back (processingParameter);
-                                    }
-
-                                    else if (endsWith (key, "_Int"))
-                                    {
-                                        int variantValue = atoi (valueString.c_str());
-                                        royale::Variant variant (variantValue);
-
-                                        std::pair<royale::ProcessingFlag, royale::Variant> processingParameter (processingFlag, variant);
-                                        params.push_back (processingParameter);
-                                    }
-
-                                    else if (endsWith (key, "_Float"))
-                                    {
-                                        auto variantValue = static_cast<float> (atof (valueString.c_str()));
-                                        royale::Variant variant (variantValue);
-
-                                        std::pair<royale::ProcessingFlag, royale::Variant> processingParameter (processingFlag, variant);
-                                        params.push_back (processingParameter);
-                                    }
-                                }
-                            }
-                        }
-                        catch (...)
-                        {
-                            widgets.helpView->addLogMessage ("config parameter can not be parsed");
-                        }
-
-                        streamConfigString = keyValueMatcher.suffix().str();
-                    }
-
-                    m_cameraDevice->setProcessingParameters (params, streamID);
-                    widgets.parameterView->setCurrentParameters (params);
-                    widgets.parameterView->parameterChanged();
-
-                    configString = streamMatcher.suffix().str();
-                }
-
+                loadConfig (localFile);
                 event->acceptProposedAction();
                 repeat();
             }
@@ -2511,25 +2601,6 @@ void QTViewer::exposureChanged (int newExposure)
             widgets.helpView->addLogMessage (QString ("Error changing the exposure time! Error : ") + QString (getErrorString (ret).c_str()));
         }
         widgets.exposureView->blockSlider (false);
-    }
-}
-
-void QTViewer::framerateChanged (int newFramerate)
-{
-    if (m_cameraDevice)
-    {
-        auto rate = static_cast<uint16_t> (newFramerate);
-        if (static_cast<int> (rate) != newFramerate)
-        {
-            // this narrow_cast failure was unexpected, but just return
-            return;
-        }
-
-        auto ret = m_cameraDevice->setFrameRate (rate);
-        if (ret == CameraStatus::SUCCESS)
-        {
-            widgets.framerateView->valueChanged (newFramerate);
-        }
     }
 }
 
@@ -2638,6 +2709,41 @@ void QTViewer::onNewExposure (const uint32_t exposureTime, const royale::StreamI
     }
 }
 
+void QTViewer::rewindWhenRange()
+{
+    if (!m_replayControl)
+    {
+        return;
+    }
+
+    uint32_t begin{}, end{};
+
+    m_replayControl->getPlaybackRange (begin, end);
+    auto frameNumber = m_replayControl->currentFrame();
+
+    if (frameNumber == begin)
+    {
+        frameNumber = end - 1;
+    }
+    else
+    {
+        auto skip = uint32_t{ 1 };
+        if (m_isPlaybackActive)
+        {
+            // If the playback is already running than rewind
+            // by 10% of all frames
+            skip = std::max (3u, (end - begin) / 10);
+        }
+        // Seek to the first frame if skip is too large
+        frameNumber -= std::min (frameNumber, skip);
+    }
+
+    if (frameNumber >= begin && frameNumber <= end)
+    {
+        m_replayControl->seek (frameNumber);
+    }
+}
+
 void QTViewer::rewind()
 {
     if (!m_replayControl)
@@ -2670,6 +2776,22 @@ void QTViewer::rewind()
     m_replayControl->seek (frameNumber);
 }
 
+void QTViewer::rangePlay (int firstFrame, int lastFrame)
+{
+    if (!m_replayControl)
+    {
+        return;
+    }
+
+    if (lastFrame > firstFrame)
+    {
+        m_replayControl->setPlaybackRange (uint32_t (firstFrame), uint32_t (lastFrame));
+
+        m_replayControl->seek (uint32_t (firstFrame));
+    }
+
+}
+
 void QTViewer::repeat()
 {
     if (!m_replayControl || m_isPlaybackActive)
@@ -2700,6 +2822,46 @@ void QTViewer::playbackStopPlay (bool play)
     }
 }
 
+void QTViewer::forwardWhenRange()
+{
+    if (!m_replayControl)
+    {
+        return;
+    }
+    uint32_t begin{}, end{};
+
+    m_replayControl->getPlaybackRange (begin, end);
+    auto frameNumber = m_replayControl->currentFrame();
+
+    if (frameNumber == end - 1)
+    {
+        frameNumber = begin;
+    }
+    else
+    {
+        auto skip = uint32_t{ 1 };
+
+        if (m_isPlaybackActive)
+        {
+            // If the playback is already running than forward
+            // by 10% of all frames
+            skip = std::max (3u, (end - begin) / 10);
+        }
+
+        if (frameNumber + skip >= end)
+        {
+            // Seek is zero-based, frameCount is not
+            frameNumber = end - 1;
+        }
+        else
+        {
+            frameNumber += skip;
+        }
+    }
+    m_replayControl->seek (frameNumber);
+
+
+}
 void QTViewer::forward()
 {
     if (!m_replayControl)
@@ -2738,6 +2900,41 @@ void QTViewer::forward()
     m_replayControl->seek (frameNumber);
 }
 
+void QTViewer::seekToWhenRange (int frame)
+{
+    if (!m_replayControl)
+    {
+        return;
+    }
+    uint32_t begin{}, end{};
+    m_replayControl->getPlaybackRange (begin, end);
+
+    if (m_isPlaybackActive)
+    {
+        m_replayControl->pause();
+        if ( (uint32_t) frame >= begin && (uint32_t) frame <= end - 1)
+        {
+            m_replayControl->seek (frame);
+        }
+        else
+        {
+            m_replayControl->seek (begin);
+        }
+        m_replayControl->resume();
+    }
+    else
+    {
+        if ( (uint32_t) frame >= begin && (uint32_t) frame <= end - 1)
+        {
+            m_replayControl->seek (frame);
+        }
+        else
+        {
+            m_replayControl->seek (begin);
+        }
+    }
+
+}
 void QTViewer::seekTo (int frame)
 {
     if (!m_replayControl)
@@ -2760,7 +2957,8 @@ void QTViewer::seekTo (int frame)
 
 void QTViewer::onEvent (std::unique_ptr<royale::IEvent> &&event)
 {
-    if (event->severity() >= royale::EventSeverity::ROYALE_WARNING)
+    if (event->severity() >= royale::EventSeverity::ROYALE_WARNING ||
+            m_accessLevel >= CameraAccessLevel::L2)
     {
         auto m = event->describe();
         auto msg = m.toStdString();
@@ -2854,33 +3052,7 @@ bool QTViewer::eventFilter (QObject *obj, QEvent *event)
 
 void QTViewer::setCurrentView (bool twoD)
 {
-    if (!twoD)
-    {
-        if (m_streamIds.size())
-        {
-            for (auto i = 0u; i < m_streamIds.size(); ++i)
-            {
-                m_2dViews[i]->hide();
-                m_3dViews[i]->show();
-                if (m_hasData[m_streamIds[i]])
-                {
-                    m_3dViews[i]->onNewData (&m_currentData[m_streamIds[i]],
-                                             &m_currentIntermediateData[m_streamIds[i]]);
-                }
-            }
-            for (auto i = 0; i < m_maxStreams; ++i)
-            {
-                m_fpsLabel[i]->setParent (m_3dViews[i]);
-                m_streamIdLabel[i]->setParent (m_3dViews[i]);
-                m_validPixelsNumberLabel[i]->setParent (m_3dViews[i]);
-            }
-        }
-        else
-        {
-            // we don't have any streams ...
-        }
-    }
-    else
+    if (twoD)
     {
         if (m_streamIds.size())
         {
@@ -2906,9 +3078,44 @@ void QTViewer::setCurrentView (bool twoD)
             // we don't have any streams ...
         }
     }
+    else
+    {
+        if (m_streamIds.size())
+        {
+            for (auto i = 0u; i < m_streamIds.size(); ++i)
+            {
+                if (!m_irMode[m_streamIds[i]])
+                {
+                    m_2dViews[i]->hide();
+                    m_3dViews[i]->show();
+                    if (m_hasData[m_streamIds[i]])
+                    {
+                        m_3dViews[i]->onNewData (&m_currentData[m_streamIds[i]],
+                                                 &m_currentIntermediateData[m_streamIds[i]]);
+                    }
+                }
+            }
+            for (auto i = 0; i < m_maxStreams; ++i)
+            {
+                if (!m_irMode[m_streamIds[i]])
+                {
+                    m_fpsLabel[i]->setParent (m_3dViews[i]);
+                    m_streamIdLabel[i]->setParent (m_3dViews[i]);
+                    m_validPixelsNumberLabel[i]->setParent (m_3dViews[i]);
+                }
+            }
+        }
+        else
+        {
+            // we don't have any streams ...
+        }
+    }
 
     widgets.dataSelectorView->displayUniformMode (!twoD);
-
+    if (m_accessLevel >= CameraAccessLevel::L2)
+    {
+        widgets.dataSelectorView->displayflagged (twoD);
+    }
     m_2d = twoD;
     if (m_2d)
     {
@@ -2961,6 +3168,7 @@ void QTViewer::fillStreamView()
         m_streamIdMap[stream] = curIdx;
         m_firstData[stream] = true;
         m_frameCounter[stream] = 0;
+        m_irMode[stream] = false;
 
         ++curIdx;
     }
@@ -2981,8 +3189,6 @@ void QTViewer::fillStreamView()
 
     widgets.toolsMenu->updateToolEntries (m_isConnected, m_2d, m_modeMixed, !m_playbackFilename.empty());
 
-    layoutSubviews();
-
     if (m_autoExposure)
     {
         for (auto i = 0u; i < m_streamIds.size(); ++i)
@@ -2991,23 +3197,34 @@ void QTViewer::fillStreamView()
         }
     }
 
-    uint16_t framerateMax;
-    if (m_cameraDevice->getMaxFrameRate (framerateMax) == CameraStatus::SUCCESS)
-    {
-        emit framerateLimitsChanged (1, framerateMax);
-    }
-
-    uint16_t framerateCurr;
-    if (m_cameraDevice->getFrameRate (framerateCurr) == CameraStatus::SUCCESS)
-    {
-        emit framerateValue (framerateCurr);
-    }
-
-
     if (m_initSettings.hasInit)
     {
         initSettings();
     }
+
+    m_defaultParameters.clear();
+    for (auto i = 0u; i < m_streamIds.size(); ++i)
+    {
+        m_cameraDevice->getProcessingParameters (m_defaultParameters[m_streamIds[i]], m_streamIds[i]);
+        m_irMode[m_streamIds[i]] = checkIfIRMode (m_defaultParameters[m_streamIds[i]]);
+    }
+
+    if (!m_configFileName.isEmpty() && m_accessLevel >= CameraAccessLevel::L2)
+    {
+        loadConfig (m_configFileName);
+    }
+
+    for (auto i = 0u; i < m_streamIds.size(); ++i)
+    {
+        m_2dViews[i]->setIRMode (m_irMode[m_streamIds[i]]);
+    }
+
+    layoutSubviews();
+
+    m_currentHeight.clear();
+    m_currentWidth.clear();
+    m_currentHeight.resize (m_streamIds.size(), 0u);
+    m_currentWidth.resize (m_streamIds.size(), 0u);
 }
 
 void QTViewer::initSettings()
@@ -3021,7 +3238,7 @@ void QTViewer::initSettings()
         if (m_initSettings.initCenter != 2.0f)
         {
             m_autoRotationSettings[m_streamIds[i]].center = m_initSettings.initCenter;
-            m_3dViews[i]->setRotatingCenter (m_initSettings.initCenter);
+            m_3dViews[i]->setRotatingCenter (m_initSettings.initCenter, true);
         }
         if (m_initSettings.initSpeed != 0.01f)
         {
@@ -3328,7 +3545,7 @@ void QTViewer::onRCenterChanged (const float center)
         {
             if (curStreamId == m_streamIds[i])
             {
-                m_3dViews[i]->setRotatingCenter (center);
+                m_3dViews[i]->setRotatingCenter (center, true);
                 break;
             }
         }
@@ -3669,6 +3886,61 @@ void QTViewer::hideTool()
     }
 }
 
+void QTViewer::resetGUI()
+{
+
+    // clear flip views and other checkboxes
+    widgets.toolsMenu->resetCheckboxes();
+
+    // reset 3d camera positions
+    cameraPositionPreset (CameraPositionPreset_Front);
+
+    // reset to 2d view
+    m_2d = true;
+    setCurrentView (m_2d);
+
+    // reset data visualization
+    dataSelectorSwitched (DataSelector_Distance);
+
+    // hide windows
+    hideTool();
+
+    // reset filter level
+    widgets.filterLevelView->setFilterLevel (royale::FilterLevel::Legacy);
+
+    // reset min/max filter
+    widgets.filterMinMaxView->onFilterMinMaxToggled (false);
+
+    float filterMin = .0f;
+    float filterMax = 7.5f;
+    widgets.filterMinMaxView->setFilterMinMaxSlider ( (int) (filterMin * 100.0f), (int) (filterMax * 100.0f));
+
+    // set to default settings
+    initSettings();
+
+    // clear pixelinfos
+    for (auto i = 0; i < m_maxStreams; ++i)
+    {
+        m_2dViews[i]->clearPixelInfos();
+    }
+
+    // reset parameters we got when we initialized the streams.
+    for (auto i = 0u; i < m_streamIds.size(); ++i)
+    {
+        m_cameraDevice->setProcessingParameters (m_defaultParameters[m_streamIds[i]], m_streamIds[i]);
+        streamIdParameterViewChanged (m_streamIds[i]);
+    }
+    widgets.parameterView->parameterChanged();
+    widgets.parameterView->reset();
+
+    // reload configs
+    if (!m_configFileName.isEmpty() && m_accessLevel >= CameraAccessLevel::L2)
+    {
+        loadConfig (m_configFileName);
+    }
+
+}
+
 void QTViewer::readRegister (QString registerStr)
 {
     if (!m_cameraDevice)
@@ -3704,7 +3976,7 @@ void QTViewer::writeRegister (QString registerStr, uint16_t value)
     }
 }
 
-void QTViewer::loadFile ()
+void QTViewer::loadFile()
 {
     QString fileName = QFileDialog::getOpenFileName (this, tr ("Open File"),
                        m_lastLoadFolder,
@@ -3753,4 +4025,61 @@ void QTViewer::streamIdFilterLevelViewChanged (royale::StreamId streamId)
     FilterLevel level;
     m_cameraDevice->getFilterLevel (level, streamId);
     widgets.filterLevelView->setFilterLevel (level);
+}
+
+void QTViewer::onRecordingStopped (const uint32_t numFrames)
+{
+    emit recButton->setChecked (false);
+
+    widgets.helpView->addLogMessage ("Stopped the recording");
+}
+
+void QTViewer::updateLensParameters (int viewIdx)
+{
+    // The lens parameters may not be available, in which case the 3DView will use its built-in
+    // default settings. A non-SUCCESS here doesn't disconnect the camera.
+    LensParameters lensParams;
+    auto ret = m_cameraDevice->getLensParameters (lensParams);
+
+    if (ret == CameraStatus::SUCCESS)
+    {
+        if (viewIdx >= 0)
+        {
+            m_3dViews[viewIdx]->updateLensParameters (lensParams, m_currentWidth[viewIdx], m_currentHeight[viewIdx]);
+        }
+        else
+        {
+            for (auto i = 0u; i < m_3dViews.size(); ++i)
+            {
+                m_3dViews[i]->updateLensParameters (lensParams, m_currentWidth[i], m_currentHeight[i]);
+            }
+        }
+    }
+    else
+    {
+        widgets.helpView->addLogMessage ("Unable to retrieve lens parameters, using standard ones");
+        for (auto cur3DView : m_3dViews)
+        {
+            cur3DView->resetLensParameters();
+        }
+    }
+}
+
+bool QTViewer::checkIfIRMode (const ProcessingParameterVector &parameters)
+{
+    for (auto curParam : parameters)
+    {
+        if (curParam.first == royale::ProcessingFlag::SpectreProcessingType_Int)
+        {
+            if (curParam.second.getInt() == 6)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+    }
+    return false;
 }

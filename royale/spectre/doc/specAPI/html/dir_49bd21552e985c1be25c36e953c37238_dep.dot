@@ -1,0 +1,11 @@
+digraph "spectre" {
+  bgcolor=transparent;
+  compound=true
+  node [ fontsize="10", fontname="Helvetica"];
+  edge [ labelfontsize="10", labelfontname="Helvetica"];
+  subgraph clusterdir_49bd21552e985c1be25c36e953c37238 {
+    graph [ bgcolor="#eeeeff", pencolor="black", label="" URL="dir_49bd21552e985c1be25c36e953c37238.html"];
+    dir_49bd21552e985c1be25c36e953c37238 [shape=plaintext label="spectre"];
+    dir_ec0953884dab6ce756ca55940a0f7974 [shape=box label="inc" color="red" fillcolor="white" style="filled" URL="dir_ec0953884dab6ce756ca55940a0f7974.html"];
+  }
+}

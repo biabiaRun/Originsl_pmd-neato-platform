@@ -130,7 +130,8 @@ protected:
                        bool useSuperFrame = false)
     {
         {
-            ImagerParameters params{ m_bridge, nullptr, useSuperFrame, false,
+            ImagerParameters params{ m_bridge, nullptr, useSuperFrame,
+                                     royale::config::ImConnectedTemperatureSensor::NONE,
                                      ImgTrigger::GPIO13, interfaceType, 0., {},
                                      sysfreq, ImagerRawFrame::ImagerDutyCycle::DC_50,
                                      ImgIlluminationPad::SE_P, 100000000, false };
@@ -160,14 +161,15 @@ protected:
 
 TEST_F (TestImagerM2450_A12_AIO, CreateImagerDirectly)
 {
-    ImagerParameters params1{ nullptr, nullptr, false, false, ImgTrigger::I2C, ImgImageDataTransferType::PIF, 0., {}, 0u, ImagerRawFrame::ImagerDutyCycle::DC_0, ImgIlluminationPad::SE_P, 0u, false };
+    ImagerParameters params1{ nullptr, nullptr, false, royale::config::ImConnectedTemperatureSensor::NONE, ImgTrigger::I2C, ImgImageDataTransferType::PIF, 0., {}, 0u, ImagerRawFrame::ImagerDutyCycle::DC_0, ImgIlluminationPad::SE_P, 0u, false };
 
     ASSERT_THROW (new ImagerM2450_A12_AIO (params1), LogicError);
 }
 
 TEST_F (TestImagerM2450_A12_AIO, UnsupportedTransmissionMode)
 {
-    ImagerParameters params{ m_bridge, nullptr, true, false,
+    ImagerParameters params{ m_bridge, nullptr, true,
+                             royale::config::ImConnectedTemperatureSensor::NONE,
                              ImgTrigger::GPIO13, ImgImageDataTransferType::PIF, 0., {},
                              SYSFREQ, ImagerRawFrame::ImagerDutyCycle::DC_50,
                              ImgIlluminationPad::SE_P, 100000000, false };
@@ -276,7 +278,8 @@ TEST_F (TestImagerM2450_A12_AIO, InitAndVerifyCustomReadoutSettings)
 
     //switch to SOCD=8cycles and ODDD=34cycles delay
     {
-        ImagerParameters params{ m_bridge, nullptr, false, false,
+        ImagerParameters params{ m_bridge, nullptr, false,
+        royale::config::ImConnectedTemperatureSensor::NONE,
         ImgTrigger::GPIO13, ImgImageDataTransferType::PIF, 0.0000078f, { { CFGCNT_ROS1, 0xF806 } },
         SYSFREQ, ImagerRawFrame::ImagerDutyCycle::DC_50,
         ImgIlluminationPad::SE_P, 100000000, false };
@@ -345,7 +348,8 @@ TEST_F (TestImagerM2450_A12_AIO, InitAndExecuteForPIF)
 
 TEST_F (TestImagerM2450_A12_AIO, InitAndExecuteForPIFSuperFrame)
 {
-    ImagerParameters params{ m_bridge, nullptr, true, false,
+    ImagerParameters params{ m_bridge, nullptr, true,
+                             royale::config::ImConnectedTemperatureSensor::NONE,
                              ImgTrigger::GPIO13, ImgImageDataTransferType::PIF, 0., {},
                              SYSFREQ, ImagerRawFrame::ImagerDutyCycle::DC_50,
                              ImgIlluminationPad::SE_P, 100000000, false };
@@ -365,7 +369,7 @@ TEST_F (TestImagerM2450_A12_AIO, InitAndExecuteForCSI2_MIPI1Lane)
     ASSERT_TRUE (regChanged.count (CFGCNT_PIFCCFG) > 0);
     ASSERT_TRUE (regChanged.at (CFGCNT_PIFCCFG) == 0x0000);
     ASSERT_TRUE (regChanged.count (CFGCNT_CSICFG) > 0);
-    ASSERT_TRUE (regChanged.at (CFGCNT_CSICFG) == 0x0211);
+    ASSERT_TRUE (regChanged.at (CFGCNT_CSICFG) == 0x0011);
 
     UseCaseForM2450 ucs (5u, 4, 1000u, 30000000u, 0u, 1000u);
     ASSERT_NO_THROW (m_imager->executeUseCase (ucs));
@@ -383,7 +387,7 @@ TEST_F (TestImagerM2450_A12_AIO, InitAndExecuteForCSI2_MIPI1LaneSuperFrame)
     ASSERT_TRUE (regChanged.count (CFGCNT_PIFCCFG) > 0);
     ASSERT_TRUE (regChanged.at (CFGCNT_PIFCCFG) == 0x0000);
     ASSERT_TRUE (regChanged.count (CFGCNT_CSICFG) > 0);
-    ASSERT_TRUE (regChanged.at (CFGCNT_CSICFG) == 0x0201);
+    ASSERT_TRUE (regChanged.at (CFGCNT_CSICFG) == 0x0001);
 
     UseCaseForM2450 ucs (5u, 4, 1000u, 30000000u, 0u, 1000u);
     ASSERT_NO_THROW (m_imager->executeUseCase (ucs));
@@ -401,7 +405,7 @@ TEST_F (TestImagerM2450_A12_AIO, InitAndExecuteForCSI2_MIPI2Lane)
     ASSERT_TRUE (regChanged.count (CFGCNT_PIFCCFG) > 0);
     ASSERT_TRUE (regChanged.at (CFGCNT_PIFCCFG) == 0x0000);
     ASSERT_TRUE (regChanged.count (CFGCNT_CSICFG) > 0);
-    ASSERT_TRUE (regChanged.at (CFGCNT_CSICFG) == 0x0291);
+    ASSERT_TRUE (regChanged.at (CFGCNT_CSICFG) == 0x0091);
 
     UseCaseForM2450 ucs (5u, 4, 1000u, 30000000u, 0u, 1000u);
     ASSERT_NO_THROW (m_imager->executeUseCase (ucs));
@@ -419,7 +423,7 @@ TEST_F (TestImagerM2450_A12_AIO, InitAndExecuteForCSI2_MIPI2LaneSuperFrame)
     ASSERT_TRUE (regChanged.count (CFGCNT_PIFCCFG) > 0);
     ASSERT_TRUE (regChanged.at (CFGCNT_PIFCCFG) == 0x0000);
     ASSERT_TRUE (regChanged.count (CFGCNT_CSICFG) > 0);
-    ASSERT_TRUE (regChanged.at (CFGCNT_CSICFG) == 0x0281);
+    ASSERT_TRUE (regChanged.at (CFGCNT_CSICFG) == 0x0081);
 
     UseCaseForM2450 ucs (5u, 4, 1000u, 30000000u, 0u, 1000u);
     ASSERT_NO_THROW (m_imager->executeUseCase (ucs));
@@ -430,7 +434,8 @@ TEST_F (TestImagerM2450_A12_AIO, CheckIfInterfaceDelayIsSet)
     initImager();
 
     {
-        ImagerParameters params{ m_bridge, nullptr, false, false,
+        ImagerParameters params{ m_bridge, nullptr, false,
+                                 royale::config::ImConnectedTemperatureSensor::NONE,
                                  ImgTrigger::GPIO13, ImgImageDataTransferType::PIF, 0.0000078f, {},
                                  SYSFREQ, ImagerRawFrame::ImagerDutyCycle::DC_50,
                                  ImgIlluminationPad::SE_P, 100000000, false };
@@ -722,7 +727,8 @@ TEST_F (TestImagerM2450_A12_AIO, UseCaseVerifyHighTargetFrameRateNegative)
     initImager();
 
     {
-        ImagerParameters params{ m_bridge, nullptr, false, false,
+        ImagerParameters params{ m_bridge, nullptr, false,
+                                 royale::config::ImConnectedTemperatureSensor::NONE,
                                  ImgTrigger::GPIO13, ImgImageDataTransferType::PIF, 0.0000078f, {},
                                  SYSFREQ, ImagerRawFrame::ImagerDutyCycle::DC_50,
                                  ImgIlluminationPad::SE_P, 100000000, false };
@@ -1118,13 +1124,12 @@ TEST_F (TestImagerM2450_A12_AIO, PicoFlexxDC)
 
 TEST_F (TestImagerM2450_A12_AIO, UseCaseMixedModeStopAlignedRawFrameRate)
 {
-    //test for invariant: sum of all idle/delay times must be equal
-    //no matter what alignment the non-master-clock RFS has
+    //test for correct frame time settings depending on the alignment of the frames
     // 1) create use-case non mixed-mode (all start-aligned)
-    // 2) execute use-case and get raw-frame-rate register of last raw frame
-    // 3) create use-case with equal raw frames, but stop align one
-    // 4) execute use case and scan for the raw frame rate register
-    // 5) check if the raw frame rate register values are equal
+    // 2) execute use-case and get raw-frame-rate registers of last two raw frames
+    // 3) create use-case with equal raw frames, but stop align the last one
+    // 4) execute use case and get raw-frame-rate registers of last two raw frames
+    // 5) check the raw frame rate register values
     initImager();
     UseCaseAlignment ucsStandard (false);
     UseCaseAlignment ucsStopAligned (true);
@@ -1144,23 +1149,19 @@ TEST_F (TestImagerM2450_A12_AIO, UseCaseMixedModeStopAlignedRawFrameRate)
     ASSERT_NO_THROW (m_imager->executeUseCase (ucsStopAligned));
     const auto regStopAligned = m_bridge->getWrittenRegisters();
 
-    uint32_t sumRawFrameRatesUcsStandard = 0;
-    uint32_t sumRawFrameRatesUcsStopAligned = 0;
+    ASSERT_TRUE (regStandard.count (AIO_SR_NR_FRAMERATE + 12u) > 0);
+    ASSERT_TRUE (regStandard.count (AIO_SR_NR_FRAMERATE + 16u) > 0);
+    ASSERT_TRUE (regStopAligned.count (AIO_SR_NR_FRAMERATE + 12u) > 0);
+    ASSERT_TRUE (regStopAligned.count (AIO_SR_NR_FRAMERATE + 16u) > 0);
 
-    for (auto regAdr = AIO_SR_NR_FRAMERATE; regAdr <= static_cast<uint16_t> (AIO_SR_NR_FRAMERATE + 20u); regAdr = static_cast<uint16_t> (regAdr + 4u))
-    {
-        if (regStandard.count (regAdr))
-        {
-            sumRawFrameRatesUcsStandard += regStandard.at (regAdr);
-        }
-        if (regStopAligned.count (regAdr))
-        {
-            sumRawFrameRatesUcsStopAligned += regStopAligned.at (regAdr);
-        }
-    }
+    ASSERT_EQ (0x0000, regStandard.at (AIO_SR_NR_FRAMERATE + 12u));
+    ASSERT_EQ (0x5f62, regStandard.at (AIO_SR_NR_FRAMERATE + 16u));
+    ASSERT_EQ (0x5fcc, regStopAligned.at (AIO_SR_NR_FRAMERATE + 12u));
+    ASSERT_EQ (0x0000, regStopAligned.at (AIO_SR_NR_FRAMERATE + 16u));
 
-    ASSERT_EQ (regStandard.size(), regStopAligned.size());
-    ASSERT_EQ (sumRawFrameRatesUcsStandard, sumRawFrameRatesUcsStopAligned);
+    //The frame time values for both use cases differ because of the way the overall framerate is achieved.
+    //Only one frame is extended by specifying a frametime value to reach the overall framerate.
+    //Depending on which frame is extended this value is different since the remaining frames have different durations.
 }
 
 TEST_F (TestImagerM2450_A12_AIO, UseCaseMixedModeMBLimit)
@@ -1379,9 +1380,10 @@ TEST_F (TestImagerM2450_A12_AIO, ReconfigureNormalMode)
 
     //with the CE_normal_fix the new config should be (refer to ROYAL-2119):
     const uint16_t expoRFS1 = 0x017a; //S00-S03
-    const uint16_t frateS03 = 0x011b;
+    //const uint16_t frateS03 = 0x0000; // => no change
     const uint16_t expoRFS2 = 0x00ff; //S04-S07
-    const uint16_t frateS07 = 0x011c;
+    //const uint16_t frateS07 = 0x0000; // => no change
+    const uint16_t frateS08 = 0x5cb2;
 
     //compare the expectation to what has been reconfigured
     auto regChanged = m_bridge->getWrittenRegisters();
@@ -1390,25 +1392,25 @@ TEST_F (TestImagerM2450_A12_AIO, ReconfigureNormalMode)
     ASSERT_TRUE (regChanged.count (0xA852) > 0);
     ASSERT_TRUE (regChanged.count (0xA854) > 0);
     ASSERT_TRUE (regChanged.count (0xA856) > 0);
-    ASSERT_TRUE (regChanged.count (0xA857) > 0);
+    ASSERT_TRUE (regChanged.count (0xA857) == 0); //register not changed
 
     ASSERT_TRUE (regChanged.count (0xA858) > 0);
     ASSERT_TRUE (regChanged.count (0xA85A) > 0);
     ASSERT_TRUE (regChanged.count (0xA85C) > 0);
     ASSERT_TRUE (regChanged.count (0xA85E) > 0);
-    ASSERT_TRUE (regChanged.count (0xA85F) > 0);
+    ASSERT_TRUE (regChanged.count (0xA85F) == 0); //register not changed
 
     ASSERT_EQ (expoRFS1, regChanged[0xA850]);
     ASSERT_EQ (expoRFS1, regChanged[0xA852]);
     ASSERT_EQ (expoRFS1, regChanged[0xA854]);
     ASSERT_EQ (expoRFS1, regChanged[0xA856]);
-    ASSERT_EQ (frateS03, regChanged[0xA857]);
 
     ASSERT_EQ (expoRFS2, regChanged[0xA858]);
     ASSERT_EQ (expoRFS2, regChanged[0xA85A]);
     ASSERT_EQ (expoRFS2, regChanged[0xA85C]);
     ASSERT_EQ (expoRFS2, regChanged[0xA85E]);
-    ASSERT_EQ (frateS07, regChanged[0xA85F]);
+
+    ASSERT_EQ (frateS08, regChanged[0xA861]);
 
     //if low power would be used the following register would have changed
     //const uint16_t lpfsm_FR1 = 0x0000;
@@ -1457,7 +1459,7 @@ TEST_F (TestImagerM2450_A12_AIO, ReconfigureMixedMode)
     //with the CE_AIO_mb_fix the new config should be (refer to ROYAL-2119):
     const uint16_t expoMB1 = 0x0195;
     const uint16_t decodeMB1Expo = 0/*1st MB*/ + (0xF << 4) /*seqnum 0-3*/ + (0 << 12) /*expo-reg*/;
-    const uint16_t fRateMB1 = 0x011c;
+    const uint16_t fRateMB1 = 0x0121;
     const uint16_t decodeMB1Frate = 0/*1st MB*/ + (0x8 << 4) /*seqnum 3*/ + (1 << 12) /*fr-reg*/;
 
     //if low power would be used the following two decodes would be used
@@ -1468,7 +1470,7 @@ TEST_F (TestImagerM2450_A12_AIO, ReconfigureMixedMode)
 
     const uint16_t expoMB2 = 0x0195;
     const uint16_t decodeMB2Expo = 1/*2nd MB*/ + (0xF << 4) /*seqnum 0-3*/ + (0 << 12) /*expo-reg*/;
-    const uint16_t fRateMB2 = 0x011c;
+    const uint16_t fRateMB2 = 0x0121;
     const uint16_t decodeMB2Frate = 1/*2nd MB*/ + (0x8 << 4) /*seqnum 3*/ + (1 << 12) /*fr-reg*/;
 
     //if low power would be used the following two decodes would be used
@@ -1532,7 +1534,8 @@ TEST_F (TestImagerM2450_A12_AIO, IlluminationPadLVDS)
     ASSERT_NO_THROW (m_bridge.reset (new StubBridgeImager (std::move (m_simImager))));
 
     {
-        ImagerParameters params{ m_bridge, nullptr, false, false,
+        ImagerParameters params{ m_bridge, nullptr, false,
+                                 royale::config::ImConnectedTemperatureSensor::NONE,
                                  ImgTrigger::GPIO13, ImgImageDataTransferType::PIF, 0., {},
                                  SYSFREQ, ImagerRawFrame::ImagerDutyCycle::DC_50,
                                  ImgIlluminationPad::LVDS, 100000000, false };
@@ -1558,9 +1561,8 @@ TEST_F (TestImagerM2450_A12_AIO, IlluminationPadLVDS)
 
 TEST_F (TestImagerM2450_A12_AIO, UseCaseMixedModeMasterClockDistribution)
 {
-    //test for invariant: sum of all idle/delay times must be equal
-    //no matter what if the second part of a 4+4 use case is start-aligned
-    //or is a clock-aligned one
+    //test for correct frame time settings depending on the alignment of the frames
+    //timings (frame times) must be spread differently for different alignments
     initImager();
     UseCaseMasterClockTicks ucsStandard (false);
     UseCaseMasterClockTicks ucsSpread (true);
@@ -1580,17 +1582,24 @@ TEST_F (TestImagerM2450_A12_AIO, UseCaseMixedModeMasterClockDistribution)
     ASSERT_NO_THROW (m_imager->executeUseCase (ucsSpread));
     const auto regSpread = m_bridge->getWrittenRegisters();
 
-    uint32_t sumRawFrameRatesStandard = 0;
-    uint32_t sumRawFrameRatesSpread = 0;
-
     const uint16_t regFramerateStart = 0xC321;
-    const uint16_t regFramerateEnd = 0xC341;
 
-    for (auto regAdr = regFramerateStart; regAdr <= regFramerateEnd; regAdr = static_cast<uint16_t> (regAdr + 4u))
-    {
-        sumRawFrameRatesStandard += regStandard.at (regAdr);
-        sumRawFrameRatesSpread += regSpread.at (regAdr);
-    }
+    //Check the registers of raw frame 3 and 8
+    ASSERT_TRUE (regStandard.count (regFramerateStart + 12u) > 0);
+    ASSERT_TRUE (regStandard.count (regFramerateStart + 32u) > 0);
+    ASSERT_TRUE (regSpread.count (regFramerateStart + 12u) > 0);
+    ASSERT_TRUE (regSpread.count (regFramerateStart + 32u) > 0);
 
-    ASSERT_EQ (sumRawFrameRatesStandard, sumRawFrameRatesSpread);
+    //All remaining time is added to the last frame
+    ASSERT_EQ (0x0000, regStandard.at (AIO_SR_NR_FRAMERATE + 12u));
+    ASSERT_EQ (0x2630, regStandard.at (AIO_SR_NR_FRAMERATE + 32u));
+
+    //The remaining time is spread on two frames
+    ASSERT_EQ (0x14ac, regSpread.at (AIO_SR_NR_FRAMERATE + 12u));
+    ASSERT_EQ (0x1319, regSpread.at (AIO_SR_NR_FRAMERATE + 32u));
+
+    //The sums of the frame time values for both use cases differ because of the way the overall framerate is achieved.
+    //In the standard case only one frame is extended by specifying a frametime value to reach the overall framerate.
+    //In the second case two frames are extended.
+    //Depending on which frame(s) is/are extended the values are different since the remaining frames have different durations.
 }

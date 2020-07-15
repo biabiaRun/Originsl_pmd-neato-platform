@@ -1,4 +1,6 @@
-DEPENDS_ON_ROYALE_VERSION_H("src/FileWriter.cpp")
+include_directories(SYSTEM 
+    ${PROCESSING_SPECTRE_HEADER_DIR}
+    )
 
 set (RECORD_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/CameraPlayback.cpp"
@@ -70,8 +72,6 @@ source_group(v1 FILES     ${V1_SOURCES} ${V1_HEADERS})
 source_group(v2 FILES     ${V2_SOURCES} ${V2_HEADERS})
 source_group(v3 FILES     ${V3_SOURCES} ${V3_HEADERS})
 
-# We have to add this before the include_directories call below
-# otherwise we might use the wrong royale-version.h
 add_subdirectory (clibs)
 
 add_definitions(-DRRFACCESSAPI_EXPORTS)

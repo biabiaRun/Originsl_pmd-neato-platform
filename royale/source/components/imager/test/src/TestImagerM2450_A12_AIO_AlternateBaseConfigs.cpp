@@ -51,7 +51,8 @@ protected:
     void initImagerWithBaseConfig (ImgTrigger trigger)
     {
         {
-            ImagerParameters params{ m_bridge, nullptr, false, false,
+            ImagerParameters params{ m_bridge, nullptr, false,
+                                     royale::config::ImConnectedTemperatureSensor::NONE,
                                      trigger, ImgImageDataTransferType::PIF, 0., {},
                                      SYSFREQ, ImagerRawFrame::ImagerDutyCycle::DC_50,
                                      ImgIlluminationPad::SE_P, 100000000, false };

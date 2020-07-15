@@ -104,24 +104,24 @@ add_custom_command(
 add_dependencies(test_royale_without_hardware
     test_royale
     )
-  
-if(ROYALE_ENABLE_COV)
-   if(ROYALE_COVERAGE_GCOVR)
-      SETUP_TARGET_FOR_COVERAGE_COBERTURA(
-         coverage_royale
-         test_royale
-         coverage_royale
-         )
-   else()
-      SETUP_TARGET_FOR_COVERAGE(
-         coverage_royale
-         test_royale
-         coverage_royale
-         )
-   endif()
 
-   SET_TARGET_PROPERTIES(coverage_royale
-      PROPERTIES
-      FOLDER coverage_royale
-      )
+if(ROYALE_ENABLE_COV)
+    if(ROYALE_COVERAGE_GCOVR)
+        SETUP_TARGET_FOR_COVERAGE_GCOVR_XML(
+            NAME coverage_royale
+            EXECUTABLE test_royale
+            DEPENDENCIES test_royale
+            )
+    else()
+        SETUP_TARGET_FOR_COVERAGE_LCOV(
+            NAME coverage_royale
+            EXECUTABLE test_royale
+            DEPENDENCIES test_royale
+            )
+    endif()
+
+    SET_TARGET_PROPERTIES(coverage_royalecore
+        PROPERTIES
+        FOLDER coverage_royalecore
+        )
 endif()

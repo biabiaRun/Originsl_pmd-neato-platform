@@ -73,6 +73,11 @@ namespace royale
             ROYALE_API std::vector<uint8_t> idOfZwetschgeExampleFlashImage();
 
             /**
+            * Writes a new zwetschge file with a dummy secure area on top of the provided input zwetschge file
+            */
+            ROYALE_API void writeDummyFile (std::string dummyFile, std::string originalFile);
+
+            /**
              * This sub-namespace has functions for creating a Zwetschge image via
              * getZwetschgeImage(), containing data specified by the caller.
              */

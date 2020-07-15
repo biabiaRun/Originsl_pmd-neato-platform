@@ -47,7 +47,15 @@ namespace
                     regChanges[static_cast<uint16_t> (CFGCNT_S00_EXPOTIME + idx)] = seq.expo;
                     regChanges[static_cast<uint16_t> (CFGCNT_S00_PS + idx)] = seq.ps;
                     regChanges[static_cast<uint16_t> (CFGCNT_S00_PLLSET + idx)] = seq.pllset;
-                    regChanges[static_cast<uint16_t> (CFGCNT_S00_FRAMERATE + idx)] = seq.fr;
+
+                    if (seq.fr_valEqZero)
+                    {
+                        regChanges[static_cast<uint16_t> (CFGCNT_S00_FRAMERATE + idx)] = 0u;
+                    }
+                    else
+                    {
+                        regChanges[static_cast<uint16_t> (CFGCNT_S00_FRAMERATE + idx)] = seq.fr;
+                    }
 
                     //move up to the next LUT assignment register address
                     idx = static_cast<uint16_t> (idx + SEQIDXOFFSET);
@@ -250,7 +258,7 @@ void ImagerM2450_A11::startCapture()
     m_imagerState = ImagerState::Capturing;
 }
 
-void ImagerM2450_A11::stopCapture()
+uint16_t ImagerM2450_A11::stopCapture()
 {
     ImagerM2450::stopCapture();
 
@@ -267,6 +275,7 @@ void ImagerM2450_A11::stopCapture()
     shutDownSequencer();
 
     m_imagerState = ImagerState::Ready;
+    return 0u;
 }
 
 ImagerVerificationStatus ImagerM2450_A11::verifyUseCase (const ImagerUseCaseDefinition &useCase)

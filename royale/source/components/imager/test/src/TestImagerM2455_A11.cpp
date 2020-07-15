@@ -120,7 +120,8 @@ protected:
     */
     void createImager (std::shared_ptr<const royale::imager::IImagerExternalConfig> externalConfig)
     {
-        ImagerParameters params{ m_bridge, std::move (externalConfig), true, false,
+        ImagerParameters params{ m_bridge, std::move (externalConfig), true,
+                                 royale::config::ImConnectedTemperatureSensor::NONE,
                                  ImgTrigger::I2C, ImgImageDataTransferType::MIPI_2LANE, 0.f, {},
                                  SYSFREQ, ImagerRawFrame::ImagerDutyCycle::DC_50,
                                  ImgIlluminationPad::SE_P, 90000000, false };
@@ -170,7 +171,8 @@ protected:
 
 TEST (TestImagerM2455_A11_Nofixture, CreateImagerDirectly)
 {
-    ImagerParameters params{ nullptr, nullptr, true, false,
+    ImagerParameters params{ nullptr, nullptr, true,
+                             royale::config::ImConnectedTemperatureSensor::NONE,
                              ImgTrigger::I2C, ImgImageDataTransferType::MIPI_2LANE, 0.f, {},
                              SYSFREQ, ImagerRawFrame::ImagerDutyCycle::DC_50,
                              ImgIlluminationPad::SE_P, 90000000, false };

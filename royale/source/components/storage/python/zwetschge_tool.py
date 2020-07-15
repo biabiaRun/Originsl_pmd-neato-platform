@@ -71,6 +71,8 @@ Including calibration data:
 """
 
 import argparse
+import logging
+import zwetschge_tool
 from zwetschge_tool.lena.writer import LenaWriter
 from zwetschge_tool.zwetschge.writer import ZwetschgeWriter, ZwetschgeWriterWithoutReserved
 from zwetschge_tool.util.import_device_data import importDeviceData
@@ -82,13 +84,21 @@ def main ():
     parser.add_argument ("--device", help="Python module to execute to get a complete device description")
     formatGroup = parser.add_mutually_exclusive_group()
     formatGroup.add_argument ("--lena", action="store_true", help="OUTPUTFORMAT: Write Lena format instead of Zwetschge format")
-    formatGroup.add_argument ("--without-reserved", dest="without_reserved", action="store_true", help="OUTPUTFORMAT: Write Zwetschge format, but without the reserved area at the start")
     parser.add_argument ("--no-validate", dest="validate", action="store_false", help="Skip sanity-checking the data")
     parser.add_argument ("--outfile", help="Zwetschge file to write")
     parser.add_argument ("--verbose", action="store_true", help="Print details about the device")
     parser.add_argument ("--serial", help="Module serial of the device")
     parser.add_argument ("--suffix", help="Module suffix of the device")
     options = parser.parse_args()
+
+    logger = logging.getLogger('pmdpy')
+
+    if options.verbose:
+        ch = logging.StreamHandler()
+        logger.addHandler(ch)
+        logger.setLevel(logging.DEBUG)
+        
+    logger.info('Zwetschge Tool version is: {}'.format(zwetschge_tool.__version__))
 
     # The device data is currently stored directly as Python, but this section could be changed to
     # load a parser for a non-executable data format.
@@ -97,8 +107,7 @@ def main ():
     else:
         raise Exception ("This requires a --device argument")
 
-    if options.verbose:
-        print (device)
+    logger.info (device)
 
     calibration = None
     if options.calibration:
@@ -120,10 +129,8 @@ def main ():
 
     if options.lena:
         writer = LenaWriter (device, calibration)
-    elif options.without_reserved:
-        writer = ZwetschgeWriterWithoutReserved (device, calibration, moduleSerial, moduleSuffix)
     else:
-        writer = ZwetschgeWriter (device, calibration, moduleSerial, moduleSuffix)
+        writer = ZwetschgeWriterWithoutReserved (device, calibration, moduleSerial, moduleSuffix)
     content = writer.pack()
 
     # If no outfile option is given, just warn that the only output was the stdout debugging

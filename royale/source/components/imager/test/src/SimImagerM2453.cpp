@@ -19,7 +19,6 @@
 using namespace royale::stub;
 using namespace royale::common;
 using namespace royale::imager::M2453;
-using namespace royale::imager::M2453_ONLY;
 
 SimImagerM2453::SimImagerM2453 ()
 {

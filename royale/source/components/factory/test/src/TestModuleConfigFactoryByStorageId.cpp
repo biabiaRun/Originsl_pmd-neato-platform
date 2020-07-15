@@ -124,6 +124,17 @@ TEST (TestModuleConfigFactoryByStorageId, ByStorageIdConfig)
         ASSERT_EQ (royale::String ("Camera34"), probedConfig->coreConfigData.cameraName);
     }
 
+    // Test that an unknown identifier returns a nullptr if the access level is too low
+    {
+        auto storage = getRouteConfigWithIdentifier ({ 0x01, 0x04 });
+        ModuleConfigFactoryByStorageId confFactory (std::move (storage.route), std::move (storage.config), probeConfig, { 0x03, 0x04 });
+
+        std::shared_ptr<const ModuleConfig> probedConfig;
+        ASSERT_NO_THROW (probedConfig = static_cast<IModuleConfigFactory *> (&confFactory)->probeAndCreate (bridgeFactory,
+                                        royale::CameraAccessLevel::L1));
+        ASSERT_EQ (nullptr, probedConfig);
+    }
+
     // Test that an empty identifier returns nullptr (assuming that there is no empty identifier in
     // the list), and does not cause an exception or crash
     {

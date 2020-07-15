@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>520</width>
-    <height>631</height>
+    <width>303</width>
+    <height>660</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -29,147 +29,172 @@
    </size>
   </property>
   <property name="windowTitle">
-   <string>Form</string>
+   <string>Settings Menu</string>
   </property>
   <property name="autoFillBackground">
    <bool>false</bool>
   </property>
-  <property name="styleSheet">
-   <string notr="true"/>
-  </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
-   <property name="spacing">
-    <number>0</number>
-   </property>
-   <property name="sizeConstraint">
-    <enum>QLayout::SetDefaultConstraint</enum>
-   </property>
-   <property name="leftMargin">
-    <number>0</number>
-   </property>
-   <property name="topMargin">
-    <number>0</number>
-   </property>
-   <property name="rightMargin">
-    <number>0</number>
-   </property>
-   <property name="bottomMargin">
-    <number>0</number>
-   </property>
-   <item>
-    <widget class="QListWidget" name="listWidget">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="styleSheet">
-      <string notr="true"/>
-     </property>
-     <property name="frameShape">
-      <enum>QFrame::NoFrame</enum>
-     </property>
-     <property name="frameShadow">
-      <enum>QFrame::Plain</enum>
-     </property>
-     <property name="lineWidth">
-      <number>0</number>
-     </property>
-     <property name="verticalScrollBarPolicy">
-      <enum>Qt::ScrollBarAsNeeded</enum>
-     </property>
-     <property name="horizontalScrollBarPolicy">
-      <enum>Qt::ScrollBarAlwaysOff</enum>
-     </property>
-     <property name="sizeAdjustPolicy">
-      <enum>QAbstractScrollArea::AdjustIgnored</enum>
-     </property>
-     <property name="autoScroll">
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="0" column="0">
+    <widget class="QScrollArea" name="scrollArea">
+     <property name="widgetResizable">
       <bool>true</bool>
      </property>
-     <property name="showDropIndicator" stdset="0">
-      <bool>false</bool>
-     </property>
-     <property name="verticalScrollMode">
-      <enum>QAbstractItemView::ScrollPerPixel</enum>
-     </property>
-     <property name="horizontalScrollMode">
-      <enum>QAbstractItemView::ScrollPerPixel</enum>
-     </property>
-     <property name="movement">
-      <enum>QListView::Static</enum>
-     </property>
-     <property name="resizeMode">
-      <enum>QListView::Adjust</enum>
-     </property>
-     <property name="layoutMode">
-      <enum>QListView::SinglePass</enum>
-     </property>
-     <item>
-      <property name="text">
-       <string>Show Frustum</string>
+     <widget class="QWidget" name="scrollAreaContents">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>283</width>
+        <height>640</height>
+       </rect>
       </property>
-      <property name="checkState">
-       <enum>Unchecked</enum>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Lock View</string>
-      </property>
-      <property name="checkState">
-       <enum>Unchecked</enum>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Flip vertically</string>
-      </property>
-      <property name="checkState">
-       <enum>Unchecked</enum>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Flip horizontally</string>
-      </property>
-      <property name="checkState">
-       <enum>Unchecked</enum>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Show FPS</string>
-      </property>
-      <property name="checkState">
-       <enum>Unchecked</enum>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Show StreamID</string>
-      </property>
-      <property name="checkState">
-       <enum>Unchecked</enum>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Show the number of valid pixels</string>
-      </property>
-      <property name="checkState">
-       <enum>Unchecked</enum>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Single Frame Recording</string>
-      </property>
-      <property name="checkState">
-       <enum>Unchecked</enum>
-      </property>
-     </item>
+      <layout class="QVBoxLayout" name="verticalLayout_3">
+       <item>
+        <widget class="QPushButton" name="btn_colorRange">
+         <property name="text">
+          <string>Color Range</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btn_useCase">
+         <property name="text">
+          <string>Use Case (FPS)</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btn_exposureTime">
+         <property name="text">
+          <string>Exposure Time</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btn_filterLevel">
+         <property name="text">
+          <string>Filter Level</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btn_parameters">
+         <property name="text">
+          <string>Parameters</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btn_cameraPresets">
+         <property name="text">
+          <string>Camera Presets</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btn_autoRotation">
+         <property name="text">
+          <string>Auto Rotation</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btn_filterMinMax">
+         <property name="text">
+          <string>Filter (Min/Max)</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btn_data">
+         <property name="text">
+          <string>Data</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btn_reset">
+         <property name="text">
+          <string>Reset GUI</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btn_loadFile">
+         <property name="text">
+          <string>Load File</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="cb_showFrustrum">
+         <property name="text">
+          <string>Show Frustum</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="cb_lockView">
+         <property name="text">
+          <string>Lock View</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="cb_flipVertical">
+         <property name="text">
+          <string>Flip vertical</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="cb_flipHorizontal">
+         <property name="text">
+          <string>Flip horizontal</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="cb_showFPS">
+         <property name="text">
+          <string>Show FPS</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="cb_showStreamID">
+         <property name="text">
+          <string>Show Stream ID</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="cb_showNumberOfValidPixels">
+         <property name="text">
+          <string>Show number of valid pixels</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="cb_singleFrameRecording">
+         <property name="text">
+          <string>Single Frame Recording</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="cb_showRangeSpecifier">
+         <property name="text">
+          <string>Show Range Specifier</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
     </widget>
    </item>
   </layout>

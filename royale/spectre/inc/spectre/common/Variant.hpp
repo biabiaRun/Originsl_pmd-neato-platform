@@ -8,7 +8,6 @@
  *
 \****************************************************************************/
 
-
 #ifndef __VARIANT_HPP__
 #define __VARIANT_HPP__
 
@@ -23,22 +22,27 @@ namespace spectre
     namespace common
     {
 
-        // Implementation details which are not considered as part of the public API
+        // Implementation details which are not considered as part of the public
+        // API
         namespace details
         {
             template<typename T1, typename T2, typename... Tn>
             struct get_typeid
             {
-                static const unsigned value = std::is_same<T1, T2>::value ? 0 : 1 + get_typeid<T1, Tn...>::value;
+                static const unsigned value =
+                    std::is_same<T1, T2>::value
+                        ? 0
+                        : 1 + get_typeid<T1, Tn...>::value;
             };
 
             template<typename T1, typename T2>
             struct get_typeid<T1, T2>
             {
-                static const unsigned value = std::is_same<T1, T2>::value ? 0 : 1;
+                static const unsigned value =
+                    std::is_same<T1, T2>::value ? 0 : 1;
             };
 
-            template<unsigned N, typename T, typename ...Tn>
+            template<unsigned N, typename T, typename... Tn>
             struct apply_visitor
             {
                 template<typename V>
@@ -46,11 +50,11 @@ namespace spectre
                 {
                     if (get_typeid<T, T, Tn...>::value + N == typeId)
                     {
-                        visitor.SPECTRE_TEMPLATE_PREFIX operator() <T>();
+                        visitor.SPECTRE_TEMPLATE_PREFIX operator()<T> ();
                     }
                     else
                     {
-                        apply_visitor < N + 1, Tn... > () (typeId, visitor);
+                        apply_visitor<N + 1, Tn...> () (typeId, visitor);
                     }
                 }
             };
@@ -63,40 +67,44 @@ namespace spectre
                 {
                     if (get_typeid<T, T>::value + N == typeId)
                     {
-                        visitor.SPECTRE_TEMPLATE_PREFIX operator() <T>();
+                        visitor.SPECTRE_TEMPLATE_PREFIX operator()<T> ();
                     }
                 }
             };
-        }
+        } // namespace details
 
         /**
-         * @brief A Variant<T1, T2, ..., Tn> stores a value of a type Ti, i = 1, ..., n.
+         * @brief A Variant<T1, T2, ..., Tn> stores a value of a type Ti, i = 1,
+         * ..., n.
          *
-         * The Variant class is type-safe in the sense, that it is possible to store a value
-         * for any type Ti, i = 1, ..., n, but it is only possible to call Variant::get<Ti>()
-         * for the type Ti successfully.
+         * The Variant class is type-safe in the sense, that it is possible to
+         * store a value for any type Ti, i = 1, ..., n, but it is only possible
+         * to call Variant::get<Ti>() for the type Ti successfully.
          *
-         * The Variant class requires that each type Ti, i = 1, ... ,n is copy constructable and
-         * assignable. Additionally, it is assumed that neither the destructor, the copy constructor
-         * or the assigment operator for any type Ti throws.
+         * The Variant class requires that each type Ti, i = 1, ... ,n is copy
+         * constructable and assignable. Additionally, it is assumed that
+         * neither the destructor, the copy constructor or the assigment
+         * operator for any type Ti throws.
          */
-        template <typename... Args>
+        template<typename... Args>
         class Variant
         {
         public:
             /**
              * Constructs a new variant
              *
-             * The Variant is marked as invalid, and it is not possible to call get.
+             * The Variant is marked as invalid, and it is not possible to call
+             * get.
              */
-            Variant()
-                : m_holder (allocArray<char> (get_size<Args ...>::value)), m_typeId (sizeof... (Args))
-            { }
+            Variant ()
+                : m_holder (allocArray<char> (get_size<Args...>::value)),
+                  m_typeId (sizeof...(Args))
+            {}
 
             /// Destructor
-            ~Variant()
+            ~Variant ()
             {
-                destruct();
+                destruct ();
                 freeArray (m_holder);
             }
 
@@ -105,8 +113,7 @@ namespace spectre
              *
              * @param other other variant
              */
-            Variant (const Variant<Args...> &other)
-                : Variant()
+            Variant (const Variant<Args...> &other) : Variant ()
             {
                 if (this != &other)
                 {
@@ -123,9 +130,9 @@ namespace spectre
              */
             Variant<Args...> &operator= (const Variant<Args...> &other)
             {
-                destruct();
+                destruct ();
                 m_typeId = other.m_typeId;
-                setter set = { m_holder, other.m_holder };
+                setter set = {m_holder, other.m_holder};
                 applyVisitor (set);
                 return *this;
             }
@@ -135,9 +142,10 @@ namespace spectre
              *
              * @param val value to assign after construction
              */
-            template < typename T, typename U = typename std::enable_if< (details::get_typeid<T, Args...>::value < sizeof... (Args)) >::type >
-            explicit Variant (const T &val)
-                : Variant()
+            template<typename T, typename U = typename std::enable_if<
+                                     (details::get_typeid<T, Args...>::value <
+                                      sizeof...(Args))>::type>
+            explicit Variant (const T &val) : Variant ()
             {
                 set (val);
             }
@@ -148,10 +156,12 @@ namespace spectre
              *
              * @param val value to set
              */
-            template < typename T, typename U = typename std::enable_if< (details::get_typeid<T, Args...>::value < sizeof... (Args)) >::type >
+            template<typename T, typename U = typename std::enable_if<
+                                     (details::get_typeid<T, Args...>::value <
+                                      sizeof...(Args))>::type>
             void set (const T &val)
             {
-                destruct();
+                destruct ();
                 auto id = details::get_typeid<T, Args...>::value;
                 m_typeId = id;
                 m_holder = reinterpret_cast<char *> (new (m_holder) T (val));
@@ -160,15 +170,17 @@ namespace spectre
             /**
              * @brief Gets the value stored in the Variant
              *
-             * The function sets the value of the passed reference val to the value of the stored Variant, if the type of
-             * val is equal to the type of the stored value. If this not the case, the function will return false, and not
-             * alter the value of val.
+             * The function sets the value of the passed reference val to the
+             * value of the stored Variant, if the type of val is equal to the
+             * type of the stored value. If this not the case, the function will
+             * return false, and not alter the value of val.
              *
              * @param val target where to the value
              *
              * @return true if the getter succeeded, false otherwise
              */
-            template<typename T, typename U = typename std::enable_if<true>::type >
+            template<typename T,
+                     typename U = typename std::enable_if<true>::type>
             bool get (T &val) const
             {
                 if (details::get_typeid<T, Args...>::value == m_typeId)
@@ -189,7 +201,7 @@ namespace spectre
              *
              * @return type id
              */
-            unsigned typeId() const
+            unsigned typeId () const
             {
                 return m_typeId;
             }
@@ -200,7 +212,7 @@ namespace spectre
              *
              * @return true if the Variant holds a value, false otherwise.
              */
-            bool empty() const
+            bool empty () const
             {
                 return !isIdValid (m_typeId);
             }
@@ -208,8 +220,9 @@ namespace spectre
             /**
              * @brief Equal operator for two Variants
              *
-             * Two Variants are considered as equal if they contain the same type,
-             * and if the equal operator for the values stored in both Variants return true.
+             * Two Variants are considered as equal if they contain the same
+             * type, and if the equal operator for the values stored in both
+             * Variants return true.
              *
              * @param other variant to compare
              *
@@ -219,12 +232,12 @@ namespace spectre
             {
                 if (m_typeId == other.m_typeId)
                 {
-                    if (empty())
+                    if (empty ())
                     {
                         return true;
                     }
 
-                    comperatorEq cmp{ m_holder, other.m_holder, false };
+                    comperatorEq cmp{m_holder, other.m_holder, false};
                     applyVisitor (cmp);
                     return cmp.res;
                 }
@@ -235,15 +248,15 @@ namespace spectre
             /**
              * @brief Less operator for two Variants (used for mapping)
              *
-             * One Variant is considered smaller then the other Variant if they contain
-             * the same type, and if the less operator for the values stored in both
-             * Variants returns true. If they contain different types however, their
-             * typeIds will be compared.
+             * One Variant is considered smaller then the other Variant if they
+             * contain the same type, and if the less operator for the values
+             * stored in both Variants returns true. If they contain different
+             * types however, their typeIds will be compared.
              *
              * @param other variant to compare
              *
-             * @return true if the left handed Variant is smaller then the right handed
-             * Variant, false otherwise
+             * @return true if the left handed Variant is smaller then the right
+             * handed Variant, false otherwise
              */
             bool operator< (const Variant<Args...> &other) const
             {
@@ -252,12 +265,12 @@ namespace spectre
                     return m_typeId < other.m_typeId;
                 }
 
-                if (empty())
+                if (empty ())
                 {
                     return true;
                 }
 
-                comperatorLess cmp{ m_holder, other.m_holder, false };
+                comperatorLess cmp{m_holder, other.m_holder, false};
                 applyVisitor (cmp);
                 return cmp.res;
             }
@@ -269,7 +282,7 @@ namespace spectre
              */
             void print (std::ostream &os) const
             {
-                printer prn { os, m_holder };
+                printer prn{os, m_holder};
                 applyVisitor (prn);
             }
 
@@ -277,11 +290,13 @@ namespace spectre
             using value_types = TypeList<Args...>;
 
         private:
-            template<typename T, typename ... Tn>
+            template<typename T, typename... Tn>
             struct get_size
             {
-                static const size_t value = sizeof (T) < get_size<Tn...>::value ? get_size<Tn...>::value : sizeof (T);
-                                                                                          };
+                static const size_t value = sizeof (T) < get_size<Tn...>::value
+                                                ? get_size<Tn...>::value
+                                                : sizeof (T);
+            };
 
             template<typename T>
             struct get_size<T>
@@ -294,7 +309,7 @@ namespace spectre
                 template<typename T>
                 void operator() ()
                 {
-                    reinterpret_cast<T *> (holder)->~T();
+                    reinterpret_cast<T *> (holder)->~T ();
                 }
                 char *holder;
             };
@@ -305,7 +320,8 @@ namespace spectre
                 template<typename T>
                 void operator() ()
                 {
-                    holder = reinterpret_cast<char *> (new (holder) T (*reinterpret_cast<const T *> (origin)));
+                    holder = reinterpret_cast<char *> (
+                        new (holder) T (*reinterpret_cast<const T *> (origin)));
                 }
 
                 char *holder;
@@ -317,7 +333,8 @@ namespace spectre
                 template<typename T>
                 void operator() ()
                 {
-                    res = *reinterpret_cast<const T *> (lhs) == *reinterpret_cast<const T *> (rhs);
+                    res = *reinterpret_cast<const T *> (lhs) ==
+                          *reinterpret_cast<const T *> (rhs);
                 }
 
                 const char *lhs;
@@ -330,7 +347,8 @@ namespace spectre
                 template<typename T>
                 void operator() ()
                 {
-                    res = *reinterpret_cast<const T *> (lhs) < *reinterpret_cast<const T *> (rhs);
+                    res = *reinterpret_cast<const T *> (lhs) <
+                          *reinterpret_cast<const T *> (rhs);
                 }
 
                 const char *lhs;
@@ -353,25 +371,25 @@ namespace spectre
             template<typename V>
             void applyVisitor (V &visitor)
             {
-                details::apply_visitor<0, Args...>() (m_typeId, visitor);
+                details::apply_visitor<0, Args...> () (m_typeId, visitor);
             }
 
             template<typename V>
             void applyVisitor (V &visitor) const
             {
-                details::apply_visitor<0, Args...>() (m_typeId, visitor);
+                details::apply_visitor<0, Args...> () (m_typeId, visitor);
             }
 
             static bool isIdValid (unsigned typeId)
             {
-                return typeId < sizeof... (Args);
+                return typeId < sizeof...(Args);
             }
 
-            void destruct()
+            void destruct ()
             {
                 if (isIdValid (m_typeId))
                 {
-                    destructor dest = { m_holder };
+                    destructor dest = {m_holder};
                     applyVisitor (dest);
                 }
             }
@@ -382,7 +400,8 @@ namespace spectre
         };
 
         template<>
-        class Variant<> {};
+        class Variant<>
+        {};
 
         /**
          * @brief Prints a Variant in human-readble format
@@ -392,10 +411,10 @@ namespace spectre
          *
          * @return os
          */
-        template<typename ...Args>
+        template<typename... Args>
         std::ostream &operator<< (std::ostream &os, const Variant<Args...> &v)
         {
-            if (v.empty())
+            if (v.empty ())
             {
                 os << "! Empty Variant !";
             }
@@ -405,8 +424,8 @@ namespace spectre
             }
             return os;
         }
-    }  // common
+    } // namespace common
 
-}  // spectre
+} // namespace spectre
 
 #endif /*__VARIANT_HPP|SPECTRE__*/

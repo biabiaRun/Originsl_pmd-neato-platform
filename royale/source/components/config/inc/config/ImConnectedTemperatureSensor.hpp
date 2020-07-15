@@ -30,7 +30,12 @@ namespace royale
             /**
             * NTC temperature sensor
             */
-            NTC
+            NTC,
+
+            /**
+            * IC temperature sensor
+            */
+            SIC
         };
 
     }

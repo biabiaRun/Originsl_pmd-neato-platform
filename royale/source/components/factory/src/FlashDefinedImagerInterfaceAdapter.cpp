@@ -17,14 +17,14 @@
 using namespace royale::factory;
 
 FlashDefinedImagerInterfaceAdapter::
-FlashDefinedImagerInterfaceAdapter (std::shared_ptr<royale::imager::IFlashDefinedImagerComponent> imager, std::shared_ptr<royale::imager::ImagerRegisterAccess> directAccess) :
+FlashDefinedImagerInterfaceAdapter (std::shared_ptr<royale::imager::FlashDefinedImagerComponent> imager, std::shared_ptr<royale::imager::ImagerRegisterAccess> directAccess) :
     m_imager (std::move (imager)),
     m_directAccess (std::move (directAccess))
 {
 }
 
 std::shared_ptr<royale::hal::IImager> FlashDefinedImagerInterfaceAdapter::
-createImager (std::shared_ptr<royale::imager::IFlashDefinedImagerComponent> imager, std::shared_ptr<royale::imager::ImagerRegisterAccess> directAccess)
+createImager (std::shared_ptr<royale::imager::FlashDefinedImagerComponent> imager, std::shared_ptr<royale::imager::ImagerRegisterAccess> directAccess)
 {
     return std::make_shared<FlashDefinedImagerInterfaceAdapter> (std::move (imager), std::move (directAccess));
 }
@@ -97,7 +97,7 @@ void FlashDefinedImagerInterfaceAdapter::reconfigureExposureTimes (const std::ve
     for (auto exp : exposureTimes)
     {
         const auto nrawframes = rfs_it->countRawFrames();
-        exposuresPerSequence.insert(exposuresPerSequence.end(), nrawframes, exp);
+        exposuresPerSequence.insert (exposuresPerSequence.end(), nrawframes, exp);
         ++rfs_it;
     }
 

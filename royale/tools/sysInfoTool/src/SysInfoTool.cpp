@@ -63,13 +63,13 @@ SysInfoTool::SysInfoTool (const string &playbackFilename,
         m_filePaths.resize (1);
 
 #ifdef WIN32
-        int pos = static_cast<int> (m_playbackFilename.find_last_of ('\\'));
+        size_t pos = m_playbackFilename.find_last_of ('\\');
 #elif __linux__ // incl. Linux and Android
-        int pos = static_cast<int> (m_playbackFilename.find_last_of ('/'));
+        size_t pos = m_playbackFilename.find_last_of ('/');
 #endif
         m_files[0] = m_playbackFilename;
-        m_fileNames[0] = m_playbackFilename.substr (pos + 1);
-        m_filePaths[0] = m_playbackFilename.substr (0, pos);
+        m_fileNames[0] = m_playbackFilename.substr (pos + 1u);
+        m_filePaths[0] = m_playbackFilename.substr (0u, pos);
         showRRFInfo (0);
         exit (0);
     }
@@ -257,7 +257,7 @@ void SysInfoTool::showControlMenu()
 #ifdef __linux__ // incl. Linux and Android
                 c = getch();
 #endif
-                int rrfNo = num - 1;
+                size_t rrfNo = static_cast<size_t> (num - 1);
                 showRRFInfo (rrfNo);
             }
         }
@@ -269,7 +269,7 @@ void SysInfoTool::showControlMenu()
     }
 }
 
-void SysInfoTool::showRRFInfo (int rrfNo)
+void SysInfoTool::showRRFInfo (size_t rrfNo)
 {
     cout << "Checking for this RRF file..." << endl;
     CameraManager manager;

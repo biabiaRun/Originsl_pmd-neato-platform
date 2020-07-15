@@ -25,26 +25,36 @@ using namespace royale::usecase;
  */
 TEST (TestUseCaseProcessingOnly, create14Phase)
 {
+    royale::Vector<ExposureGroup> expoGroups;
+    royale::Vector<RawFrameSet> rfsUcd;
+
+    ExposureGroup expo1;
+    expo1.m_exposureLimits = royale::Pair<uint32_t, uint32_t> { 1u, 2000u };
+    expo1.m_exposureTime = 100u;
+
+    ExposureGroup expo2;
+    expo2.m_exposureLimits = royale::Pair<uint32_t, uint32_t> { 1u, 2000u };
+    expo2.m_exposureTime = 500u;
+
+    expoGroups.push_back (expo1);
+    expoGroups.push_back (expo2);
+    expoGroups.push_back (expo2);
+    expoGroups.push_back (expo2);
+    expoGroups.push_back (expo1);
+
+    rfsUcd.push_back (RawFrameSet (60240000u, RawFrameSet::PhaseDefinition::GRAYSCALE, RawFrameSet::DutyCycle::DC_AUTO, 0));
+    rfsUcd.push_back (RawFrameSet (80320000u, RawFrameSet::PhaseDefinition::MODULATED_4PH_CW, RawFrameSet::DutyCycle::DC_AUTO, 1));
+    rfsUcd.push_back (RawFrameSet (60240000u, RawFrameSet::PhaseDefinition::MODULATED_4PH_CW, RawFrameSet::DutyCycle::DC_AUTO, 2));
+    rfsUcd.push_back (RawFrameSet (80320000u, RawFrameSet::PhaseDefinition::MODULATED_4PH_CW, RawFrameSet::DutyCycle::DC_AUTO, 3));
+    rfsUcd.push_back (RawFrameSet (60240000u, RawFrameSet::PhaseDefinition::GRAYSCALE, RawFrameSet::DutyCycle::DC_AUTO, 4));
+
     auto simple = UseCaseDefFactoryProcessingOnly::createUcd (
-    UseCaseIdentifier ("test"),
+                      UseCaseIdentifier ("test"),
     {176u, 120u},
     {1u, 50u},
     10u,
-    {
-        {{1u, 2000u}, 100u},
-        {{1u, 2000u}, 500u},
-        {{1u, 2000u}, 500u},
-        {{1u, 2000u}, 500u},
-        {{1u, 2000u}, 100u}
-    },
-    {
-        { 1, 60240000u, 0},
-        { 4, 80320000u, 1},
-        { 4, 60240000u, 2},
-        { 4, 80320000u, 3},
-        { 1, 60240000u, 4}
-    }
-    );
+    expoGroups,
+    rfsUcd);
 
     ASSERT_EQ (UseCaseIdentifier ("test"), simple->getIdentifier());
 
@@ -119,26 +129,36 @@ TEST (TestUseCaseProcessingOnly, reduce14Phase)
     uint16_t width, height;
     ucap.getImage (width, height);
 
+    royale::Vector<ExposureGroup> expoGroups;
+    royale::Vector<RawFrameSet> rfs;
+
+    ExposureGroup expo1;
+    expo1.m_exposureLimits = royale::Pair<uint32_t, uint32_t> { 1u, 2000u };
+    expo1.m_exposureTime = 100u;
+
+    ExposureGroup expo2;
+    expo2.m_exposureLimits = royale::Pair<uint32_t, uint32_t> { 1u, 2000u };
+    expo2.m_exposureTime = 500u;
+
+    expoGroups.push_back (expo1);
+    expoGroups.push_back (expo2);
+    expoGroups.push_back (expo2);
+    expoGroups.push_back (expo2);
+    expoGroups.push_back (expo1);
+
+    rfs.push_back (RawFrameSet (60240000u, RawFrameSet::PhaseDefinition::GRAYSCALE, RawFrameSet::DutyCycle::DC_AUTO, 0));
+    rfs.push_back (RawFrameSet (80320000u, RawFrameSet::PhaseDefinition::MODULATED_4PH_CW, RawFrameSet::DutyCycle::DC_AUTO, 1));
+    rfs.push_back (RawFrameSet (60240000u, RawFrameSet::PhaseDefinition::MODULATED_4PH_CW, RawFrameSet::DutyCycle::DC_AUTO, 2));
+    rfs.push_back (RawFrameSet (80320000u, RawFrameSet::PhaseDefinition::MODULATED_4PH_CW, RawFrameSet::DutyCycle::DC_AUTO, 3));
+    rfs.push_back (RawFrameSet (60240000u, RawFrameSet::PhaseDefinition::GRAYSCALE, RawFrameSet::DutyCycle::DC_AUTO, 4));
+
     auto ucpo = UseCaseDefFactoryProcessingOnly::createUcd (
-    UseCaseIdentifier ("test"),
+                    UseCaseIdentifier ("test"),
     {width, height},
     {1u, 10u},
     10u,
-    {
-        {{1u, 2000u}, 100u},
-        {{1u, 2000u}, 500u},
-        {{1u, 2000u}, 500u},
-        {{1u, 2000u}, 500u},
-        {{1u, 2000u}, 100u}
-    },
-    {
-        { 1, 60240000u, 0},
-        { 4, 80320000u, 1},
-        { 4, 60240000u, 2},
-        { 4, 80320000u, 3},
-        { 1, 60240000u, 4}
-    }
-    );
+    expoGroups,
+    rfs);
 
     ASSERT_NE (ucap, *ucpo);
     auto fromAP = UseCaseDefFactoryProcessingOnly::createUcd (ucap);

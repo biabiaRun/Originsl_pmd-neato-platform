@@ -17,6 +17,21 @@
 #include <sstream>
 #include <mutex>
 #include <atomic>
+#include <memory>
+#include <thread>
+
+#include "IlogBackend.hpp"
+#include "CommandLog.hpp"
+#include "FileLog.hpp"
+#if defined (ROYALE_TARGET_PLATFORM_LINUX) || defined (ROYALE_TARGET_PLATFORM_APPLE)
+#include "SysLogger.hpp"
+#endif
+#ifdef ROYALE_TARGET_PLATFORM_ANDROID
+#include "AndroidLog.hpp"
+#endif
+#ifdef ROYALE_TARGET_PLATFORM_WINDOWS
+#include "WindowsDebugStringLog.hpp"
+#endif
 
 #if (!defined(NDEBUG) && defined(ROYALE_USE_LOGGING)) || defined(ROYALE_FORCE_LOGGING)
 #define ROYALE_LOG_INTERNAL
@@ -34,13 +49,9 @@
   * Logging during static initialization (before main() is called) causes undefined behavior.
   */
 #ifdef ROYALE_LOG_INTERNAL
-#ifdef TARGET_PLATFORM_ANDROID
-#define LOG(X)    royale::common::Log((uint16_t)RoyaleLoggerLevels::X##_)
+#define LOG(X)    royale::common::Log(static_cast<uint16_t>(RoyaleLoggerLevels::X##_))
 #else
-#define LOG(X)    royale::common::Log((uint16_t)RoyaleLoggerLevels::X##_) << " " << #X << " "
-#endif
-#else
-#define LOG(X) if (true); else royale::common::Log((uint16_t)RoyaleLoggerLevels::X##_)
+#define LOG(X) if (true); else royale::common::Log(static_cast<uint16_t>(RoyaleLoggerLevels::X##_))
 #endif
 
 /** Definition of LogLevels
@@ -81,19 +92,17 @@ namespace royale
             /// Can be used to pipe logging to a log file (has to be called explicitly)
             ROYALE_API void setLogFile (std::string logfilePath);
 
+            /// Swaps the current log backend with the one provided and returns the log backend which was swapped
+            ROYALE_API std::unique_ptr<IlogBackend> swapLogBackend (std::unique_ptr<IlogBackend> backend);
+
             /// Returns the configured log level (the one from the class which defines what messages shall be created)
             ROYALE_API uint16_t logLevel() const;
 
-#ifdef TARGET_PLATFORM_ANDROID
-            /// Returns the current stream (for Android this is a stringstream)
-            ROYALE_API std::stringstream &stream();
-#else
-            /// Returns the current stream (might be "cout" or a file-stream if a log file was specified before
-            ROYALE_API std::ostream &stream();
-#endif
-
             /// Returns the current LogTime (current time according to the given format)
             ROYALE_API const std::string getLogTime (const std::string &dateTimeFormat) const;
+
+            /// Calls the overloaded method from IlogBackend to print the log message
+            ROYALE_API const void pushLogLine (uint16_t loglevel, const std::string &logLine);
 
             /// Explicitly define assignment operator as deleted, so prohibit copying
             ROYALE_API LogSettings &operator= (const LogSettings &) = delete;
@@ -101,15 +110,16 @@ namespace royale
         private:
             /// Explicitly define copy ctor as deleted, so prohibit copying
             LogSettings (const LogSettings &) = delete;
-
-#ifdef TARGET_PLATFORM_ANDROID
-            std::stringstream m_androidLogout;
-#endif
-
+            std::unique_ptr<IlogBackend> m_logBackend;
             uint16_t m_logSetting;
-            std::ofstream fout;
         };
+    }
+}
 
+namespace royale
+{
+    namespace common
+    {
         class Log
         {
         public:
@@ -129,8 +139,8 @@ namespace royale
 #if defined(ROYALE_LOG_INTERNAL)
                 if (m_output)
                 {
+                    m_Buffer << x;
                     m_endlLast = false;
-                    LogSettings::getInstance()->stream() << x;
                 }
 #endif
                 return *this;
@@ -143,12 +153,10 @@ namespace royale
             bool m_output;
 #if defined(ROYALE_LOG_INTERNAL)
             bool m_endlLast;
+            uint16_t m_currentLogLevel;
 #endif
-#ifdef TARGET_PLATFORM_ANDROID
-            uint16_t m_level;
-#endif
-
             std::unique_lock<std::recursive_mutex> m_logLock;
+            std::stringstream m_Buffer;
         };
     }
 }

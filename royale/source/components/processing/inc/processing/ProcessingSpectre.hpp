@@ -94,12 +94,13 @@ namespace royale
                                       const spectre::common::ArrayReference<float> &outNoise,
                                       const float noiseThreshold,
                                       const spectre::common::ArrayReference<uint32_t> &outFlags,
-                                      royale::DepthImage *target, const royale::StreamId streamId);
+                                      royale::Vector<uint16_t> &data, const royale::StreamId streamId);
 
             void prepareDepthImage (royale::DepthImage *target, const royale::StreamId streamId);
             void prepareSparsePointCloud (royale::SparsePointCloud *target, const royale::StreamId streamId);
-            void doPrepareIRImage (const spectre::common::ArrayReference<float> &outAmplitude, royale::IRImage *target);
+            void doPrepareIRImage (const spectre::common::ArrayReference<float> &outAmplitude, royale::Vector<uint8_t> &data);
             void prepareIRImage (royale::IRImage *target, const royale::StreamId streamId);
+            void prepareDepthIRImage (royale::DepthIRImage *target, const royale::StreamId streamId);
 
             /**
             * Fills the intermediate output struct.
@@ -118,7 +119,8 @@ namespace royale
             struct SpectreInstanceInfo
             {
                 SpectreInstanceInfo()
-                    : used (false) {}
+                    : used (false),
+                      irMode (false) {}
                 /// Spectre instance
                 std::unique_ptr<spectre::ISpectre> spectre;
                 /// StreamId for which the instance was configured
@@ -133,6 +135,9 @@ namespace royale
                  * frameIndices[2] -> start of second 4 phase raw frame set (if any)
                  */
                 std::vector<size_t> frameIndices;
+
+                /// This instance should only get 2 phases for the gray image calculation
+                bool irMode;
 
                 /**
                  * @brief Indices of exposure times in processFrame
@@ -174,6 +179,9 @@ namespace royale
              */
             void activateUseCase (const royale::usecase::UseCaseDefinition &useCase);
 
+            royale::Variant setSpectreProcessingType (const ProcessingParameterMap &parameters,
+                    const royale::StreamId streamId);
+
         private:
             std::chrono::microseconds m_timeStamp;
             std::vector<uint8_t> m_calibrationData;
@@ -194,6 +202,8 @@ namespace royale
             float m_ampMult;
             float m_scalingFactor;
             bool m_isReady;
+
+            royale::String m_spectreBackend;
         };
     }
 }

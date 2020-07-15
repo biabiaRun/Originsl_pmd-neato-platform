@@ -183,6 +183,13 @@ namespace RoyaleDotNet
 
         [DllImport (RoyaleDotNET.royaleCAPI_DLL)]
         private static extern Int32 royale_camera_device_stop_recording_v210 (HND_TYPE cameraDeviceHnd);
+
+        [DllImport(RoyaleDotNET.royaleCAPI_DLL)]
+        private static extern Int32 royale_camera_device_get_filter_level_v32400(HND_TYPE cameraDeviceHnd, UInt16 streamId, out FilterLevel filterLevel);
+
+        [DllImport(RoyaleDotNET.royaleCAPI_DLL)]
+        private static extern Int32 royale_camera_device_set_filter_level_v32400(HND_TYPE cameraDeviceHnd, UInt16 streamId, UInt32 filterLevel);
+        
         #endregion
 
         #region Level 2
@@ -1011,6 +1018,31 @@ namespace RoyaleDotNet
         {
             return (CameraStatus) royale_camera_device_set_external_trigger_v330 (m_cameraDeviceHnd, useExternalTrigger);
         }
+
+
+        /// <summary>
+        /// LEVEL 1
+        /// Change the level of filtering that is used during the processing.
+        /// This will change the setting of multiple internal filters based on some predefined levels.
+        /// Please have a look at the royale::FilterLevel enum to see which levels are available.
+        /// FilterLevel::Custom is a special setting which can not be set.
+        /// </summary>
+        public CameraStatus SetFilterLevel(FilterLevel filterLevel, UInt16 streamId = 0)
+        {
+            return (CameraStatus)royale_camera_device_set_filter_level_v32400(m_cameraDeviceHnd, streamId, (UInt32)filterLevel);
+        }
+
+        /// <summary>
+        /// LEVEL 1
+        /// Retrieve the level of filtering for the given streamId.
+        /// Please have a look at the royale::FilterLevel enum to see which levels are available.
+        /// If the processing parameters do not match any of the levels this will return FilterLevel::Custom.
+        /// </summary>
+        public CameraStatus GetFilterLevel(out FilterLevel filterLevel, UInt16 streamId = 0)
+        {
+            return (CameraStatus)royale_camera_device_get_filter_level_v32400(m_cameraDeviceHnd, streamId, out filterLevel);
+        }
+
 
         #endregion
 

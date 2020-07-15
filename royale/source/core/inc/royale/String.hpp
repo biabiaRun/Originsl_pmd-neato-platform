@@ -357,14 +357,14 @@ namespace royale
                   typename = typename std::enable_if< (royale::iterator::is_same<IteratorType, reverse_iterator>::value) >::type>
         size_t indexFromIterator (IteratorType it)
         {
-            return it.base() - begin();
+            return static_cast<size_t> (it.base() - begin());
         }
 
         template < typename... Dummy, typename IteratorType,
                    typename = typename std::enable_if < (royale::iterator::is_same<IteratorType, reverse_iterator>::value || royale::iterator::is_same<IteratorType, const_reverse_iterator>::value) >::type >
         size_t indexFromIterator (IteratorType it) const
         {
-            return it.base() - cbegin();
+            return static_cast<size_t> (it.base() - cbegin());
         }
 
         /**
@@ -378,14 +378,14 @@ namespace royale
                   typename = typename std::enable_if< (royale::iterator::is_same<IteratorType, iterator>::value) >::type>
         size_t indexFromIterator (IteratorType it)
         {
-            return it - begin();
+            return static_cast<size_t> (it - begin());
         }
 
         template < typename IteratorType,
                    typename = typename std::enable_if < (royale::iterator::is_same<IteratorType, iterator>::value || royale::iterator::is_same<IteratorType, const_iterator>::value) >::type >
         size_t indexFromIterator (IteratorType it) const
         {
-            return it - cbegin();
+            return static_cast<size_t> (it - cbegin());
         }
 
         /**
@@ -1868,7 +1868,7 @@ namespace royale
             auto p = m_strdata.get();
 
             // now we have as much space as needed in between
-            for (const_iterator insertIterator (beginPos); insertIterator != (beginPos + n); insertIterator++)
+            for (const_iterator insertIterator (beginPos); insertIterator != (beginPos + static_cast<long> (n)); insertIterator++)
             {
                 p [insertIterator - beginPos] = val;
             }
@@ -1892,7 +1892,7 @@ namespace royale
     basicString<T> &basicString<T>::assign (InputIterator_first first, InputIterator_last last)
     {
         // return position
-        size_t sizeLength = (last - first) < 0 ? first - last : last - first;
+        size_t sizeLength = (last - first) < 0 ? static_cast<size_t> (first - last) : static_cast<size_t> (last - first);
 
         if (static_cast<uint64_t> ( (last - first) < 0 ? first - last : last - first) >= npos)
         {
@@ -1926,7 +1926,7 @@ namespace royale
             auto p = m_strdata.get();
             for (size_t i = 0; i < sizeLength; i++)
             {
-                p[i] = * (first + i);
+                p[i] = * (first + static_cast<long> (i));
             }
 
             // erase unused elements at the end
@@ -2004,7 +2004,7 @@ namespace royale
 
         // return position
         size_t index;
-        size_t sizeLength = (last - first) < 0 ? first - last : last - first;
+        size_t sizeLength = (last - first) < 0 ? static_cast<size_t> (first - last) : static_cast<size_t> (last - first);
 
         // realloc is needed
         if (m_allocationSize < (sizeLength + size() + NUL_TERMINATOR_LENGTH))
@@ -2046,7 +2046,7 @@ namespace royale
         // realloc is not needed
         else
         {
-            size_t iteratingTimes = end() - position;
+            size_t iteratingTimes = static_cast<size_t> (end() - position);
             size_t lastIndex      = m_actualSize - 1;
 
             // take the originally last item and place it at the new end
@@ -2054,7 +2054,7 @@ namespace royale
             auto p = m_strdata.get();
             for (posChanger = rbegin(); iteratingTimes > 0; posChanger++)
             {
-                size_t offset = sizeLength + (posChanger - rbegin());
+                size_t offset = sizeLength + static_cast<size_t> (posChanger - rbegin());
 
                 // if we place items behind the actualSize, we need to use placement new
                 // otherwise we have to use "="; memAssign manages these cases.
@@ -2069,7 +2069,7 @@ namespace royale
             {
                 // if we place items behind the actualSize, we need to use placement new
                 // otherwise we have to use "="; memAssign manages these cases.
-                p [index + offset] = * (first + offset);
+                p [index + offset] = * (first + static_cast<long> (offset));
             }
 
             m_actualSize += sizeLength;
@@ -2088,14 +2088,14 @@ namespace royale
     template <class T>
     basicString<T> &basicString<T>::erase (size_t pos, size_t len)
     {
-        erase (iteratorFromIndex (pos), iteratorFromIndex (pos) + len);
+        erase (iteratorFromIndex (pos), iteratorFromIndex (pos) + static_cast<long> (len));
         return *this;
     }
 
     template <class T>
     basicString<T> &basicString<T>::erase (const_iterator position, size_t len)
     {
-        erase (position, position + len);
+        erase (position, position + static_cast<long> (len));
         return *this;
     }
 
@@ -2133,14 +2133,14 @@ namespace royale
     template <class T>
     basicString<T> &basicString<T>::remove (size_t pos, size_t len)
     {
-        remove (iteratorFromIndex (pos), iteratorFromIndex (pos) + len);
+        remove (iteratorFromIndex (pos), iteratorFromIndex (pos) + static_cast<long> (len));
         return *this;
     }
 
     template <class T>
     basicString<T> &basicString<T>::remove (const_iterator position, size_t len)
     {
-        remove (position, position + len);
+        remove (position, position + static_cast<long> (len));
         return *this;
     }
 
@@ -2159,7 +2159,7 @@ namespace royale
 
             assert (realFirst < end() && realLast <= end());
 
-            size_t noDelItems = (realLast - realFirst);
+            size_t noDelItems = static_cast<size_t>(realLast - realFirst);
             if (noDelItems > m_actualSize)
             {
                 noDelItems = m_actualSize;
@@ -2173,7 +2173,7 @@ namespace royale
 
             for (i = 0; i < iteratingTimes; i++)
             {
-                if ( (realFirst + i + noDelItems) < end()) // we are at the end
+                if ( (realFirst + static_cast<long> (i + noDelItems)) < end()) // we are at the end
                 {
                     // relocate items as long as we do not reach the end
                     p[insertIndex + i] = p[insertIndex + i + noDelItems];
@@ -2192,16 +2192,16 @@ namespace royale
               typename, typename> // evaluation in definition
     typename basicString<T>::iterator basicString<T>::replace (const_iterator start, const_iterator end, InputIterator_first first, InputIterator_last last)
     {
-        size_t corrInput = (last - first);
+        size_t corrInput = static_cast<size_t> (last - first);
 
         if (last < first)
         {
-            corrInput = (first - last);
+            corrInput = static_cast<size_t> (first - last);
         }
 
         size_t numItems = (corrInput < static_cast<size_t> (end - start)) ? corrInput : static_cast<size_t> (end - start);
 
-        return replace (start, first, first + numItems);
+        return replace (start, first, first + static_cast<long> (numItems));
     }
 
     template <class T>
@@ -2221,7 +2221,7 @@ namespace royale
 
         // return position
         size_t index = 0;
-        size_t numItems = (last - first) < 0 ? first - last : last - first;
+        size_t numItems = (last - first) < 0 ? static_cast<size_t> (first - last) : static_cast<size_t> (last - first);
 
         // realloc is needed
         if (m_allocationSize < (indexFromIterator (position) + numItems + NUL_TERMINATOR_LENGTH))
@@ -2264,7 +2264,7 @@ namespace royale
             auto p = m_strdata.get();
             for (size_t offset = 0; offset < numItems; offset++)
             {
-                p [index + offset] = * (first + offset);
+                p [index + offset] = * (first + static_cast<long> (offset));
             }
 
             m_actualSize = (index + numItems > m_actualSize) ? index + numItems : m_actualSize;

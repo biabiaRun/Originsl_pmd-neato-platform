@@ -30,7 +30,8 @@ namespace royale
             ROYALE_API explicit ModuleConfigFactoryFixed (const royale::config::ModuleConfig &moduleConfig);
 
             std::shared_ptr<const royale::config::ModuleConfig>
-            probeAndCreate (royale::factory::IBridgeFactory &bridgeFactory) const override;
+            probeAndCreate (royale::factory::IBridgeFactory &bridgeFactory,
+                            royale::CameraAccessLevel accessLevel = royale::CameraAccessLevel::L3) const override;
             royale::Vector<std::shared_ptr<const royale::config::ModuleConfig>> enumerateConfigs() const override;
         private:
             std::shared_ptr<const royale::config::ModuleConfig> m_moduleConfig;

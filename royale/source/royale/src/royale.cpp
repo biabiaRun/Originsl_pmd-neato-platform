@@ -40,14 +40,14 @@ void royale::getVersion (unsigned &major, unsigned &minor, unsigned &patch, unsi
     scmRevision = ROYALE_VERSION_SCM;
 }
 
-void royale::getVersion(unsigned &major, unsigned &minor, unsigned &patch, unsigned &build, royale::String &customer, royale::String &scmRevision)
+void royale::getVersion (unsigned &major, unsigned &minor, unsigned &patch, unsigned &build, royale::String &customer, royale::String &scmRevision)
 {
-	major = ROYALE_VERSION_MAJOR;
-	minor = ROYALE_VERSION_MINOR;
-	patch = ROYALE_VERSION_PATCH;
-	build = ROYALE_VERSION_BUILD;
-	customer = ROYALE_VERSION_CUSTOMER_SUFFIX;
-	scmRevision = ROYALE_VERSION_SCM;
+    major = ROYALE_VERSION_MAJOR;
+    minor = ROYALE_VERSION_MINOR;
+    patch = ROYALE_VERSION_PATCH;
+    build = ROYALE_VERSION_BUILD;
+    customer = ROYALE_VERSION_CUSTOMER_SUFFIX;
+    scmRevision = ROYALE_VERSION_SCM;
 }
 
 royale::String royale::getErrorString (royale::CameraStatus status)

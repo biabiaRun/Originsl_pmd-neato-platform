@@ -103,11 +103,13 @@ void FilterMinMaxView::onFilterMinMaxToggled (bool enabled)
 {
     if (enabled)
     {
+        ui.cbFilter->setChecked (true);
         emit filterMinChanged (m_filterMin);
         emit filterMaxChanged (m_filterMax);
     }
     else
     {
+        ui.cbFilter->setChecked (false);
         emit filterMinChanged (0.0f);
         emit filterMaxChanged (9999.9f);
     }
