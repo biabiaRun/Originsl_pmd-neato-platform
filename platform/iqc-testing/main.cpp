@@ -55,7 +55,7 @@ int main(int argc, char **argv)
             }
             std::cout << "Streaming Time [seconds]: " << options.numSecondsToStream << std::endl;
             if (options.numSecondsToStream > 300) {
-              std::cout << "WARNING : Output test.rrf will be > 1 GB on Disk!" << std::endl;
+              std::cout << "USING STREAM TEST-MODE : Output will be stream to /dev/null" << std::endl;
             }
             break;
           case 'm':

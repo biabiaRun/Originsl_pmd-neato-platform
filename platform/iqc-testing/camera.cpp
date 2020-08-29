@@ -331,7 +331,13 @@ Camera::CameraError Camera::RunTestReceiveData(int secondsToStream) {
   }
 
   // Record to output file
-  camera_->startRecording ("test.rrf");
+  if (secondsToStream > 300) {
+    // Stream to /dev/null otherwise you will run out of disk space...
+    camera_->startRecording ("/dev/null");
+  } else {
+    camera_->startRecording ("test.rrf");
+  }
+
   std::clog << "Begin Recording for " << secondsToStream << " seconds" << std::endl;
 
   rawListener_.m_count = 0u;
