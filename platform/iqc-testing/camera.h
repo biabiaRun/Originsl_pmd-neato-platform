@@ -55,7 +55,7 @@ public:
     std::string id_;                                // Unique ID for the camera device
     royale::String use_case_;                       // Camera use_case_
     royale::StreamId stream_id_;                    // FIRST stream ID for the given use_case_
-    int fps_;
+    uint16_t fps_;
 
     enum CameraError
     {
@@ -76,7 +76,7 @@ public:
 
     CameraError RunAccessLevelTests(int user_level);
     CameraError RunExposureTests();
-    CameraError RunInitializeTests(royale::String useCase, int fps);
+    CameraError RunInitializeTests(royale::String useCase);
     CameraError RunProcessingParametersTests();
     CameraError RunStreamTests();
     CameraError RunUseCaseTests();
