@@ -14,10 +14,6 @@
 #include <syslog.h>
 
 
-// MyListener::MyListener(const bool quiet, const std::string pointcloud_dir) :
-//    m_quiet(quiet), m_pointcloud_dir(pointcloud_dir), last_frame_timestamp_long(0)
-//{
-//}
 MyListener::MyListener(const bool quiet, const std::string pointcloud_dir, const std::string grayscale_dir,  std::vector<float>* vec_x, std::vector<float>* vec_y, std::vector<float>* vec_z,
                       std::vector<uint16_t>* vec_gray) :
     m_quiet(quiet), m_pointcloud_dir(pointcloud_dir), m_grayscale_dir(grayscale_dir), m_last_frame_timestamp_long(0), m_royale_data_timeStamp(0)
@@ -27,6 +23,7 @@ MyListener::MyListener(const bool quiet, const std::string pointcloud_dir, const
   m_point_cloud_z = vec_z;
   m_gray_image = vec_gray;
 }
+
 
 MyListener::~MyListener()
 {
@@ -40,13 +37,6 @@ MyListener::~MyListener()
  * https://en.wikipedia.org/wiki/PLY_(file_format)
 */
 void MyListener::SaveDensePointcloud(const std::string &filename, const std::string &filename_gray, const royale::DepthData *data) {
-  static int counter = 0;
-  counter++;
-
-  if (counter > 10) {
-    return;
-  }
-
   std::ofstream outputFile;
   std::stringstream stringStream;
 
@@ -100,77 +90,8 @@ void MyListener::SaveDensePointcloud(const std::string &filename, const std::str
 }
 
 
-/**
- * CreatePointCloud
- *
- * The object avoidance pipeline only works on PCL PointCloud objects.  Convert
- * the input royale::DepthData data into such an object.
-
-pcl::PointCloud<pcl::PointXYZ>::Ptr MyListener::CreatePointCloud(const royale::DepthData *data) const
-{
-    // Populate a point cloud object from the depth data
-    pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloudPtr(new pcl::PointCloud<pcl::PointXYZ>);
-
-    // Cloud settings
-    inputCloudPtr->width = data->width;
-    inputCloudPtr->height = data->height;
-    inputCloudPtr->is_dense = true; // Dense point cloud
-    inputCloudPtr->points.resize(inputCloudPtr->width * inputCloudPtr->height);
-
-    // Store each depth point's data into the input point cloud
-    for(size_t i = 0; i < inputCloudPtr->width * inputCloudPtr->height; ++i)
-    {
-        royale::DepthPoint curPoint = data->points.at(i);
-        inputCloudPtr->points[i].x = curPoint.x;
-        inputCloudPtr->points[i].y = curPoint.y;
-        inputCloudPtr->points[i].z = curPoint.z;
-    }
-
-    return inputCloudPtr;
-}
-*/
-
-/**
- * FilterPointCloud
- *
- * Given an input point cloud, remove all (X, Y, Z) points that do not fall
- * within the specified thresholds.
- *
- * @param input pcl::PointCloud<pcl::PointXYZ>::Ptr: input point cloud to filter
- * @param output pcl::PointCloud<pcl::PointXYZ>::Ptr: output filtered point cloud
-
-void MyListener::FilterPointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr &input, pcl::PointCloud<pcl::PointXYZ>::Ptr &output)
-{
-    std::cout << "Filtering point cloud" << std::endl;
-
-    // Min/Max Thresholding for the 3 axis.  Remove any points that do not fit
-    // within these thresholds.
-    const std::pair<float, float> X_THRESH = std::make_pair(-0.17, 0.17);
-    const std::pair<float, float> Y_THRESH = std::make_pair(-0.2, 1.0);
-    const std::pair<float, float> Z_THRESH = std::make_pair(0.15, 1.0);
-
-    // Filter to remove points
-    pcl::PassThrough<pcl::PointXYZ> filter(true);
-
-    filter.setInputCloud(input);
-    // Apply thresholds.  Remove points that are outside of these bounds
-    filter.setFilterFieldName("x");
-    filter.setFilterLimits(X_THRESH.first, X_THRESH.second);
-    filter.filter(*output);
-    filter.setInputCloud(output);
-    filter.setFilterFieldName("y");
-    filter.setFilterLimits(Y_THRESH.first, Y_THRESH.second);
-    filter.filter(*output);
-    filter.setFilterFieldName("z");
-    filter.setFilterLimits(Z_THRESH.first, Z_THRESH.second);
-    filter.filter(*output);
-}
-*/
-
-
 // Helper to output time deltas for time benchmaking
-void MyListener::DisplayTimeDeltaMS(const struct timeval &startTime, const struct timeval &endTime, const char *comment)
-{
+void MyListener::DisplayTimeDeltaMS(const struct timeval &startTime, const struct timeval &endTime, const char *comment) {
   const double TIME_DELTA = static_cast<double>(endTime.tv_sec - startTime.tv_sec) * 1000. + static_cast<double>(endTime.tv_usec - startTime.tv_usec) / 1000.;
   if(!m_quiet) {
     syslog(LOG_NOTICE, "TOFDaemon %s: time delta took %g milliseconds\n", comment, TIME_DELTA);
@@ -183,234 +104,100 @@ void MyListener::DisplayTimeDeltaMS(const struct timeval &startTime, const struc
  *
  * Callback to execute the object avoidance pipeline.
  */
-void MyListener::onNewData(const royale::DepthData *data)
-{
-    struct timeval startTime;
-    gettimeofday(&startTime, NULL);
+void MyListener::onNewData(const royale::DepthData *data) {
+  static int counter = 0;
+  counter++;
 
-    long long cur_timestamp_long = (long long) startTime.tv_sec * 1000L + startTime.tv_usec / 1000;
-    if(m_last_frame_timestamp_long > 0) {
-        if( (cur_timestamp_long - m_last_frame_timestamp_long) < 120 ) {
-            std::string timestamp_diff = std::to_string(cur_timestamp_long - m_last_frame_timestamp_long);
-            syslog(LOG_NOTICE, "Skipping Frame : Timestamp Diff = %s\n", timestamp_diff.c_str());
-            return;
-        }else{
-            m_last_frame_timestamp_long = cur_timestamp_long;
-        }
-    }else{
-        m_last_frame_timestamp_long = cur_timestamp_long;
+  struct timespec start, stop;
+  double accum;
+
+  if( clock_gettime( CLOCK_BOOTTIME, &start) == -1 ) {
+    syslog(LOG_ERR, "Error: Failed to get clock start time\n");
+  }
+  // struct timeval startTime;
+  // gettimeofday(&startTime, NULL);
+
+  m_royale_data_timeStamp = data->timeStamp.count();
+  int64_t time_diff =(m_royale_data_timeStamp - m_last_frame_timestamp_long) / 1000L;
+  // syslog(LOG_NOTICE, "timestamp %ld  :::  previous %ld\n", m_royale_data_timeStamp, m_last_frame_timestamp_long);
+  syslog(LOG_NOTICE, "TIME DIFF TOF ::: %ld\n", time_diff);
+  m_last_frame_timestamp_long = m_royale_data_timeStamp;
+
+  /*
+  if(m_last_frame_timestamp_long > 0) {
+    if(m_last_frame_timestamp_long < m_royale_data_timeStamp) {
+      m_last_frame_timestamp_long = m_royale_data_timeStamp;
+    } else {
+      syslog(LOG_NOTICE, "Skipping Frame : Timestamp Diff = 0\n");
+      return;
     }
+  }else{
+      m_last_frame_timestamp_long = m_royale_data_timeStamp;
+  }
+  */
 
-    // m_depth_points =  data->points;
+  /* long long cur_timestamp_long = (long long) static_cast<long long>(startTime.tv_sec) * 1000L + static_cast<long long>(startTime.tv_usec) / 1000L;
+  if(m_last_frame_timestamp_long > 0) {
+      if( (cur_timestamp_long - m_last_frame_timestamp_long) < 120 ) {
+          std::string timestamp_diff = std::to_string(cur_timestamp_long - m_last_frame_timestamp_long);
+          syslog(LOG_NOTICE, "Skipping Frame : Timestamp Diff = %s\n", timestamp_diff.c_str());
+          return;
+      }else{
+          m_last_frame_timestamp_long = cur_timestamp_long;
+      }
+  }else{
+      m_last_frame_timestamp_long = cur_timestamp_long;
+      m_royale_data_timeStamp = data->timeStamp;
+  }*/
+
+  // m_depth_points =  data->points;
+  {
     std::unique_lock<std::mutex> lock (g_ptcloud_mutex);
-    m_royale_data_timeStamp = data->timeStamp;
+    // m_royale_data_timeStamp = data->timeStamp;
     for (size_t index = 0u; index < m_point_cloud_x->size(); ++index) {
       (*m_point_cloud_x)[index] = data->points[index].x;
       (*m_point_cloud_y)[index] = data->points[index].y;
       (*m_point_cloud_z)[index] = data->points[index].z;
       (*m_gray_image)[index] = data->points[index].grayValue;
     }
+  }
 
-    // Convert the depth data into a point cloud object
-    //pcl::PointCloud<pcl::PointXYZ>::Ptr cloud = CreatePointCloud(data);
+  //struct timeval createPCLTime;
+  //gettimeofday(&createPCLTime, NULL);
+  //DisplayTimeDeltaMS(startTime, createPCLTime, "CreatePointCloud");
 
-    //struct timeval createPCLTime;
-    //gettimeofday(&createPCLTime, NULL);
-    //DisplayTimeDeltaMS(startTime, createPCLTime, "CreatePointCloud");
+  /*
+  // Test if m_pointcloud_dir is not empty
+  if ((counter < 11) && !m_pointcloud_dir.empty()) {
+    // If a directory is defined then save pointcloud
+    //struct timeval tp;
+    //gettimeofday(&tp, NULL);
+    // Must cast to long long to avoid overflows
+    // long long msec_long = (long long) startTime.tv_sec * 1000L + startTime.tv_usec / 1000;
+    // std::string timestamp = std::to_string(msec_long);
+    std::string timestamp = std::to_string(m_royale_data_timeStamp);
+    std::string filename = "densePointCloud_" + timestamp + ".ply";
+    filename = m_pointcloud_dir + filename;
+    // std::string lclpth = "/home/root/tof-data-repo/";
+    // filename = lclpth + filename;
+    std::string filename_gray = "grayscale_" + timestamp + ".raw16";
+    filename_gray = m_grayscale_dir + filename_gray;
+    // filename_gray = lclpth + filename_gray;
 
+    SaveDensePointcloud(filename, filename_gray, data);
+  }
+  */
 
-    // Test if m_pointcloud_dir is not empty
-    if(!m_pointcloud_dir.empty()) {
-      // If a directory is defined then save pointcloud
-      //struct timeval tp;
-      //gettimeofday(&tp, NULL);
-      // Must cast to long long to avoid overflows
-      long long msec_long = (long long) startTime.tv_sec * 1000L + startTime.tv_usec / 1000;
-      std::string timestamp = std::to_string(msec_long);
-      std::string filename = "densePointCloud_" + timestamp + ".ply";
-      filename = m_pointcloud_dir + filename;
-      // std::string lclpth = "/home/root/tof-data-repo/";
-      // filename = lclpth + filename;
-      std::string filename_gray = "grayscale_" + timestamp + ".raw16";
-      filename_gray = m_grayscale_dir + filename_gray;
-      // filename_gray = lclpth + filename_gray;
+  if( clock_gettime( CLOCK_BOOTTIME, &stop) == -1 ) {
+    syslog(LOG_ERR, "Error: Failed to get clock stop time\n");
+  }
 
-      SaveDensePointcloud(filename, filename_gray, data);
-    }
-
-
-    //scp -ri /home/root/.ssh/id_rsa /home/root/TOF_Data_Repo Mark.Wilson@10.10.20.190:/home/local/NEATO/mark.wilson/data && rm /home/root/TOF_Data_Repo/2019-09-13_04-22-07/Dense_PC/densePointCloud_1568348870843.ply
-    //std::string rsync_command = "rsync --remove-source-files -rltD -e \"ssh -i /home/root/.ssh/id_ed25519\" /home/root/TOF_Data_Repo botvaclogger@neato-eng-fs01.neato.local:/volume1/neato/";
-    //std::string rsync_command = "rsync --remove-source-files -rltD -e \"ssh -i /home/root/.ssh/id_ed25519\" /home/root/TOF_Data_Repo Mark.Wilson@10.10.20.190:/home/local/NEATO/mark.wilson/data";
-    //system(rsync_command.c_str());
-
-/*
-    // Ground estimation and ground/wall removal
-    // GroundEstimator class needs full pointcloud because it uses array indeces
-    GroundEstimator ge;
-    pcl::PointCloud<pcl::PointXYZ>::Ptr object(new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr ground(new pcl::PointCloud<pcl::PointXYZ>);
-    ge.filter(cloud, object, ground);
-
-    struct timeval groundEstimatorTime;
-    gettimeofday(&groundEstimatorTime, NULL);
-    DisplayTimeDeltaMS(createPCLTime, groundEstimatorTime, "GroundEstimatorTime");
-
-    // Filter the point cloud
-    pcl::PointCloud<pcl::PointXYZ>::Ptr output(new pcl::PointCloud<pcl::PointXYZ>);
-    FilterPointCloud(object, output);
-
-    struct timeval filterPCTime;
-    gettimeofday(&filterPCTime, NULL);
-    DisplayTimeDeltaMS(groundEstimatorTime, filterPCTime, "FilterPCTime");
-
-    // TODO: Ground Extraction & Wall Removal
-
-    // Setup KDTree
-    pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
-    kdtree.setInputCloud (output);
-
-    struct timeval setInputTime;
-    gettimeofday(&setInputTime, NULL);
-    DisplayTimeDeltaMS(filterPCTime, setInputTime, "SetInputTime");
-
-    // DBScan
-    std::cout << "Running DBScan on " << output->points.size() << " points" << std::endl;
-    std::vector<int> labels = DBScan(output, kdtree, DBSCAN_EPS, DBSCAN_MIN_PTS);
-
-    struct timeval dbTime;
-    gettimeofday(&dbTime, NULL);
-    DisplayTimeDeltaMS(setInputTime, dbTime, "DBScanTime");
-
-    const std::string LABEL_OUTPUT("/tmp/labels_cluster.txt");
-    std::unordered_map<int, Cluster> cluster_map = SeperateClusters(output, labels, LABEL_OUTPUT);
-
-    struct timeval clusterTime;
-    gettimeofday(&clusterTime, NULL);
-    DisplayTimeDeltaMS(dbTime, clusterTime, "SeperateClustersTime");
-
-    // Send clusters to robot
-    StoreClustersForRobot(cluster_map);
-
-    // DEBUG ONLY: Grab the clusters for verification
-    NeatoObstacles &obst = NeatoObstacles::GetInstance();
-    NeatoObstacles::ClusterMap iGotThis;
-
-    obst.GetBoundingBoxes(&iGotThis);
-
-    if(!m_quiet)
-    {
-        syslog(LOG_NOTICE, "TOFDaemon: I got these clusters\n");
-        for(NeatoObstacles::ClusterMap::iterator itr = iGotThis.begin(); itr != iGotThis.end(); ++itr)
-        {
-            syslog(LOG_NOTICE, "TOFDaemon: Cluster: %d\n", itr->first);
-            Cluster nextCluster = itr->second;
-
-            syslog(LOG_NOTICE, "TOFDaemon: Point count: %d, Width: %f, Height: %f, Length: %f\n",
-            nextCluster.GetPointCount(), nextCluster.GetWidth(), nextCluster.GetHeight(), nextCluster.GetLength());
-        }
-    }
-    */
-
-  struct timeval finalTime;
-  gettimeofday(&finalTime, NULL);
-  DisplayTimeDeltaMS(startTime, finalTime, "Total Elapsed Time: ");
+  accum = static_cast<double>( stop.tv_sec - start.tv_sec ) * 1000.0 + static_cast<double>( stop.tv_nsec - start.tv_nsec ) / 1000000.0;
+  syslog(LOG_NOTICE, "TIME DIFF SYSTEM *:::* %lf\n", accum);
+  // struct timeval finalTime;
+  // gettimeofday(&finalTime, NULL);
+  // DisplayTimeDeltaMS(startTime, finalTime, "Total Elapsed Time: ");
 
   g_newDataAvailable = true;
   g_ptcloud_cv.notify_all();
 }
-
-/*
-DepthImageListener::DepthImageListener(const std::string depthImage_dir) :
-    m_depthImage_dir(depthImage_dir)
-{
-}
-
-DepthImageListener::~DepthImageListener()
-{
-}
-
-void DepthImageListener::SaveDepthImage(const std::string &filename, const royale::DepthImage *data)
-{
-    ofstream outputFile;
-    stringstream stringStream;
-
-    outputFile.open(filename, ofstream::out);
-    if (outputFile.fail()) {
-        cerr << "Outputfile " << filename << " could not be opened!" << endl;
-        return;
-    }
-    else
-    {
-        for (size_t i = 0; i < data->cdData.size(); ++i) {
-            stringStream << data->cdData[i] << " ";
-        }
-        stringStream << endl;
-        outputFile << stringStream.str();
-        outputFile.close();
-    }
-}
-
-void DepthImageListener::onNewData(const royale::DepthImage *data)
-{
-    if(!m_depthImage_dir.empty())
-    {
-        struct timeval tp;
-        gettimeofday(&tp, NULL);
-        // Must cast to long long to avoid overflows
-        long long msec_long = (long long) tp.tv_sec * 1000L + tp.tv_usec / 1000;
-        std::string timestamp = std::to_string(msec_long);
-        std::string filename = "depthImage_" + timestamp + ".dimg";
-        filename = m_depthImage_dir + filename;
-
-        SaveDepthImage(filename, data);
-    }
-}
-
-IRImageListener::IRImageListener(const std::string IRImage_dir) :
-    m_IRImage_dir(IRImage_dir)
-{
-}
-
-IRImageListener::~IRImageListener()
-{
-}
-
-void IRImageListener::SaveIRImage(const std::string &filename, const royale::IRImage *data)
-{
-    ofstream outputFile;
-    stringstream stringStream;
-
-    outputFile.open(filename, ofstream::out);
-    if (outputFile.fail()) {
-        cerr << "Outputfile " << filename << " could not be opened!" << endl;
-        return;
-    }
-    else
-    {
-        for (size_t i = 0; i < data->data.size(); ++i) {
-            stringStream << data->data[i] << " ";
-        }
-        stringStream << endl;
-        outputFile << stringStream.str();
-        outputFile.close();
-    }
-
-}
-
-void IRImageListener::onNewData(const royale::IRImage *data)
-{
-    if(!m_IRImage_dir.empty())
-    {
-        struct timeval tp;
-        gettimeofday(&tp, NULL);
-        // Must cast to long long to avoid overflows
-        long long msec_long = (long long) tp.tv_sec * 1000L + tp.tv_usec / 1000;
-        std::string timestamp = std::to_string(msec_long);
-        std::string filename = "IRImage_" + timestamp + ".irimg";
-        filename = m_IRImage_dir + filename;
-
-        SaveIRImage(filename, data);
-    }
-}
-*/
