@@ -1,6 +1,12 @@
 #include "tof_module_params.h"
 #include "pipeline_listener.h"
-#include "common.h"
+#include "otsu_threshold.h"
+#include "localize.h"
+#include "neural_network_params.h"
+#include "PracticalSocket.h"
+// #include "Model.h"
+// #include "Tensor.h"
+// #include "common.h"
 
 #include <bits/stdc++.h>
 #include <sys/types.h>
@@ -12,11 +18,20 @@
 #include <unistd.h>
 #include <syslog.h>
 #include <string>
-#include <sys/types.h>
 #include <CameraFactory.hpp>
+#include <opencv2/dnn.hpp>
+#include <opencv2/core/ocl.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/imgcodecs.hpp>
 #include <ftw.h>
+// #include <opencv2/opencv.hpp>
+// #include <opencv2/dnn.hpp>
+// #include <thread>
+// #include <queue>
 
 using namespace std;
+using namespace cv;
 
 // #include <royale/ICameraDevice.hpp>
 // #include <CameraFactory.hpp>
@@ -25,16 +40,12 @@ using namespace std;
 const char *DAEMON_NAME = "TOFDaemon";
 const char *REVISION = "1.0.0";
 
-std::mutex g_ptcloud_mutex;
-std::condition_variable g_ptcloud_cv;
-bool g_newDataAvailable;
-
 // Local Data Write Folders
 std::string LOCAL_DATA_PATH = "/home/root/tof-data-repo/";
 std::string IR_FOLDER("/gray-img/");
 std::string PTCLOUD_FOLDER("/dense-pc/");
 std::string DEPTH_IMAGE_FOLDER("/depth-img/");
-std::string CALIBRATION_FOLDER("/tof-to-lsd-calibration/");
+std::string CALIBRATION_FOLDER("/tof-to-lds-calibration/");
 
 /*
  * File path to the "lock file", which when created indicates that the
@@ -47,6 +58,10 @@ int lock_fd = -1;
 
 // Should the TOFDaemon continue processing frames?
 bool g_daemon_live = true;
+
+// Neural Network Variables
+std::vector<std::string> class_names;
+dnn::Net net;
 
 // SIGHUP Handler
 void sighup_handler(int signo) {
@@ -76,7 +91,6 @@ void Shutdown() {
     unlink(LOCK_FILE);
   }
 }
-
 
 /**
  * Daemonize
@@ -273,7 +287,6 @@ void Init_TOF_Streaming() {
   }
 }
 
-
 void SavePointcloud(const std::string &filename, const std::string &filename_gray, const std::vector<float>* vec_x, const std::vector<float>* vec_y, const std::vector<float>* vec_z,
                     const std::vector<uint16_t>* vec_gray) {
   std::ofstream outputFile;
@@ -281,9 +294,7 @@ void SavePointcloud(const std::string &filename, const std::string &filename_gra
 
   std::ofstream outputFile_gray;
   std::stringstream stringStream_gray;
-  uint16_t gray_val;
   uint16_t mask = 255;
-  uint8_t byte_low, byte_high;
 
   outputFile_gray.open (filename_gray, std::ofstream::out);
   if (outputFile_gray.fail()) {
@@ -311,11 +322,7 @@ void SavePointcloud(const std::string &filename, const std::string &filename_gra
     // output XYZ coordinates into one line
     for (size_t i = 0; i < vec_x->size(); ++i) {
         stringStream << (*vec_x)[i] << " " << (*vec_y)[i] << " " << (*vec_z)[i] << std::endl;
-        gray_val = (*vec_gray)[i];
-        byte_low = static_cast<uint8_t>((gray_val) & mask);
-        byte_high = static_cast<uint8_t>((gray_val >> 8) & mask);
-
-        stringStream_gray << byte_low << " " << byte_high << std::endl;
+        stringStream_gray << ((*vec_gray)[i] & mask) << " " << (((*vec_gray)[i] >> 8) & mask) << std::endl;
         // reconstruct like this: gray_val = byte_low | (byte_high << 8);
     }
     // output stringstream to file and close it
@@ -328,15 +335,33 @@ void SavePointcloud(const std::string &filename, const std::string &filename_gra
 }
 
 
+/*
+int otsu_threshold(cv::Mat& img_roi) {
+  int hist_size = 256;
+  float range[] = { 0, 256 }; // upper boundary is exclusive
+  const float* hist_range = range;
+  cv::Mat img_hist;
+  // mask out the invalid pixels equal to 255
+  cv::Mat img_mask = img_roi != 255;
+  double min_val, max_val;
+  cv::minMaxLoc(img_roi, &min_val, &max_val, NULL, NULL, img_mask);
+  cv::calcHist(&img_roi, 1, 0, img_mask, img_hist, 1, &hist_size, &hist_range, true, false);
+}
+*/
+
 int main(int argc, char **argv) {
 
   // Parse command line arguments
   int c;
   // Suppress debug messages?
   bool suppress = false;
-  // Save ToF Data?
-  bool save_data = true; //false;
-  g_newDataAvailable = false;
+  // Save ToF Data?oONo1
+
+  bool save_data = false; //true; //false;
+
+  std::mutex ptcloud_mutex;
+  std::condition_variable ptcloud_cv;
+  bool new_data_available = false;
 
   while((c = getopt(argc, argv, "qs")) != -1) {
     switch(c) {
@@ -380,6 +405,85 @@ int main(int argc, char **argv) {
       CALIBRATION_FOLDER = "";
     }
 
+    bool live_stream_video = true;
+    // Live Stream Server Address and Port
+    std::string servAddress("192.168.1.137");
+    std::string servPortValue("10000");
+    int PACK_SIZE = 4096;
+    unsigned short servPort;
+    UDPSocket sock;
+    std::vector<int> compression_params;
+    compression_params.push_back(IMWRITE_JPEG_QUALITY);
+    compression_params.push_back(80);
+    if (live_stream_video){
+      servPort = Socket::resolveService(servPortValue, "udp");
+    }
+
+    bool live_localization = false;
+    // std::string servAddress_local("192.168.1.137");
+    std::string servAddress_local("127.0.0.1");
+    std::string servPortValue_local("10010");
+    unsigned short servPort_local;
+    UDPSocket sock_local;
+    if (live_localization) {
+      servPort_local = Socket::resolveService(servPortValue_local, "udp");
+    }
+
+    // Neural Network Setup
+    /*
+    class_names.push_back("unlabeled");
+    class_names.push_back("sock");
+    // Load Model
+    Model model("/home/root/sdk/upload/frozen_inference_graph.pb");
+    Tensor outNames1{model, "num_detections"};
+    Tensor outNames2{model, "detection_scores"};
+    Tensor outNames3{model, "detection_boxes"};
+    Tensor outNames4{model, "detection_classes"};
+    Tensor inpName{model, "image_tensor"};
+    */
+
+    try {
+      net = dnn::readNetFromTensorflow("/home/root/sdk/upload/frozen_inference_graph.pb", "/home/root/sdk/upload/MobileNetV2.pbtxt");
+      // net.setPreferableTarget(1);
+    } catch (cv::Exception& e) {
+      const char* err_msg = e.what();
+      std::cout << "Error: " << err_msg << std::endl;
+      syslog(LOG_ERR, "Error: %s\n", err_msg);
+      Shutdown();
+      return -1;
+    }
+
+    if (net.empty()) {
+      std::cout << "Error loading the network model." << std::endl;
+      syslog(LOG_ERR, "Error loading the network model.\n");
+      Shutdown();
+      return -1;
+    } else {
+      std::cout << "Loaded the network model." << std::endl;
+      syslog(LOG_NOTICE, "Loaded the network model.\n");
+    }
+
+    // OpencCV uses the center of pixel as index origin
+    // While tensorflow uses the top/left corner of the pixel
+    // So in order to match Tensorflow we need to shift by 1/2 pixel
+    // https://towardsdatascience.com/image-read-and-resize-with-opencv-tensorflow-and-pil-3e0f29b992be
+    // https://github.com/opencv/opencv/issues/9096
+    /*
+    cv::Mat H1 = cv::Mat::eye(3,3, CV_32F);
+    H1.at<float>(0,2) = -0.5f;
+    H1.at<float>(1,2) = -0.5f;
+    cv::Mat H2 = cv::Mat::eye(3,3, CV_32F);
+    H2.at<float>(0,0) = 224.0f / 300.0f;
+    H2.at<float>(1,1) = 172.0f / 300.0f;
+    cv::Mat H3 = cv::Mat::eye(3,3, CV_32F);
+    H3.at<float>(0,2) = 0.5f;
+    H3.at<float>(1,2) = 0.5f;
+
+    cv::Mat H123 = H1*H2*H3;
+    cv::Mat M = H123 / H123.at<float>(2,2);
+    cv::Mat Hfinal = M(cv::Range(0,2), cv::Range(0,3));
+    */
+
     // Connect to the TOF sensor
     std::unique_ptr<MyListener> listener;
     platform::CameraFactory factory;
@@ -409,7 +513,8 @@ int main(int argc, char **argv) {
     auto status = cameraDevice->getUseCases(use_cases);
     if (status != royale::CameraStatus::SUCCESS || use_cases.empty()) {
       syslog(LOG_ERR, "Error retrieving use cases for the slave\n");
-      return 1;
+      Shutdown();
+      return -1;
     }
 
     // choose use case "MODE_9_5FPS"
@@ -428,12 +533,14 @@ int main(int argc, char **argv) {
     // check if we found a suitable use case
     if (!useCaseFound) {
       syslog(LOG_ERR, "Error : Did not find MODE_9_5FPS\n");
-      return 1;
+      Shutdown();
+      return -1;
     }
     // set use case
     if (cameraDevice->setUseCase(use_cases.at(selectedUseCaseIdx)) != royale::CameraStatus::SUCCESS) {
       syslog(LOG_ERR, "Error setting use case %s for the slave\n", use_mode.c_str());
-      return 1;
+      Shutdown();
+      return -1;
     }
 
     // Modify the camera parameters and settings
@@ -478,6 +585,14 @@ int main(int argc, char **argv) {
           var.setInt(GLOBAL_BINNING);
           flagPair.second = var;
           break;
+        case royale::ProcessingFlag::UseValidateImage_Bool:
+          var.setBool(USE_VALIDATE_IMAGE);
+          flagPair.second = var;
+          break;
+        case royale::ProcessingFlag::UseAdaptiveNoiseFilter_Bool:
+          var.setBool(USE_ADAPTIVE_NOISE_FILTER);
+          flagPair.second = var;
+          break;
         case royale::ProcessingFlag::UseMPIFlagAverage_Bool:
           var.setBool(USE_MPI_AVERAGE);
           flagPair.second = var;
@@ -517,23 +632,71 @@ int main(int argc, char **argv) {
 
     if(cameraDevice->setProcessingParameters(ppvec, streamId) != royale::CameraStatus::SUCCESS) {
       syslog(LOG_ERR, "TOFDaemon Error: Failed to set processing parameters\n");
+      Shutdown();
+      return -1;
     } else {
       syslog(LOG_NOTICE, "TOFDaemon successfully set processing parameters\n");
     }
 
-    uint16_t maxSensorWidth, maxSensorHeight;
-    status = cameraDevice->getMaxSensorWidth(maxSensorWidth);
-    status = cameraDevice->getMaxSensorHeight(maxSensorHeight);
+    uint16_t sensor_num_columns, sensor_num_rows;
+    status = cameraDevice->getMaxSensorWidth(sensor_num_columns);
+    status = cameraDevice->getMaxSensorHeight(sensor_num_rows);
 
-    size_t buffer_size = static_cast<size_t>(maxSensorWidth) * static_cast<size_t>(maxSensorHeight);
+    size_t buffer_size = static_cast<size_t>(sensor_num_columns) * static_cast<size_t>(sensor_num_rows);
 
-    std::vector<float> point_cloud_x(buffer_size);
-    std::vector<float> point_cloud_y(buffer_size);
-    std::vector<float> point_cloud_z(buffer_size);
-    std::vector<uint16_t> gray_image(buffer_size);
+    // packed as r,g,b r,g,b  ...
+    std::vector<float> vec_point_cloud_X(buffer_size);
+    std::vector<float> vec_point_cloud_Y(buffer_size);
+    std::vector<float> vec_point_cloud_Z(buffer_size);
+    std::vector<float> vec_point_cloud_distance(buffer_size);
+    // std::vector<uint8_t> gray_image(buffer_size);
+    cv::Mat gray_image(sensor_num_rows, sensor_num_columns, CV_8U);
+
+    // std::vector<uint8_t> vec_nnet_input(buffer_size);
+    cv::Mat img_stream(sensor_num_rows, sensor_num_columns, CV_8UC3);
+    cv::Mat blob;
+    std::vector<unsigned char> encoded;
+    // compression_params.push_back(IMWRITE_PNG_COMPRESSION);
+    // compression_params.push_back(9);
+
+    std::vector<uint8_t > img_data;
+    otsu_threshold otsu;
+    localize object_localize;
+
+    // uint8_t r_val, g_val, b_val;
+    // float x_val, y_val, z_val;
+    // int row, column;
+    int total_pack;
+    double accum;
+    //int loop_index = 0;
+    size_t loop_index, location_index;
+    cv::Mat nnet_input(300, 300, CV_8UC3);
+    const float confidence_threshold = 0.1f;
+    float detect_confidence;
+    // size_t det_index;
+    int x1, y1, x2, y2;
+    // float xx1, yy1, xx2, yy2;
+    // int total_num_objects;
+    int gray_threshold;
+    size_t num_points;
+    std::vector<float> obj_x_vals(buffer_size, 0.0f);
+    std::vector<float> obj_z_vals(buffer_size, 0.0f);
+    std::vector<int64_t> depth_data_timestamp(1);
+
+    std::string s_object_timestamp = "TIMESTAMP : ";
+    std::string s_object_id = "OBJECT_ID : SOCK-";
+    std::string s_object_loc = "LOCATION : ";
+    std::string delim = "|";
+    std::string comma = ",";
+    size_t stream_out_length;
+
+    // uint8_t depth_int = 0;
+    // uint8_t invalid_depth = static_cast<uint8_t>(255);
+    // uint8_t zero_depth = static_cast<uint8_t>(0);
 
     // Register a data listener
-    listener.reset(new MyListener(suppress, PTCLOUD_FOLDER, IR_FOLDER, &point_cloud_x, &point_cloud_y, &point_cloud_z, &gray_image));
+    // listener.reset(new MyListener(std::ref(ptcloud_mutex), ptcloud_cv, suppress, &vec_point_cloud, &vec_nnet_input, &gray_image, &new_data_available));
+    listener.reset(new MyListener(std::ref(ptcloud_mutex), ptcloud_cv, suppress, &depth_data_timestamp, &vec_point_cloud_X, &vec_point_cloud_Y, &vec_point_cloud_Z, &vec_point_cloud_distance, img_stream, gray_image, &new_data_available));
     if(cameraDevice->registerDataListener(listener.get()) != royale::CameraStatus::SUCCESS) {
       // ERROR: Failed to register data listener
       syslog(LOG_ERR, "Error: Failed to register data listener\n");
@@ -566,38 +729,223 @@ int main(int argc, char **argv) {
     // We'll need the signal handler(s) to stop the video capture;
     while(g_daemon_live) {
       struct timespec start, stop;
-      double accum;
-      if( clock_gettime( CLOCK_BOOTTIME, &start) == -1 ) {
+      accum = 0.;
+      if( clock_gettime( CLOCK_MONOTONIC, &start) == -1 ) {
         syslog(LOG_ERR, "Error: Failed to get clock start time\n");
       }
-      std::unique_lock<std::mutex> lock (g_ptcloud_mutex);
+      std::unique_lock<std::mutex> lock (ptcloud_mutex);
       auto timeOut = (std::chrono::system_clock::now() + std::chrono::milliseconds (500));
-      if (g_ptcloud_cv.wait_until (lock, timeOut, [&] {return g_newDataAvailable; })) {
-        if (g_newDataAvailable) {
+      if (ptcloud_cv.wait_until (lock, timeOut, [&] {return new_data_available; })) {
+
+        // std::vector<int> classIds;
+        struct timespec start_infer, stop_infer;
+        double accum_infer = 0.;
+        if( clock_gettime( CLOCK_MONOTONIC, &start_infer) == -1 ) {
+          syslog(LOG_ERR, "Error: Failed to get clock start time\n");
+        }
+        /* if (new_data_available) {
           syslog(LOG_NOTICE, "New Data Available in WAIT:::  TRUE");
         } else {
           syslog(LOG_NOTICE, "New Data Available in WAIT :::  FALSE");
-        }
+        } */
 
-        std::string timestamp = std::to_string(static_cast<double>(start.tv_sec)*1000.0 + static_cast<double>(start.tv_nsec)/1000000.0);
+        // std::string timestamp = std::to_string(static_cast<double>(start.tv_sec)*1000.0 + static_cast<double>(start.tv_nsec)/1000000.0);
+        // std::string filename = "nnet_input_" + timestamp + ".raw";
+        // filename = DEPTH_IMAGE_FOLDER + filename;
+
+        // std::ofstream outputFile;
+        // std::stringstream stringStream;
+        // r_val = 0;
+        // g_val = 0;
+        // b_val = 0;
+        // row = 0;
+        // column = 0;
+        total_pack = 0;
+
+        // outputFile.open (filename, std::ofstream::out);
+        // if (outputFile.fail()) {
+        //   syslog(LOG_NOTICE, "Outputfile %s could not be opened!\n", filename.c_str());
+        // } else {
+          /*
+          for (loop_index = 0; loop_index < vec_nnet_input.size(); ++loop_index) {
+            row = (int)(loop_index / sensor_num_columns);
+            column = loop_index % sensor_num_columns;
+
+            // x_val = vec_point_cloud[xyz_index++];
+            // y_val = vec_point_cloud[xyz_index++];
+            // z_val = vec_point_cloud[xyz_index++];
+
+            depth_int = vec_nnet_input[loop_index];
+            r_val = lookup_table_rgb[depth_int][0];
+            g_val = lookup_table_rgb[depth_int][1];
+            b_val = lookup_table_rgb[depth_int][2];
+
+            cv::Vec3b& bgr = img_stream.at<cv::Vec3b>(row, column);
+            bgr[0] = b_val;
+            bgr[1] = g_val;
+            bgr[2] = r_val;
+          }
+          */
+          //  No copy made here just initializes cv::Mat header
+          cv::Mat ptcloud_depth(sensor_num_rows, sensor_num_columns, CV_32FC1, vec_point_cloud_distance.data());
+          cv::Mat ptcloud_x(sensor_num_rows, sensor_num_columns, CV_32FC1, vec_point_cloud_X.data());
+          cv::Mat ptcloud_z(sensor_num_rows, sensor_num_columns, CV_32FC1, vec_point_cloud_Z.data());
+
+          // cv::warpAffine(img_stream, nnet_input, Hfinal, cv::Size(300, 300), cv::INTER_LINEAR + cv::WARP_INVERSE_MAP);
+          cv::resize(img_stream, nnet_input, cv::Size(300, 300));
+
+          /*
+          img_data.assign(nnet_input.data, nnet_input.data + nnet_input.total() * nnet_input.channels());
+          inpName.set_data(img_data, {1, 300, 300, 3});
+          model.run(inpName, {&outNames1, &outNames2, &outNames3, &outNames4});
+
+          // Visualize detected bounding boxes.
+          int num_detections = (int)outNames1.get_data<float>()[0];
+          for (int i=0; i<num_detections; i++) {
+              int classId = (int)outNames4.get_data<float>()[i];
+              float score = outNames2.get_data<float>()[i];
+              auto bbox_data = outNames3.get_data<float>();
+              std::vector<float> bbox = {bbox_data[i*4], bbox_data[i*4+1], bbox_data[i*4+2], bbox_data[i*4+3]};
+              if (score > 0.3) {
+                  float x = bbox[1] * sensor_num_columns;
+                  float y = bbox[0] * sensor_num_rows;
+                  float right = bbox[3] * sensor_num_columns;
+                  float bottom = bbox[2] * sensor_num_rows;
+
+                  // cv::rectangle(gray_image, {(int)x, (int)y}, {(int)right, (int)bottom}, {125, 255, 51}, 2);
+                  cv::rectangle(gray_image, {(int)x, (int)y}, {(int)right, (int)bottom}, cv::Scalar(255), 2);
+              }
+          }
+          */
+
+          //cv::dnn::blobFromImage(nnet_input, blob, 1.0f, cv::Size(300, 300), cv::Scalar(0, 0, 0), false, false);
+          cv::dnn::blobFromImage(nnet_input, blob, 1.0f, cv::Size(300, 300), 0.0, false, false);
+
+          net.setInput(blob);
+
+          std::vector<cv::Mat> outs;
+          //cv::Mat detection = net.forward("detection_out");
+          net.forward(outs, "detection_out");
+
+          std::string stream_out;
+          int object_id = 0;
+          float* data = (float*)outs[0].data;
+          for (loop_index = 0; loop_index < outs[0].total(); loop_index += 7) {
+            detect_confidence = data[loop_index + 2];
+            if (detect_confidence > confidence_threshold) {
+              x1 = static_cast<int>(data[loop_index + 3] * sensor_num_columns);
+              y1 = static_cast<int>(data[loop_index + 4] * sensor_num_rows);
+              x2 = static_cast<int>(data[loop_index + 5] * sensor_num_columns);
+              y2 = static_cast<int>(data[loop_index + 6] * sensor_num_rows);
+              cv::Rect roi_rect(x1, y1, x2 - x1 + 1, y2 - y1 + 1);
+              cv::rectangle(img_stream, roi_rect, cv::Scalar(255, 255, 255));
+              // classIds.push_back(static_cast<int>(data[loop_index + 1]) - 1);  //  Need to skip  0th background class id.
+
+              cv::Mat img_roi(gray_image, roi_rect);
+              cv::Mat ptcloud_depth_roi(ptcloud_depth, roi_rect);
+              cv::Mat ptcloud_x_roi(ptcloud_x, roi_rect);
+              cv::Mat ptcloud_z_roi(ptcloud_z, roi_rect);
+
+              gray_threshold = otsu.get_threshold(img_roi);
+              num_points = object_localize.localize_roi(img_roi, ptcloud_depth_roi, ptcloud_x_roi, ptcloud_z_roi, gray_threshold, obj_x_vals, obj_z_vals);
+
+              if (object_id == 0) {
+                stream_out = s_object_timestamp + std::to_string(depth_data_timestamp[0]);
+              }
+              stream_out += delim + s_object_id + std::to_string(object_id) + delim;
+              stream_out += s_object_loc;
+              for (location_index = 0; location_index < num_points; ++location_index) {
+                stream_out += " [" + std::to_string(obj_x_vals[location_index]) + "," + std::to_string(obj_z_vals[location_index]) + "]";
+              }
+              object_id++;
+            }
+          }
+
+          if (!stream_out.empty()) {
+            syslog(LOG_NOTICE, "%s\n", stream_out.c_str());
+            if (live_localization) {
+              stream_out_length = stream_out.size();
+              sock_local.sendTo(&stream_out_length, sizeof(size_t), servAddress_local, servPort_local);
+              sock_local.sendTo(stream_out.c_str(), stream_out.size(), servAddress_local, servPort_local);
+            }
+          }
+
+          if( clock_gettime( CLOCK_MONOTONIC, &stop_infer) == -1 ) {
+            syslog(LOG_ERR, "Error: Failed to get clock stop time\n");
+          }
+          accum_infer = static_cast<double>( stop_infer.tv_sec - start_infer.tv_sec ) * 1000.0 + static_cast<double>( stop_infer.tv_nsec - start_infer.tv_nsec ) / 1000000.0;
+          syslog(LOG_NOTICE, "TIME DIFF CV INFERENCE *:::* %lf\n", accum_infer);
+
+          /*
+          cv::Mat detectionMat(detection.size[2], detection.size[3], CV_32F, detection.ptr<float>());
+          // std::vector<int> classIds;  //TBD
+          total_num_objects = detectionMat.rows;
+          for (loop_index = 0; loop_index < total_num_objects; loop_index++) {
+            detect_confidence = detectionMat.at<float>(loop_index, 2);
+            if (detect_confidence > confidence_threshold) {
+              // det_index = static_cast<size_t>(detectionMat.at<float>(loop_index, 1));
+              x1 = static_cast<int>(detectionMat.at<float>(loop_index, 3) * sensor_num_columns); //  300.0f; // img_stream.cols;
+              y1 = static_cast<int>(detectionMat.at<float>(loop_index, 4) * sensor_num_rows); // 300.0f; // img_stream.rows;
+              x2 = static_cast<int>(detectionMat.at<float>(loop_index, 5) * sensor_num_columns); // 300.0f; //img_stream.cols;
+              y2 = static_cast<int>(detectionMat.at<float>(loop_index, 6) * sensor_num_rows); // 300.0f; // img_stream.rows;
+              cv::Rect roi_rect(x1, y1, x2 - x1 + 1, y2 - y1 + 1);
+              cv::rectangle(gray_image, cv::Point(x1, y1), cv::Point(x2 + 1, y2 + 1), cv::Scalar(255), 1, 8, 0);
+              // cv::rectangle(gray_image, rec, cv::Scalar(255), 1, 8, 0);
+              // cv::rectangle(img_stream, rec, cv::Scalar(255, 255, 255), 1, 8, 0);
+              // cv::putText(img_stream, format("%s", class_names[det_index].c_str()), cv::Point(x1, y1-5) , FONT_HERSHEY_PLAIN, 0.5, cv::Scalar(255, 255, 255), 1, 8, 0);
+            }
+          }
+          */
+
+         if (live_stream_video) {
+
+            cv::imencode(".jpg", img_stream, encoded, compression_params);
+            // cv::imencode(".png", gray_image, encoded, compression_params);
+            total_pack = 1 + (static_cast<int>(encoded.size()) - 1) / PACK_SIZE;
+
+            int ibuf[1];
+            ibuf[0] = total_pack;
+            sock.sendTo(ibuf, sizeof(int), servAddress, servPort);
+
+            for (int buf_idx = 0; buf_idx < total_pack; buf_idx++) {
+              sock.sendTo( & encoded[buf_idx * PACK_SIZE], PACK_SIZE, servAddress, servPort);
+            }
+         }
+
+
+           // stringStream << (int)r_val << " " << (int)g_val << " " << (int)b_val << std::endl;
+          // }
+          // outputFile << stringStream.str();
+          // outputFile.close();
+
+        /* Tensorflow - Lite typed_input_tensor   (1, 300, 300, 3)
+        for (loop_index = 0; size_t < cvimg.size(); ++loop_index) {
+          const auto& rgb = cvimg[loop_index];
+          interpreter->typed_input_tensor<uchar>(0)[3*loop_index + 0] = rgb[0];
+          interpreter->typed_input_tensor<uchar>(0)[3*loop_index + 1] = rgb[1];
+          interpreter->typed_input_tensor<uchar>(0)[3*loop_index + 2] = rgb[2];
+        }
+        */
+
+        /*
         std::string filename = "densePointCloud_" + timestamp + ".ply";
         filename = PTCLOUD_FOLDER + filename;
-        // std::string lclpth = "/home/root/tof-data-repo/";
-        // filename = lclpth + filename;
+
         std::string filename_gray = "grayscale_" + timestamp + ".raw16";
         filename_gray = IR_FOLDER + filename_gray;
 
         SavePointcloud(filename, filename_gray, &point_cloud_x, &point_cloud_y, &point_cloud_z, &gray_image);
+        */
 
-        g_newDataAvailable = false;
+        new_data_available = false;
       }// else {
       //  // we ran into a timeout so sleep for  100 milliseconds
       //  std::this_thread::sleep_for (std::chrono::milliseconds (100));
       //}
-      if( clock_gettime( CLOCK_BOOTTIME, &stop) == -1 ) {
+      if( clock_gettime( CLOCK_MONOTONIC, &stop) == -1 ) {
         syslog(LOG_ERR, "Error: Failed to get clock stop time\n");
       }
-      if (g_newDataAvailable) {
+      if (new_data_available) {
         syslog(LOG_NOTICE, "New Data Available 2 :::  TRUE");
       } else {
         syslog(LOG_NOTICE, "New Data Available 2 :::  FALSE");

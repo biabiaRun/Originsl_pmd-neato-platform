@@ -15,14 +15,22 @@
 #  *
 #*********************************************************************************************************************
 
-find_package (PCL)
+# find_package (PCL)
+set(OpenCV_DIR "/opt/fsl-imx-xwayland/4.14-sumo/environment-setup-aarch64-poky-linux/usr/lib/cmake/opencv4")
+# set(OpenCV_DIR "/home/local/NEATO/mark.wilson/git/robot_lego/fsl-imx-xwayland-glibc-x86_64-neato-rootfs-debug-aarch64-toolchain-4.14-sumo/sysroots/aarch64-poky-linux/usr/lib/cmake/opencv4")
+message(STATUS "opencv path: ${OpenCV_DIR}")
+find_package(OpenCV REQUIRED)
+
+# find_library(TENSORFLOW_LIB tensorflow HINT /home/local/NEATO/mark.wilson/pmd-neato-platform/cppflow/libtensorflow/lib)
 
 include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}/inc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../inc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../royale/source/core/inc
-    # ${PCL_INCLUDE_DIRS}
-    )
+  ${CMAKE_CURRENT_SOURCE_DIR}/inc
+  ${CMAKE_CURRENT_SOURCE_DIR}/../inc
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../royale/source/core/inc
+  # ${CMAKE_CURRENT_SOURCE_DIR}/../../cppflow/libtensorflow/include
+  ${OpenCV_INCLUDE_DIRS}
+  # ${PCL_INCLUDE_DIRS}
+  )
 
 set(HEADERS
   )
@@ -32,22 +40,28 @@ add_compile_options(-std=c++11)
 set(SOURCES
   "${CMAKE_CURRENT_SOURCE_DIR}/tof-daemon.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/pipeline_listener.cpp"
-    )
+  "${CMAKE_CURRENT_SOURCE_DIR}/PracticalSocket.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/otsu_threshold.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/localize.cpp"
+  #"${CMAKE_CURRENT_SOURCE_DIR}/Model.cpp"
+  #"${CMAKE_CURRENT_SOURCE_DIR}/Tensor.cpp"
+  )
 
 link_directories(
-    # ${PCL_LIBRARY_DIRS}
-    )
+  # ${PCL_LIBRARY_DIRS}
+  )
 
 # add_definitions(
-#   ${PCL_DEFINITIONS}
-#   )
+# ${PCL_DEFINITIONS}
+# )
 
 add_executable(tof-daemon-prog
-    ${HEADERS}
-    ${SOURCES}
-    )
+  ${HEADERS}
+  ${SOURCES}
+  )
 
 install(TARGETS tof-daemon-prog DESTINATION ${ROYALE_INSTALL_BIN_DIR})
 
-target_link_libraries(tof-daemon-prog platform)
+target_link_libraries(tof-daemon-prog platform ${OpenCV_LIBS})
+#target_link_libraries(tof-daemon-prog platform "${TENSORFLOW_LIB}" ${OpenCV_LIBS})
 #target_link_libraries(tof-daemon-prog platform ${PCL_LIBRARIES})

@@ -26,6 +26,7 @@ const float NOISE_THRESHOLD = 0.07f;
 const int GLOBAL_BINNING = 1;
 
 // Exposure time in microseconds
-const float AUTO_EXPOSURE_REF_VALUE = 400.0f;// AutoExposureRefValue_Float
+const float AUTO_EXPOSURE_REF_VALUE = 1000.0f; //400.0f;// AutoExposureRefValue_Float
+
 
 #endif
