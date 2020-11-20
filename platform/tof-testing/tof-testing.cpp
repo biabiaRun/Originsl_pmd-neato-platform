@@ -53,6 +53,10 @@ typedef struct {
   royale::String test_mode;
 } options_t;
 
+struct plane_eq {
+  float a, b, c, d;
+};
+
 class MyListener : public royale::IExtendedDataListener {
  public:
   MyListener() {}
@@ -107,6 +111,7 @@ int main(int argc, char** argv) {
   options_t options = {VERSION, "MODE_9_5FPS"};
   std::string ACCESS_CODE = "d79dab562f13ef8373e906d919aec323a2857388";
   royale::String useCase;
+  std::vector<plane_eq> plane_coeffs;
 
   if (argc > 1) {
     while ((opt = getopt(argc, argv, "m")) != -1) {
@@ -281,10 +286,13 @@ int main(int argc, char** argv) {
     cv::Scalar ux = cv::mean(frame_pt_cloud.col(0));
     cv::Scalar uy = cv::mean(frame_pt_cloud.col(1));
     cv::Scalar uz = cv::mean(frame_pt_cloud.col(2));
+    float fux = static_cast<float>(ux.val[0]);
+    float fuy = static_cast<float>(uy.val[0]);
+    float fuz = static_cast<float>(uz.val[0]);
     cv::Mat uxyz(1, 3, CV_32F);
-    uxyz.at<float>(0, 0) = ux.val[0];
-    uxyz.at<float>(0, 1) = uy.val[0];
-    uxyz.at<float>(0, 2) = uz.val[0];
+    uxyz.at<float>(0, 0) = fux;
+    uxyz.at<float>(0, 1) = fuy;
+    uxyz.at<float>(0, 2) = fuz;
 
     cv::Mat uMat = cv::repeat(uxyz, frame_pt_cloud.rows, 1);
 
@@ -296,6 +304,10 @@ int main(int argc, char** argv) {
     float a = e_vectors.at<float>(2, 0);
     float b = e_vectors.at<float>(2, 1);
     float c = e_vectors.at<float>(2, 2);
+    float d = a * fux + b * fuy + c * fuz;
+
+    plane_eq cur_plane{a, b, c, d};
+    plane_coeffs.push_back(cur_plane);
     // cv::SVD svdCC(CC, cv::SVD::MODIFY_A | cv::SVD::FULL_UV);
   }
 
