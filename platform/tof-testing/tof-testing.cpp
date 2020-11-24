@@ -1,4 +1,3 @@
-#include <getopt.h>
 #include <unistd.h>
 
 #include <CameraFactory.hpp>
@@ -179,7 +178,6 @@ bool inRange(std::pair<float, float> range_vals, float val) { return ((val - ran
 int main(int argc, char** argv) {
   // The test results reside in validation_test_metrics
   TestMetrics validation_test_metrics;
-  int opt;
   // Default options
   options_t options = {VERSION, "MODE_9_5FPS"};
   std::string ACCESS_CODE = "d79dab562f13ef8373e906d919aec323a2857388";
@@ -188,18 +186,6 @@ int main(int argc, char** argv) {
   v_pt_cloud_running_stats.resize(NUM_IMAGE_ELEMENTS);
   v_pt_amplitude_running_stats.resize(NUM_IMAGE_ELEMENTS);
 
-  if (argc > 1) {
-    while ((opt = getopt(argc, argv, "m")) != -1) {
-      switch (opt) {
-        case 'm':
-          //  "-m <str>             Set ToF mode: -m MODE_9_5FPS\n"
-          options.test_mode = royale::String(optarg);
-          break;
-        default:
-          break;
-      }
-    }
-  }
   useCase = options.test_mode;
 
   pt_cloud.reserve(NUM_IMAGE_ELEMENTS);
@@ -363,7 +349,10 @@ int main(int argc, char** argv) {
   // Fit a plane to each frame saving the plane equation coefficients into a
   // vector, plane_coeffs Using Least Squares
   float fux, fuy, fuz;
-  float a, b, c, d;
+  float a = 0.0f;
+  float b = 0.0f;
+  float c = 0.0f;
+  float d = 0.0f;
   float a_avg = 0.0f;
   float b_avg = 0.0f;
   float c_avg = 0.0f;
