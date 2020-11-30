@@ -5,7 +5,7 @@
 
 namespace ToF_test_params {
 // Ground Truth Distance in meters
-constexpr float kGroundTruthDistance = 0.3f;
+constexpr float kGroundTruthDistance = 0.27f;
 
 // Sensor Parameter settings
 static const royale::ProcessingParameterPair NOISE_THRESHOLD({royale::ProcessingFlag::NoiseThreshold_Float, 0.07f});
