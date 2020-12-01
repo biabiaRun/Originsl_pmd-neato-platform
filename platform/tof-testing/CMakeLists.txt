@@ -15,7 +15,7 @@
 #  *
 #*********************************************************************************************************************
 
-set(OpenCV_DIR "/opt/fsl-imx-xwayland/4.14-sumo/environment-setup-aarch64-poky-linux/usr/lib/cmake/opencv4")
+set(OpenCV_DIR "/opt/fsl-imx-xwayland/4.14-sumo/sysroots/aarch64-poky-linux/usr/lib/cmake/opencv4")
 # message(STATUS "opencv path: ${OpenCV_DIR}")
 find_package(OpenCV REQUIRED)
 
