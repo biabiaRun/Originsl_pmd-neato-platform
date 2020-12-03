@@ -6,7 +6,7 @@
 using namespace royale;
 using namespace platform;
 
-Camera::CameraError Camera::RunInitializeTests(royale::String useCase, int fps)
+Camera::CameraError Camera::RunInitializeTests(royale::String useCase)
 {
     // Test if CameraDevice was created
     if(camera_ == nullptr)
@@ -22,9 +22,7 @@ Camera::CameraError Camera::RunInitializeTests(royale::String useCase, int fps)
                   << royale::getStatusString(status).c_str() << std::endl;
         return CAM_NOT_INITIALIZED;
     }
-
     use_case_ = useCase;
-    fps_ = fps;
     royale::Vector<royale::String> useCaseList;
     status = camera_->getUseCases (useCaseList);
     if (status != royale::CameraStatus::SUCCESS || useCaseList.empty())
@@ -35,15 +33,47 @@ Camera::CameraError Camera::RunInitializeTests(royale::String useCase, int fps)
     }
 
     for (auto i = 0u; i < useCaseList.size(); ++i) {
-        std::cout << "USE CASE :" << useCaseList[i].c_str() << std::endl;
-        if (useCaseList.at(i) == use_case_) {
-            status = camera_->setUseCase(useCaseList.at(i));
-            if (status != royale::CameraStatus::SUCCESS) {
-                std::cerr << "[ERROR] Could not set a new use case. " << useCaseList[i].c_str() << "   " 
-                      << royale::getStatusString(status).c_str() << std::endl;
-                return USE_CASE_ERROR;
-            }
+      if (useCaseList.at(i) == use_case_) {
+        status = camera_->setUseCase(useCaseList.at(i));
+        if (status != royale::CameraStatus::SUCCESS) {
+            std::cerr << "[ERROR] Could not set a new use case. " << useCaseList[i].c_str() << "   " 
+                  << royale::getStatusString(status).c_str() << std::endl;
+            return USE_CASE_ERROR;
+        }else{
+          std::cout << "SETTING USE CASE :" << useCaseList[i].c_str() << std::endl;
+          status = camera_->getFrameRate(fps_);
+          if (status != royale::CameraStatus::SUCCESS)
+          {
+              std::cerr << "[ERROR] Could not get camera frame rate. "
+                        << royale::getStatusString(status).c_str() << std::endl;
+              return USE_CASE_ERROR;
+          }
         }
+      }
+    }
+
+    // Check frame rate setting
+    std::string delimiter1 = "_";
+    std::string delimiter2 = "FPS";
+    // find first "_"
+    size_t first = use_case_.find(delimiter1);
+    first = first + delimiter1.size();
+    // find second "_"
+    size_t second = use_case_.find(delimiter1, first);
+    // position of fist character of frame rate
+    second = second + delimiter1.size();
+    size_t last = use_case_.find(delimiter2);
+    std::string fps_string(&use_case_[second], &use_case_[last]);
+    int fps_int(std::stoi(fps_string));
+    uint16_t usecase_fps = static_cast<uint16_t>(fps_int);
+
+    if ( usecase_fps == fps_) {
+      std::clog << "Frame Rate " << fps_ << " set correctly." << std::endl;
+    }else{
+      std::cerr << "[ERROR] Camera Device frame rate "
+                << fps_ << " not equal to use case "
+                << fps_int << std::endl;
+      return USE_CASE_ERROR;
     }
 
     std::clog << "[SUCCESS] All initialize tests passed. " << std::endl;
@@ -197,7 +227,7 @@ Camera::CameraError Camera::RunExposureTests()
     }
 
     std::this_thread::sleep_for (std::chrono::seconds (1));
-
+/*
     // Set Manual Exposure
     status = camera_->setExposureMode(royale::ExposureMode::MANUAL);
     if (status != royale::CameraStatus::SUCCESS)
@@ -243,7 +273,7 @@ Camera::CameraError Camera::RunExposureTests()
                   << royale::getStatusString(status).c_str() << std::endl;
         return EXPOSURE_MODE_ERROR;
     }
-
+*/
     // NOTE: You can only check if the exposure time is set correctly 
     //       via exposure member of data in onNewData
 
@@ -301,21 +331,32 @@ Camera::CameraError Camera::RunTestReceiveData(int secondsToStream) {
   }
 
   // Record to output file
-  camera_->startRecording ("test.rrf");
+  if (secondsToStream > 300) {
+    // Stream to /dev/null otherwise you will run out of disk space...
+    camera_->startRecording ("/dev/null");
+  } else {
+    camera_->startRecording ("test.rrf");
+  }
+
+  std::clog << "Begin Recording for " << secondsToStream << " seconds" << std::endl;
 
   rawListener_.m_count = 0u;
   std::this_thread::sleep_for (std::chrono::seconds(secondsToStream));
 
   // Stop the recording
   camera_->stopRecording();
+  float number_of_frames = static_cast<float>(rawListener_.m_count);
 
-  std::clog << "Temperature Sensor Value" << std::endl;
+  float current_temp = 0.0f;
   for (auto& tmp : rawListener_.m_cur_temp) {
     if (tmp <= 0) {
         std::cerr << "[ERROR] Temperature reading of " << tmp << " <= 0." << std::endl;
             return RECEIVE_DATA_ERROR;
+    }else{
+      current_temp = tmp;
     }
   }
+  std::clog << "[SUCCESS] Temperature sensor working, reading is " << current_temp << std::endl;
 
   // Stop the capturing mode
   royale::CameraStatus status = camera_->stopCapture();
@@ -324,14 +365,16 @@ Camera::CameraError Camera::RunTestReceiveData(int secondsToStream) {
               << royale::getStatusString(status).c_str() << std::endl;
     return RECEIVE_DATA_ERROR;
   }
-  float measuredFPS = static_cast<float>(rawListener_.m_count) / static_cast<float>(secondsToStream);
+  float measuredFPS = number_of_frames / static_cast<float>(secondsToStream);
   float fps_lower_limit = static_cast<float>(fps_) - 0.5f;
   float fps_upper_limit = static_cast<float>(fps_) + 0.5f;
 
   if (measuredFPS < fps_lower_limit || measuredFPS > fps_upper_limit) {
     std::cerr << "[ERROR] FPS is outside of limits at " << measuredFPS << std::endl;
+    std::cerr << "[ERROR] " << rawListener_.m_count << " frames in " << secondsToStream << " seconds." << std::endl;
     return RECEIVE_DATA_ERROR;
   }
+  std::clog << "[SUCCESS] FPS is inside limits " << measuredFPS << std::endl;
   std::clog << "[SUCCESS] All receive data tests passed. " << std::endl;
   return NONE;
 }
@@ -360,8 +403,9 @@ Camera::CameraError Camera::RunProcessingParametersTests()
     const bool FLYING_PIXEL = false;
     const bool STRAY_LIGHT = true;
     const int ADAPTIVE_NOISE_FILTER = 2;
-    const float NOISE_THRESH = 0.14f;
+    const float NOISE_THRESH = 0.07f;
     const int GLOBAL_BINNING = 1;
+    const float AUTO_EXPOSURE_REF_VALUE = 400.0f;
 
     for (auto& flag_pair : ppvec)
     {
@@ -386,6 +430,10 @@ Camera::CameraError Camera::RunProcessingParametersTests()
                 break;
             case royale::ProcessingFlag::GlobalBinning_Int:
                 var.setInt(GLOBAL_BINNING);
+                flag_pair.second = var;
+                break;
+            case royale::ProcessingFlag::AutoExposureRefValue_Float:
+                var.setFloat(AUTO_EXPOSURE_REF_VALUE);
                 flag_pair.second = var;
                 break;
             default:
