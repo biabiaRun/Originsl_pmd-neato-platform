@@ -15,8 +15,13 @@
 #  *
 #*********************************************************************************************************************
 
-set(OpenCV_DIR "/opt/fsl-imx-xwayland/4.14-sumo/sysroots/aarch64-poky-linux/usr/lib/cmake/opencv4")
-# message(STATUS "opencv path: ${OpenCV_DIR}")
+if(NOT YOCTO)
+  # Note: Setting CMAKE_SYSROOT violates documented use but doc also
+  # says that it is the prefix the search paths for the find_* functions
+  #
+  set(CMAKE_SYSROOT $ENV{OECORE_TARGET_SYSROOT})
+endif()
+
 find_package(OpenCV REQUIRED)
 
 include_directories(
