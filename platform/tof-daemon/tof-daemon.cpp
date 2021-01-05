@@ -407,7 +407,9 @@ int main(int argc, char **argv) {
 
     bool live_stream_video = true;
     // Live Stream Server Address and Port
-    std::string servAddress("192.168.1.137");
+    // std::string servAddress("192.168.1.137");
+    std::string servAddress("127.0.0.1");
+    // std::string servAddress("10.0.0.9");
     std::string servPortValue("10000");
     int PACK_SIZE = 4096;
     unsigned short servPort;
@@ -419,14 +421,26 @@ int main(int argc, char **argv) {
       servPort = Socket::resolveService(servPortValue, "udp");
     }
 
-    bool live_localization = false;
+    bool live_localization = true;
     // std::string servAddress_local("192.168.1.137");
     std::string servAddress_local("127.0.0.1");
+    // std::string servAddress_local("10.0.0.9");
     std::string servPortValue_local("10010");
     unsigned short servPort_local;
     UDPSocket sock_local;
     if (live_localization) {
       servPort_local = Socket::resolveService(servPortValue_local, "udp");
+    }
+
+    bool live_plot = true;
+    // std::string servAddress_plot("192.168.1.137");
+    std::string servAddress_plot("127.0.0.1");
+    // std::string servAddress_plot("10.0.0.9");
+    std::string servPortValue_plot("10020");
+    unsigned short servPort_plot;
+    UDPSocket sock_plot;
+    if (live_plot) {
+      servPort_plot = Socket::resolveService(servPortValue_plot, "udp");
     }
 
     // Neural Network Setup
@@ -689,6 +703,7 @@ int main(int argc, char **argv) {
     std::string delim = "|";
     std::string comma = ",";
     size_t stream_out_length;
+    size_t stream_out_length_plot;
 
     // uint8_t depth_int = 0;
     // uint8_t invalid_depth = static_cast<uint8_t>(255);
@@ -828,6 +843,7 @@ int main(int argc, char **argv) {
           net.forward(outs, "detection_out");
 
           std::string stream_out;
+          std::string stream_out_plot;
           int object_id = 0;
           float* data = (float*)outs[0].data;
           for (loop_index = 0; loop_index < outs[0].total(); loop_index += 7) {
@@ -854,8 +870,10 @@ int main(int argc, char **argv) {
               }
               stream_out += delim + s_object_id + std::to_string(object_id) + delim;
               stream_out += s_object_loc;
+              stream_out_plot += "NEWOBJ ";
               for (location_index = 0; location_index < num_points; ++location_index) {
                 stream_out += " [" + std::to_string(obj_x_vals[location_index]) + "," + std::to_string(obj_z_vals[location_index]) + "]";
+                stream_out_plot += std::to_string(obj_x_vals[location_index]) + " " + std::to_string(obj_z_vals[location_index]) + " ";
               }
               object_id++;
             }
@@ -867,6 +885,13 @@ int main(int argc, char **argv) {
               stream_out_length = stream_out.size();
               sock_local.sendTo(&stream_out_length, sizeof(size_t), servAddress_local, servPort_local);
               sock_local.sendTo(stream_out.c_str(), stream_out.size(), servAddress_local, servPort_local);
+            }
+          }
+          if (!stream_out_plot.empty()) {
+            if (live_plot) {
+              stream_out_length_plot = stream_out_plot.size();
+              sock_plot.sendTo(&stream_out_length_plot, sizeof(size_t), servAddress_plot, servPort_plot);
+              sock_plot.sendTo(stream_out_plot.c_str(), stream_out_plot.size(), servAddress_plot, servPort_plot);
             }
           }
 
