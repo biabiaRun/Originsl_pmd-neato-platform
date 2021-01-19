@@ -7,20 +7,23 @@
 #  * Transference of this software to another party requires that all of the following conditions be met:
 #  * 	A)	Neato has a copy of a signed NDA agreement with the receiving party
 #  * 	B)	Neato Software Engineering has explicitly authorized the receiving party to have a copy of this software
-#  * 	C)	When the work is completed or terminated by the receiving party, all copies of this software that the 
+#  * 	C)	When the work is completed or terminated by the receiving party, all copies of this software that the
 #  *                             receiving party holds must be returned to Neato, or destroyed.
 #  *  The receiving party is under legal obligation to not disclose or  transfer this software.
-#  *  The receiving party may not appropriate, transform or re-use this software for any purpose other than a 
+#  *  The receiving party may not appropriate, transform or re-use this software for any purpose other than a
 #  *         Neato Robotics authorized purpose.
 #  *
 #*********************************************************************************************************************
 
 # find_package (PCL)
-set(OpenCV_DIR "/opt/fsl-imx-xwayland/4.14-sumo/environment-setup-aarch64-poky-linux/usr/lib/cmake/opencv4")
-# set(OpenCV_DIR "/home/local/NEATO/mark.wilson/git/robot_lego/fsl-imx-xwayland-glibc-x86_64-neato-rootfs-debug-aarch64-toolchain-4.14-sumo/sysroots/aarch64-poky-linux/usr/lib/cmake/opencv4")
-message(STATUS "opencv path: ${OpenCV_DIR}")
-find_package(OpenCV REQUIRED)
+if(NOT YOCTO)
+  # Note: Setting CMAKE_SYSROOT violates documented use but doc also
+  # says that it is the prefix the search paths for the find_* functions
+  #
+  set(CMAKE_SYSROOT $ENV{OECORE_TARGET_SYSROOT})
+endif()
 
+find_package(OpenCV REQUIRED)
 # find_library(TENSORFLOW_LIB tensorflow HINT /home/local/NEATO/mark.wilson/pmd-neato-platform/cppflow/libtensorflow/lib)
 
 include_directories(
@@ -29,13 +32,16 @@ include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/../../royale/source/core/inc
   # ${CMAKE_CURRENT_SOURCE_DIR}/../../cppflow/libtensorflow/include
   ${OpenCV_INCLUDE_DIRS}
-  # ${PCL_INCLUDE_DIRS}
   )
 
-set(HEADERS
-  )
+# add_compile_options(-std=c++11)
+set (CMAKE_CXX_STANDARD 11)
 
-add_compile_options(-std=c++11)
+find_package(Threads)
+
+set(LIBS
+  pthread
+  )
 
 set(SOURCES
   "${CMAKE_CURRENT_SOURCE_DIR}/tof-daemon.cpp"
@@ -43,25 +49,13 @@ set(SOURCES
   "${CMAKE_CURRENT_SOURCE_DIR}/PracticalSocket.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/otsu_threshold.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/localize.cpp"
-  #"${CMAKE_CURRENT_SOURCE_DIR}/Model.cpp"
-  #"${CMAKE_CURRENT_SOURCE_DIR}/Tensor.cpp"
   )
-
-link_directories(
-  # ${PCL_LIBRARY_DIRS}
-  )
-
-# add_definitions(
-# ${PCL_DEFINITIONS}
-# )
 
 add_executable(tof-daemon-prog
-  ${HEADERS}
   ${SOURCES}
   )
 
 install(TARGETS tof-daemon-prog DESTINATION ${ROYALE_INSTALL_BIN_DIR})
 
-target_link_libraries(tof-daemon-prog platform ${OpenCV_LIBS})
+target_link_libraries(tof-daemon-prog platform ${CMAKE_THREAD_LIBS_INIT} ${LIBS} ${OpenCV_LIBS})
 #target_link_libraries(tof-daemon-prog platform "${TENSORFLOW_LIB}" ${OpenCV_LIBS})
-#target_link_libraries(tof-daemon-prog platform ${PCL_LIBRARIES})
