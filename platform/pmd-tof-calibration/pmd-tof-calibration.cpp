@@ -1,16 +1,44 @@
-#include <unistd.h>
+/*
+ * Copyright (c) 2019, Neato Robotics, Inc.. All Rights Reserved.
+ *
+ * This file may contain contributions from others.
+ *
+ * This software is proprietary to Neato Robotics, Inc. and its transference
+ * and use is to be strictly controlled.
+ * Transference of this software to another party requires that all of the
+ * following conditions be met:
+ * 	A)	Neato has a copy of a signed NDA agreement with the receiving
+ *      party
+ * 	B)	Neato Software Engineering has explicitly authorized the
+ *      receiving party to have a copy of this software
+ * 	C)	When the work is completed or terminated by the receiving party,
+ *      all copies of this software that the receiving party holds must be
+ *      returned to Neato, or destroyed.
+ * The receiving party is under legal obligation to not disclose or  transfer
+ * this software.
+ * The receiving party may not appropriate, transform or re-use this software
+ * for any purpose other than a Neato Robotics authorized purpose.
+ */
+
+/**
+ * Calibration application for aligning the ToF camera coordiante frame to the LDS coordinate frame.
+ * The Prime or VRxx assembled robot is placed into the 500mm distance fixture.  ToF intensity images are
+ * collected with the LDS spinning and the LDS signal reflecting off the walls is path is segmented.
+ * A line segment is fit to the laser path and the 3D location of the segment endpoints are recorded.
+ * The position of the LDS with respect to the ToF sensor as described in the design CAD is combined
+ * with the two endpoint positions to form a plane which spans the LDS X,Y coordiante system.
+ * The span of the X,Z axes of the ToF form a second plane and a basis transformation is calculated
+ * from the 2 planes.  The result is a 4x4 transformation matrix which is saved in /user/tof_camera.conf
+ * file.  The 16 coefficients are formated as one per line.
+ */
 
 #include <CameraFactory.hpp>
-#include <chrono>
 #include <condition_variable>
 #include <iostream>
-#include <mutex>
 #include <opencv2/core/mat.hpp>
-#include <opencv2/core/utility.hpp>
 #include <opencv2/imgproc.hpp>
 #include <royale/ICameraDevice.hpp>
 #include <string>
-#include <thread>
 
 #include "parameters.hpp"
 #include "running_stat.hpp"
@@ -31,17 +59,6 @@ bool newDataAvailable;
 
 std::string VERSION{"1.1"};
 
-// The plane fitting parameters
-class PlaneParams {
- public:
-  PlaneParams(float v1, float v2, float v3, float v4, cv::Point3f c);
-  // a*x + b*y + c*z = d
-  float a, b, c, d;
-  cv::Point3f centroid;
-};
-
-inline PlaneParams::PlaneParams(float v1, float v2, float v3, float v4, cv::Point3f c) : a(v1), b(v2), c(v3), d(v4), centroid(c) {}
-
 // A class for a standard 3D plane defined by a* x + b* y + c* z + d = 0
 class Plane {
  public:
@@ -50,8 +67,6 @@ class Plane {
 
   // Creates the plane from a point on the surface and a normal vector
   void ConstructFromPointNormal(const cv::Point3f &Pt, const cv::Point3f &Normal);
-  // Creates the plane from a point on the surface and two vectors in the plane
-  // Plane ConstructFromPointVectors(const cv::Point3f &Pt, const cv::Point3f &V1, const cv::Point3f &V2);
 
   // Transform the plane with a 4x4 transformation matrix
   Plane TransformPlane3D(const cv::Mat &Tform);
@@ -216,12 +231,6 @@ Plane FitPlane(const std::vector<cv::Point3f> &pt_cloud_vec) {
   return fitted_plane;
 }
 
-/*
-Plane Plane::ConstructFromPointVectors(const cv::Point3f &pt, const cv::Point3f &v1, const cv::Point3f &v2) {
-  cv::Point3f normal = v1.cross(v2);
-  return ConstructFromPointNormal(pt, normal);
-}*/
-
 // Listener for new ToF frames
 class MyListener : public royale::IExtendedDataListener {
  public:
@@ -359,7 +368,6 @@ int main(int argc, char **argv) {
   std::vector<std::uint32_t> lds_exposure_times{1000, 1500, 2000, 2500, 3000};
   std::uint32_t tof_exposure_time = 1200;
 
-  std::vector<PlaneParams> plane_coeffs;
   pt_intensity_running_stat.resize(NUM_IMAGE_ELEMENTS);
   pt_x_running_stat.resize(NUM_IMAGE_ELEMENTS);
   pt_y_running_stat.resize(NUM_IMAGE_ELEMENTS);

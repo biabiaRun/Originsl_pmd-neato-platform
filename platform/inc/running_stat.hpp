@@ -1,4 +1,28 @@
+/*
+ * Copyright (c) 2019, Neato Robotics, Inc.. All Rights Reserved.
+ *
+ * This file may contain contributions from others.
+ *
+ * This software is proprietary to Neato Robotics, Inc. and its transference
+ * and use is to be strictly controlled.
+ * Transference of this software to another party requires that all of the
+ * following conditions be met:
+ * 	A)	Neato has a copy of a signed NDA agreement with the receiving
+ *      party
+ * 	B)	Neato Software Engineering has explicitly authorized the
+ *      receiving party to have a copy of this software
+ * 	C)	When the work is completed or terminated by the receiving party,
+ *      all copies of this software that the receiving party holds must be
+ *      returned to Neato, or destroyed.
+ * The receiving party is under legal obligation to not disclose or  transfer
+ * this software.
+ * The receiving party may not appropriate, transform or re-use this software
+ * for any purpose other than a Neato Robotics authorized purpose.
+ */
 
+/**
+ * A class for calculating a running mean and standarard deviaiton for floating point values
+ */
 #ifndef INCLUDE_RUNNING_STAT_H_
 #define INCLUDE_RUNNING_STAT_H_
 
