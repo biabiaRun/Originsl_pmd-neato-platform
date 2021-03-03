@@ -32,6 +32,8 @@
 namespace ToF_test_params {
 // Ground Truth Distance in meters
 constexpr float kGroundTruthDistance = 0.27f;
+// Confidence threshold for pixel samples
+constexpr float kMinConfidenceThreshold = 200.0f;
 // Sensor Parameter settings
 static const royale::ProcessingParameterPair NOISE_THRESHOLD({royale::ProcessingFlag::NoiseThreshold_Float, 0.07f});
 static const royale::ProcessingParameterPair AUTO_EXPOSURE_REF_VALUE({royale::ProcessingFlag::AutoExposureRefValue_Float, 1000.0f});
@@ -51,6 +53,7 @@ static const royale::ProcessingParameterPair USE_HOLE_FILLING({royale::Processin
 }  // namespace ToF_test_params
 
 namespace ToF_testing_limits {
+static const int confident_pixel_count(34000);
 static const float ground_truth_distance_check(0.003f);
 static const std::pair<float, float> depth_precision_spatial(-0.013, 0.013);
 static const std::pair<float, float> depth_precision_temporal(-0.01, 0.01);
@@ -59,20 +62,24 @@ static const std::pair<float, float> single_shot_depth_error(-0.013, 0.013);
 static const std::pair<float, float> depth_accuracy(-0.013, 0.013);
 static const std::pair<float, float> depth_accuracy_percent(-10.0, 10.0);
 static const std::pair<float, float> depth_accuracy_percent_Q90(-10.0, 10.0);
-static const std::pair<float, float> amplitude_std_temporal(0.0, 10.0);
-static const std::pair<float, float> amplitude_std(0.0, 200.0);
-static const std::pair<float, float> amplitude_mean(0.0, 1000.0);
-static const std::pair<float, float> amplitude_max(0.0, 1000.0);
+static const std::pair<float, float> amplitude_std_temporal(0.0, 150.0);
+static const std::pair<float, float> amplitude_std(0.0, 350.0);
+static const std::pair<float, float> amplitude_mean(0.0, 600.0);
+static const std::pair<float, float> amplitude_max(0.0, 2000.0);
 static const std::pair<float, float> amplitude_min(0.0, 1000.0);
-static const std::pair<float, float> amplitude_max_max(0.0, 1000.0);
+static const std::pair<float, float> amplitude_max_max(0.0, 2000.0);
 static const std::pair<float, float> amplitude_min_min(0.0, 1000.0);
 }  // namespace ToF_testing_limits
 
 namespace ToF_calibration_params {
 // LDS Detection Threshold
-static const float lds_detection_threshold(30.0f);
-static const int lds_sample_size(500);
-static const int tof_sample_size(30);
+static const float lds_detection_threshold(30.0f);  // 30.0f);
+static const int lds_sample_size(1000);
+static const int tof_sample_size(100);
+static const std::pair<int, int> row_detection_bounds(20, 149);
+static const std::pair<int, int> col_detection_bounds(20, 200);
+//  Threshold the span of the detected LDS signal to maximize resolution, set to 85% of col_detection range
+static const float lds_pts_plane_fit_min_range = 153.0f;
 // Sensor Parameter settings
 static const royale::ProcessingParameterPair NOISE_THRESHOLD({royale::ProcessingFlag::NoiseThreshold_Float, 0.01f});
 static const royale::ProcessingParameterPair AUTO_EXPOSURE_REF_VALUE({royale::ProcessingFlag::AutoExposureRefValue_Float, 1000.0f});
