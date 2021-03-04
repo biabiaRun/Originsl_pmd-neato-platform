@@ -50,10 +50,15 @@
 
 // Simplify memory handeling for testing
 namespace {
+// Running Mean and Standard Deviation collections
+// Intensity Data
 std::vector<RunningStat> pt_intensity_running_stat;
+// ToF 3D X/Y/Z values in meters
 std::vector<RunningStat> pt_x_running_stat;
 std::vector<RunningStat> pt_y_running_stat;
 std::vector<RunningStat> pt_z_running_stat;
+// ToF Depth Confidence Level, royale::DepthPoint.depthConfidence
+// A value from 0 (invalid) to 255 (full confidence)
 std::vector<RunningStat> confident_pixel;
 std::mutex cloudMutex;
 std::condition_variable cloudCV;
@@ -165,16 +170,18 @@ cv::Mat CreateBasisTransfrom3D(const Plane &source, const Plane &target) {
 
 // Scan down the columns of the intensity image and calculate the intensity weighted centroid
 // taking 3 columns at a time.  The centroids are then used for line fiitting
-cv::Point2f findLdsReturn(const cv::Size &camera_size, std::vector<cv::Point2d> &xy_vals) {
+cv::Point2f FindLdsReturn(const cv::Size &camera_size, std::vector<cv::Point2d> &xy_vals) {
   int cam_width = camera_size.width;
   int cam_height = camera_size.height;
+  // 1-D point index into 2-D image data
   int pt_index = 0;
   float sum_region = 0.0f;
   float pix_val = 0.0f;
+  // x (column) & y (row) accumulator or intensity weighted centroid
   float x_bar = 0.0f;
   float y_bar = 0.0f;
-  float min_col = 999999.0f;
-  float max_col = -99999.0f;
+  float min_col = std::numeric_limits<float>::max();
+  float max_col = std::numeric_limits<float>::min();
   cv::Point2f min_max_col;
   for (int col = 0; col < cam_width - 2; col += 3) {
     sum_region = 0.0f;
@@ -247,14 +254,14 @@ class MyListener : public royale::IExtendedDataListener {
       for (size_t i = 0u; i < NUM_IMAGE_ELEMENTS; ++i) {
         if (current_mode == DataCollectionMode::LDS_DATA) {
           // Temporary ignore region at top and bottom of image due to incorrect calibration changes
-          row = (int)((int)i / (int)intermed->width);
-          col = (int)i % (int)intermed->width;
+          row = static_cast<int>(static_cast<int>(i) / static_cast<int>(intermed->width));
+          col = static_cast<int>(i) % static_cast<int>(intermed->width);
           // Skip if outside of detection boundary
-          if (row < ToF_calibration_params::row_detection_bounds.first || row > ToF_calibration_params::row_detection_bounds.second) continue;
-          if (col < ToF_calibration_params::col_detection_bounds.first || col > ToF_calibration_params::col_detection_bounds.second) continue;
+          if (row < ToF_calibration_params::kRowDetectionBounds.first || row > ToF_calibration_params::kRowDetectionBounds.second) continue;
+          if (col < ToF_calibration_params::kColDetectionBounds.first || col > ToF_calibration_params::kColDetectionBounds.second) continue;
 
           intensity_val = intermed->points[i].intensity;
-          if (intensity_val > ToF_calibration_params::lds_detection_threshold) {
+          if (intensity_val > ToF_calibration_params::kLdsDetectionThreshold) {
             pt_intensity_running_stat[i].Push(intensity_val);
           }
         } else if (current_mode == DataCollectionMode::TOF_DATA) {
@@ -273,9 +280,7 @@ class MyListener : public royale::IExtendedDataListener {
 
   void setDataCollectionMode(DataCollectionMode enum_mode) {
     const std::string enum_name[] = {"NONE", "LDS_DATA", "TOF_DATA"};
-    // std::cout << "Current mode set to: " << enum_name[current_mode] << std::endl;
     current_mode = enum_mode;
-    // std::cout << "New mode set to: " << enum_name[enum_mode] << std::endl;
   }
 
   char spin_chars[4];
@@ -356,8 +361,8 @@ bool inRange(royale::Pair<std::uint32_t, std::uint32_t> range_vals, std::uint32_
 }
 
 // Removes duplicate points from a vector
-void removeDuplicates(std::vector<cv::Point2d> &xy_vals) {
-  unsigned nb_removed = 0;
+void RemoveDuplicates(std::vector<cv::Point2d> &xy_vals) {
+  unsigned nb_removed = 0;  // count number of removed from back
   double threshold_distance = 0.1;
   for (size_t i = 0; i < xy_vals.size() - nb_removed; ++i) {
     for (size_t j = i + 1; j < xy_vals.size() - nb_removed; ++j) {
@@ -385,7 +390,7 @@ int main(int argc, char **argv) {
   royale::String useCase_LDS = "MODE_5_5FPS";
   royale::String useCase_TOF = "MODE_9_5FPS";
 
-  // When
+  // Use a constant exposure rate for collecting data with the LDS turned off
   std::uint32_t tof_exposure_time = 900;
   std::uint32_t current_exposure;
 
@@ -488,8 +493,8 @@ int main(int argc, char **argv) {
   std::vector<cv::Mat> vec_pt_cloud;
   std::vector<cv::Mat> vec_pt_intensity;
   int num_frames_collected = 0;
-  int lds_sample_size = ToF_calibration_params::lds_sample_size;
-  int tof_sample_size = ToF_calibration_params::tof_sample_size;
+  int kLdsSampleSize = ToF_calibration_params::kLdsSampleSize;
+  int kTofSampleSize = ToF_calibration_params::kTofSampleSize;
   float col_range = 0.0f;
   bool exposure_going_down = true;
 
@@ -501,21 +506,19 @@ int main(int argc, char **argv) {
   int num_new_collected = 0;
   cv::Point2f min_max_col;
 
-  // Continue to look for LDS laser signal locations until the number of collected samples exceeds the lds_sample_size and
+  // Continue to look for LDS laser signal locations until the number of collected samples exceeds the kLdsSampleSize and
   // the points are not sufficiently spread across the width of the sensor.  A robust solution for an accurate plane increases
   // as both of these criteria are met.  The chances of catching the LDS signal increase by incrementally varying the exposure.
-  while (xy_vals.size() < (size_t)lds_sample_size || col_range < ToF_calibration_params::lds_pts_plane_fit_min_range) {
+  while (xy_vals.size() < static_cast<size_t>(kLdsSampleSize) || col_range < ToF_calibration_params::kLdsPtsPlaneFitMinRange) {
     std::unique_lock<std::mutex> lock(cloudMutex);
     auto timeOut = (std::chrono::system_clock::now() + std::chrono::milliseconds(1000));
     if (cloudCV.wait_until(lock, timeOut, [&] { return newDataAvailable; })) {
-      min_max_col = findLdsReturn(camera_size, xy_vals);
+      min_max_col = FindLdsReturn(camera_size, xy_vals);
       col_range = min_max_col.y - min_max_col.x;
 
-      if (num_last_xy_pts < (int)xy_vals.size()) {
-        num_new_collected = (int)xy_vals.size() - num_last_xy_pts;
-        num_last_xy_pts = (int)xy_vals.size();
-        // std::cout << "# New Points Collected: " << num_new_collected << "  Total: " << num_last_xy_pts << " min/max col: " << min_max_col.x << " " << min_max_col.y << " " <<
-        // col_range << std::endl;
+      if (num_last_xy_pts < static_cast<int>(xy_vals.size())) {
+        num_new_collected = static_cast<int>(xy_vals.size()) - num_last_xy_pts;
+        num_last_xy_pts = static_cast<int>(xy_vals.size());
       }
       newDataAvailable = false;
     }
@@ -554,7 +557,7 @@ int main(int argc, char **argv) {
   listener_.get()->setDataCollectionMode(MyListener::DataCollectionMode::NONE);
 
   // Remove duplicate points
-  removeDuplicates(xy_vals);
+  RemoveDuplicates(xy_vals);
 
   // Stopping LDS
   std::cout << "Stopping LDS Closed Loop" << std::endl;
@@ -604,7 +607,7 @@ int main(int argc, char **argv) {
   listener_.get()->setDataCollectionMode(MyListener::DataCollectionMode::TOF_DATA);
 
   num_frames_collected = 0;
-  while (num_frames_collected < tof_sample_size) {
+  while (num_frames_collected < kTofSampleSize) {
     std::unique_lock<std::mutex> lock(cloudMutex);
     auto timeOut = (std::chrono::system_clock::now() + std::chrono::milliseconds(1000));
     if (cloudCV.wait_until(lock, timeOut, [&] { return newDataAvailable; })) {
@@ -617,31 +620,26 @@ int main(int argc, char **argv) {
   listener_.get()->setDataCollectionMode(MyListener::DataCollectionMode::NONE);
 
   // Fit line
-  // std::cout << "lds points" << std::endl;
   cv::Mat lds_pts = cv::Mat::zeros(static_cast<int>(xy_vals.size()), 2, CV_64F);  //, xy_vals.data());
   int i_row = 0;
   for (size_t idx = 0; idx < xy_vals.size(); ++idx) {
     lds_pts.at<double>(i_row, 0) = xy_vals[idx].x;
     lds_pts.at<double>(i_row, 1) = xy_vals[idx].y;
     i_row++;
-    // std::cout << xy_vals[idx].x << "," << xy_vals[idx].y << std::endl;
   }
 
-  // std::cout << "NUM PTS: " << lds_pts.rows << " cols: " << lds_pts.cols << std::endl;
   cv::PCA pca_analysis(lds_pts, cv::Mat(), cv::PCA::DATA_AS_ROW);
   double beta = -pca_analysis.eigenvectors.at<double>(1, 0) / pca_analysis.eigenvectors.at<double>(1, 1);
   double b_zero = pca_analysis.mean.at<double>(0, 1) - beta * pca_analysis.mean.at<double>(0, 0);
-  // std::cout << "beta / b_zero: " << beta << " / " << b_zero << std::endl;
 
   // Endpoints of the line fit to the LDS signal, for first and last columns
   cv::Point2f lds_pt_0;
   cv::Point2f lds_pt_1;
 
   lds_pt_0.x = 1.0f;
-  lds_pt_0.y = (float)(beta + b_zero);
-  lds_pt_1.x = (float)cam_width - 1.0f;
-  lds_pt_1.y = (float)(beta * ((double)cam_width - 1.) + b_zero);
-  // std::cout << "lds_pt_0 / lds_pt_1: " << lds_pt_0.x << "," << lds_pt_0.y << " / " << lds_pt_1.x << "," << lds_pt_1.y << std::endl;
+  lds_pt_0.y = static_cast<float>(beta + b_zero);
+  lds_pt_1.x = static_cast<float>(cam_width) - 1.0f;
+  lds_pt_1.y = static_cast<float>(beta * (static_cast<double>(cam_width) - 1.) + b_zero);
 
   // Laser offset from the LDS center
   double lds_center_to_laser_angle = 57.;        // Degrees
@@ -649,18 +647,20 @@ int main(int argc, char **argv) {
   double z_trans_lds = lds_center_to_laser_distance * cos(lds_center_to_laser_angle * (M_PI / 180.));
   double x_trans_lds = lds_center_to_laser_distance * sin(lds_center_to_laser_angle * (M_PI / 180.));
   cv::Mat lds_offset = cv::Mat::eye(4, 4, CV_32F);
-  lds_offset.at<float>(0, 3) = (float)x_trans_lds;
-  lds_offset.at<float>(2, 3) = (float)z_trans_lds;
+  lds_offset.at<float>(0, 3) = static_cast<float>(x_trans_lds);
+  lds_offset.at<float>(2, 3) = static_cast<float>(z_trans_lds);
 
   cv::Mat line_image(cam_height, cam_width, CV_8UC1, cv::Scalar(0));
   cv::line(line_image, lds_pt_0, lds_pt_1, cv::Scalar(255), 1, 8);
 
   int confident_image_index = 0;
+  // Use a hightly confident pixel threshold
+  float confident_pixel_threshold = 200.0f;
   std::vector<cv::Point3f> pt_3d_vector;
   for (int row = 0; row < line_image.rows; ++row) {
     uchar *line_image_ptr = line_image.ptr<uchar>(row);
     for (int col = 0; col < line_image.cols; ++col) {
-      if ((line_image_ptr[col] > 0) && (confident_pixel[confident_image_index].Mean() > 200.0f)) {
+      if ((line_image_ptr[col] > 0) && (confident_pixel[confident_image_index].Mean() > confident_pixel_threshold)) {
         cv::Point3f pt_3d(pt_x_running_stat[confident_image_index].Mean() * 1000.0f, pt_y_running_stat[confident_image_index].Mean() * 1000.0f,
                           pt_z_running_stat[confident_image_index].Mean() * 1000.0f);
         pt_3d_vector.push_back(pt_3d);
@@ -671,8 +671,8 @@ int main(int argc, char **argv) {
 
   // Add in LDS position
   cv::Point3f P3(0.0f, -15.0f, -250.683f);
-  P3.x = P3.x + (float)x_trans_lds;
-  P3.z = P3.z + (float)z_trans_lds;
+  P3.x = P3.x + static_cast<float>(x_trans_lds);
+  P3.z = P3.z + static_cast<float>(z_trans_lds);
   pt_3d_vector.push_back(P3);
 
   // Use line points from detected LDS signal along with the LDS position from the mechanical drawings to form a plane

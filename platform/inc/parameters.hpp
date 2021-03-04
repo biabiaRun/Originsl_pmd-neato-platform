@@ -32,7 +32,7 @@
 namespace ToF_test_params {
 // Ground Truth Distance in meters
 constexpr float kGroundTruthDistance = 0.27f;
-// Confidence threshold for pixel samples
+// Confidence threshold for pixel samples (value from 0 (invalid) to 255 (full confidence))
 constexpr float kMinConfidenceThreshold = 200.0f;
 // Sensor Parameter settings
 static const royale::ProcessingParameterPair NOISE_THRESHOLD({royale::ProcessingFlag::NoiseThreshold_Float, 0.07f});
@@ -53,6 +53,10 @@ static const royale::ProcessingParameterPair USE_HOLE_FILLING({royale::Processin
 }  // namespace ToF_test_params
 
 namespace ToF_testing_limits {
+// See documentation an-se-3-7-validation_test_points.pdf in /docs folder for explanation of testing limits below.
+// Depth metrics were specified by PMD and Amplitude metrics are specific to our custom diffuser and values were
+// determined by statistical sampling.
+// A pair defines the range (min,max) for the specific test to pass.
 static const int confident_pixel_count(34000);
 static const float ground_truth_distance_check(0.003f);
 static const std::pair<float, float> depth_precision_spatial(-0.013, 0.013);
@@ -72,14 +76,18 @@ static const std::pair<float, float> amplitude_min_min(0.0, 1000.0);
 }  // namespace ToF_testing_limits
 
 namespace ToF_calibration_params {
-// LDS Detection Threshold
-static const float lds_detection_threshold(30.0f);  // 30.0f);
-static const int lds_sample_size(1000);
-static const int tof_sample_size(100);
-static const std::pair<int, int> row_detection_bounds(20, 149);
-static const std::pair<int, int> col_detection_bounds(20, 200);
-//  Threshold the span of the detected LDS signal to maximize resolution, set to 85% of col_detection range
-static const float lds_pts_plane_fit_min_range = 153.0f;
+// LDS Detection Threshold - Intensity values > threshold are considered signal from the LDS laser
+static const float kLdsDetectionThreshold(30.0f);
+
+// LDS Sample Size - Required sample size of detected LDS intensity points for line fitting.
+static const int kLdsSampleSize(1000);
+// TOF Sample Size - Number of ToF depth frames to average over and reduce temporal noise
+static const int kTofSampleSize(100);
+// Row & Column Detection Bounds - Clip noisy areas and look between row:(top, bottom), col:(left,right) for LDS intensity signal.
+static const std::pair<int, int> kRowDetectionBounds(20, 149);
+static const std::pair<int, int> kColDetectionBounds(20, 200);
+//  Threshold the span of the detected LDS signal to maximize resolution, set to 85% of kColDetectionBounds
+static const float kLdsPtsPlaneFitMinRange = 153.0f;
 // Sensor Parameter settings
 static const royale::ProcessingParameterPair NOISE_THRESHOLD({royale::ProcessingFlag::NoiseThreshold_Float, 0.01f});
 static const royale::ProcessingParameterPair AUTO_EXPOSURE_REF_VALUE({royale::ProcessingFlag::AutoExposureRefValue_Float, 1000.0f});
