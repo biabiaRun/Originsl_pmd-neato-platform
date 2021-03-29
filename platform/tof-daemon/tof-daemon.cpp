@@ -30,6 +30,7 @@ using namespace cv;
 
 // Global Frame Queue
 FrameQueue<FrameDataStruct> framesQueue;
+std::vector<std::string> classes;
 
 // Name and version of the TOF Daemon
 const char *DAEMON_NAME = "TOFDaemon";
@@ -190,6 +191,13 @@ int Daemonize(const char *name, const char *path, const char *outfile, const cha
   return 0;
 }
 
+// Post process bounding boxes
+void postprocess(const std::vector<Mat> &outs, std::vector<int> &classIds, std::vector<float> &confidences, std::vector<cv::Rect> &boxes, std::vector<int> &indices,
+                 cv::Size2f &sensor_size_float);
+
+// Draw prediciton for debugging and demo
+void drawPred(int classId, float conf, int left, int top, int right, int bottom, Mat &frame);
+
 // Create a directory
 bool mkpath(std::string path) {
   bool bSuccess = false;
@@ -332,6 +340,8 @@ int main(int argc, char **argv) {
   // Save ToF cloud and grayscale data to text file?
   bool save_data = false;
   bool new_data_available = false;
+  classes.push_back(std::string("Fabric"));
+  classes.push_back(std::string("Cord"));
 
   while ((c = getopt(argc, argv, "qs")) != -1) {
     switch (c) {
@@ -377,6 +387,7 @@ int main(int argc, char **argv) {
 
     // Live Stream Server Address and Port
     std::string servAddress("192.168.1.137");
+    // std::string servAddress("10.100.33.225");
     // std::string servAddress("127.0.0.1");
     // std::string servAddress("10.0.0.9");
     std::string servPortValue("10000");
@@ -390,7 +401,7 @@ int main(int argc, char **argv) {
       servPort = Socket::resolveService(servPortValue, "udp");
     }
 
-    // std::string servAddress_local("192.168.1.137");
+    // std::string servAddress_local("10.100.33.225");
     std::string servAddress_local("127.0.0.1");
     // std::string servAddress_local("10.0.0.9");
     std::string servPortValue_local("10010");
@@ -400,9 +411,10 @@ int main(int argc, char **argv) {
       servPort_local = Socket::resolveService(servPortValue_local, "udp");
     }
 
-    // std::string servAddress_plot("192.168.1.137");
-    std::string servAddress_plot("127.0.0.1");
-    // std::string servAddress_plot("10.0.0.9");
+    std::string servAddress_plot("192.168.1.137");
+    // std::string servAddress_plot("127.0.0.1");
+    //std::string servAddress_plot("10.100.33.225");
+    // std::string servAddress_plot("10.100.33.214");
     std::string servPortValue_plot("10020");
     unsigned short servPort_plot;
     UDPSocket sock_plot;
@@ -424,7 +436,7 @@ int main(int argc, char **argv) {
     */
 
     try {
-      net = dnn::readNetFromTensorflow("/home/root/sdk/upload/frozen_inference_graph.pb", "/home/root/sdk/upload/MobileNetV2.pbtxt");
+      net = dnn::readNetFromTensorflow("/home/root/sdk/install/frozen_inference_graph.pb", "/home/root/sdk/install/MobileNetV2.pbtxt");
       // net.setPreferableTarget(1);
     } catch (cv::Exception &e) {
       const char *err_msg = e.what();
@@ -638,6 +650,8 @@ int main(int argc, char **argv) {
     cameraDevice->getMaxSensorHeight(sensor_num_rows);
     size_t buffer_size = static_cast<size_t>(sensor_num_columns) * static_cast<size_t>(sensor_num_rows);
 
+    cv::Size2f sensor_size_float(static_cast<float>(sensor_num_columns), static_cast<float>(sensor_num_rows));
+
     // packed as r,g,b r,g,b  ...
     std::vector<float> vec_point_cloud_X(buffer_size);
     std::vector<float> vec_point_cloud_Y(buffer_size);
@@ -652,13 +666,9 @@ int main(int argc, char **argv) {
 
     int total_pack;
     double accum;
-    size_t loop_index, location_index;
+    size_t location_index;
     cv::Mat blob;
     cv::Mat nnet_input(300, 300, CV_8UC3);
-    const float confidence_threshold = 0.1f;
-    float detect_confidence;
-    int x1, y1, x2, y2;
-    int roi_width, roi_height;
     int gray_threshold;
     size_t num_points;
     std::vector<float> obj_x_vals(buffer_size, 0.0f);
@@ -748,52 +758,41 @@ int main(int argc, char **argv) {
           // cv::Mat detection = net.forward("detection_out");
           net.forward(outs, "detection_out");
 
+          std::vector<int> classIds;
+          std::vector<float> confidences;
+          std::vector<Rect> boxes;
+          std::vector<int> indices;
+
+          postprocess(outs, classIds, confidences, boxes, indices, sensor_size_float);
+
           std::string stream_out;
           std::string stream_out_plot;
-          int object_id = 0;
-          float *data = (float *)outs[0].data;
-          for (loop_index = 0; loop_index < outs[0].total(); loop_index += 7) {
-            detect_confidence = data[loop_index + 2];
-            if (detect_confidence > confidence_threshold) {
-              x1 = static_cast<int>(data[loop_index + 3] * sensor_num_columns);
-              y1 = static_cast<int>(data[loop_index + 4] * sensor_num_rows);
-              x2 = static_cast<int>(data[loop_index + 5] * sensor_num_columns);
-              y2 = static_cast<int>(data[loop_index + 6] * sensor_num_rows);
 
-              if (x1 < 0) x1 = 0;
-              if (y1 < 0) y1 = 0;
-              roi_width = x2 - x1 + 1;
-              roi_height = y2 - y1 + 1;
+          for (size_t i = 0; i < indices.size(); ++i) {
+            int idx = indices[i];
+            Rect roi_rect = boxes[idx];
 
-              if (roi_width < 1) continue;
-              if (roi_height < 1) continue;
+            cv::Mat img_roi(frame_data.mat_gray_image, roi_rect);
+            cv::Mat ptcloud_depth_roi(ptcloud_depth, roi_rect);
+            cv::Mat ptcloud_x_roi(ptcloud_x, roi_rect);
+            cv::Mat ptcloud_z_roi(ptcloud_z, roi_rect);
 
-              if ((x1 + roi_width) > sensor_num_columns) roi_width = sensor_num_columns - x1;
-              if ((y1 + roi_height) > sensor_num_rows) roi_height = sensor_num_rows - y1;
+            gray_threshold = otsu.get_threshold(img_roi);
+            num_points = object_localize.localize_roi(img_roi, ptcloud_depth_roi, ptcloud_x_roi, ptcloud_z_roi, gray_threshold, obj_x_vals, obj_z_vals);
 
-              cv::Rect roi_rect(x1, y1, roi_width, roi_height);
-              cv::rectangle(frame_data.mat_nnet_input, roi_rect, cv::Scalar(255, 255, 255));
-              // classIds.push_back(static_cast<int>(data[loop_index + 1]) - 1);  //  Need to skip  0th background class id.
+            if (i == 0) {
+              stream_out = s_object_timestamp + std::to_string(frame_data.royale_data_timeStamp);
+            }
+            stream_out += delim + s_object_id + std::to_string(i) + delim;
+            stream_out += s_object_loc;
+            stream_out_plot += "NEWOBJ ";
+            for (location_index = 0; location_index < num_points; ++location_index) {
+              stream_out += " [" + std::to_string(obj_x_vals[location_index]) + "," + std::to_string(obj_z_vals[location_index]) + "]";
+              stream_out_plot += std::to_string(obj_x_vals[location_index]) + " " + std::to_string(obj_z_vals[location_index]) + " ";
+            }
 
-              cv::Mat img_roi(frame_data.mat_gray_image, roi_rect);
-              cv::Mat ptcloud_depth_roi(ptcloud_depth, roi_rect);
-              cv::Mat ptcloud_x_roi(ptcloud_x, roi_rect);
-              cv::Mat ptcloud_z_roi(ptcloud_z, roi_rect);
-
-              gray_threshold = otsu.get_threshold(img_roi);
-              num_points = object_localize.localize_roi(img_roi, ptcloud_depth_roi, ptcloud_x_roi, ptcloud_z_roi, gray_threshold, obj_x_vals, obj_z_vals);
-
-              if (object_id == 0) {
-                stream_out = s_object_timestamp + std::to_string(frame_data.royale_data_timeStamp);
-              }
-              stream_out += delim + s_object_id + std::to_string(object_id) + delim;
-              stream_out += s_object_loc;
-              stream_out_plot += "NEWOBJ ";
-              for (location_index = 0; location_index < num_points; ++location_index) {
-                stream_out += " [" + std::to_string(obj_x_vals[location_index]) + "," + std::to_string(obj_z_vals[location_index]) + "]";
-                stream_out_plot += std::to_string(obj_x_vals[location_index]) + " " + std::to_string(obj_z_vals[location_index]) + " ";
-              }
-              object_id++;
+            if (live_stream_video) {
+              drawPred(classIds[idx], confidences[idx], roi_rect.x, roi_rect.y, roi_rect.x + roi_rect.width, roi_rect.y + roi_rect.height, frame_data.mat_nnet_input);
             }
           }
 
@@ -854,4 +853,61 @@ int main(int argc, char **argv) {
 
   Shutdown();
   return 0;
+}
+
+void postprocess(const std::vector<Mat> &outs, std::vector<int> &classIds, std::vector<float> &confidences, std::vector<cv::Rect> &boxes,
+                 std::vector<int> &indices, cv::Size2f &sensor_size_float) {
+  float detect_confidence;
+  int x1, y1, x2, y2;
+  int bbox_width, bbox_height;
+  cv::Size2i sensor_size_int(static_cast<int>(sensor_size_float.width), static_cast<int>(sensor_size_float.height));
+
+  for (size_t k = 0; k < outs.size(); k++) {
+    float *data = (float *)outs[k].data;
+    for (size_t loop_index = 0; loop_index < outs[k].total(); loop_index += 7) {
+      detect_confidence = data[loop_index + 2];
+
+      if (detect_confidence > CONFIDENCE_THRESHOLD) {
+        x1 = (int)(data[loop_index + 3] * sensor_size_float.width);
+        y1 = (int)(data[loop_index + 4] * sensor_size_float.height);
+        x2 = (int)(data[loop_index + 5] * sensor_size_float.width);
+        y2 = (int)(data[loop_index + 6] * sensor_size_float.height);
+
+        if (x1 < 0) x1 = 0;
+        if (y1 < 0) y1 = 0;
+        bbox_width = x2 - x1 + 1;
+        bbox_height = y2 - y1 + 1;
+
+        if (bbox_width < 1) continue;
+        if (bbox_height < 1) continue;
+
+        if ((x1 + bbox_width) > sensor_size_int.width) bbox_width = sensor_size_int.width - x1;
+        if ((y1 + bbox_height) > sensor_size_int.height) bbox_height = sensor_size_int.height - y1;
+
+        classIds.push_back((int)(data[loop_index + 1]) - 1);
+        boxes.push_back(Rect(x1, y1, bbox_width, bbox_height));
+        confidences.push_back(detect_confidence);
+        // std::cout << "Object: " << object_id << std::endl;
+        // std::cout << "Confidence: " << detect_confidence << std::endl;
+        // std::cout << "Rectange: "
+        //          << "(" << x1 << "," << y1 << ")  (" << x2 << "," << y2 << ")" << std::endl;
+      }
+    }
+  }
+
+  cv::dnn::NMSBoxes(boxes, confidences, CONFIDENCE_THRESHOLD, NMS_THRESHOLD, indices);
+}
+
+void drawPred(int classId, float conf, int left, int top, int right, int bottom, Mat &frame) {
+  rectangle(frame, Point(left, top), Point(right, bottom), Scalar(255, 255, 255));
+  std::string label = format("%.2f", conf);
+  if (!classes.empty()) {
+    CV_Assert(classId < (int)classes.size());
+    label = classes[classId] + ": " + label;
+  }
+  int baseLine;
+  Size labelSize = getTextSize(label, FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
+  top = max(top, labelSize.height);
+  rectangle(frame, Point(left, top - labelSize.height), Point(left + labelSize.width, top + baseLine), Scalar::all(255), FILLED);
+  putText(frame, label, Point(left, top), FONT_HERSHEY_SIMPLEX, 0.5, Scalar());
 }

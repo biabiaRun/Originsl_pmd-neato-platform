@@ -16,5 +16,7 @@ constexpr float DEFAULT_MIN_DIST = 0.1f;
 constexpr float DEFAULT_MAX_DIST = 1.1f;
 constexpr uint16_t DEFAULT_MIN_GRAY = 1;
 constexpr uint16_t DEFAULT_MAX_GRAY = 500;
+constexpr float CONFIDENCE_THRESHOLD = 0.3f;
+constexpr float NMS_THRESHOLD = 0.3f;
 
 #endif
