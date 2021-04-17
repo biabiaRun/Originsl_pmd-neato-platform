@@ -50,6 +50,8 @@
 
 // Simplify memory handeling for testing
 namespace {
+// The camera device
+std::unique_ptr<royale::ICameraDevice> camera_;
 // Running Mean and Standard Deviation collections
 // Intensity Data
 std::vector<RunningStat> pt_intensity_running_stat;
@@ -66,6 +68,55 @@ bool newDataAvailable;
 }  // namespace
 
 std::string VERSION{"1.1"};
+
+//  When exiting application stop LDS and Camera.
+void terminate() {
+  const char *stop_lds_command = ToF_calibration_params::kStopLdsString.c_str();
+  system(stop_lds_command);
+  if (camera_) {
+    bool camera_is_capturing = false;
+    camera_->isCapturing(camera_is_capturing);
+    if (camera_is_capturing) {
+      if (camera_->stopCapture() != royale::CameraStatus::SUCCESS) {
+        std::cout << "Error stopping camera" << std::endl;
+      }
+    }
+  }
+}
+
+// A timer class to be used as a stopwatch
+class Timer {
+public:
+  void start() {
+    m_StartTime = std::chrono::steady_clock::now();
+    m_bRunning = true;
+  }
+
+  void stop() {
+    m_EndTime = std::chrono::steady_clock::now();
+    m_bRunning = false;
+  }
+
+  double elapsedMilliseconds() {
+    std::chrono::time_point<std::chrono::steady_clock> endTime;
+    if (m_bRunning) {
+      endTime = std::chrono::steady_clock::now();
+    } else {
+      endTime = m_EndTime;
+    }
+    return static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(endTime - m_StartTime).count());
+  }
+
+  int elapsedSeconds() {
+    return static_cast<int>(elapsedMilliseconds() / 1000.);
+  }
+
+private:
+  std::chrono::time_point<std::chrono::steady_clock> m_StartTime;
+  std::chrono::time_point<std::chrono::steady_clock> m_EndTime;
+  bool m_bRunning = false;
+
+};
 
 // A class for a standard 3D plane defined by a* x + b* y + c* z + d = 0
 class Plane {
@@ -294,62 +345,77 @@ int setCameraProperties(std::unique_ptr<royale::ICameraDevice> &camera_) {
   // set ToF module processing parameters
   if (camera_->setProcessingParameters({ToF_calibration_params::USE_ADAPTIVE_NOISE_FILTER}) != royale::CameraStatus::SUCCESS) {
     std::cout << "[ERROR] Could not set USE_ADAPTIVE_NOISE_FILTER." << std::endl;
+    terminate();
     return -1;
   }
   if (camera_->setProcessingParameters({ToF_calibration_params::USE_FLYING_PIXEL}) != royale::CameraStatus::SUCCESS) {
     std::cout << "[ERROR] Could not set USE_FLYING_PIXEL." << std::endl;
+    terminate();
     return -1;
   }
   if (camera_->setProcessingParameters({ToF_calibration_params::USE_MPI_AVERAGE}) != royale::CameraStatus::SUCCESS) {
     std::cout << "[ERROR] Could not set USE_MPI_AVERAGE." << std::endl;
+    terminate();
     return -1;
   }
   if (camera_->setProcessingParameters({ToF_calibration_params::USE_MPI_AMP}) != royale::CameraStatus::SUCCESS) {
     std::cout << "[ERROR] Could not set USE_MPI_AMP." << std::endl;
+    terminate();
     return -1;
   }
   if (camera_->setProcessingParameters({ToF_calibration_params::USE_MPI_DIST}) != royale::CameraStatus::SUCCESS) {
     std::cout << "[ERROR] Could not set USE_MPI_DIST." << std::endl;
+    terminate();
     return -1;
   }
   if (camera_->setProcessingParameters({ToF_calibration_params::USE_VALIDATE_IMAGE}) != royale::CameraStatus::SUCCESS) {
     std::cout << "[ERROR] Could not set USE_VALIDATE_IMAGE." << std::endl;
+    terminate();
     return -1;
   }
   if (camera_->setProcessingParameters({ToF_calibration_params::USE_STRAY_LIGHT}) != royale::CameraStatus::SUCCESS) {
     std::cout << "[ERROR] Could not set USE_STRAY_LIGHT." << std::endl;
+    terminate();
     return -1;
   }
   if (camera_->setProcessingParameters({ToF_calibration_params::USE_FILTER_2_FREQ}) != royale::CameraStatus::SUCCESS) {
     std::cout << "[ERROR] Could not set USE_FILTER_2_FREQ." << std::endl;
+    terminate();
     return -1;
   }
   if (camera_->setProcessingParameters({ToF_calibration_params::USE_SBI_FLAG}) != royale::CameraStatus::SUCCESS) {
     std::cout << "[ERROR] Could not set USE_SBI_FLAG." << std::endl;
+    terminate();
     return -1;
   }
   if (camera_->setProcessingParameters({ToF_calibration_params::USE_SMOOTHING_FILTER}) != royale::CameraStatus::SUCCESS) {
     std::cout << "[ERROR] Could not set USE_SMOOTHING_FILTER." << std::endl;
+    terminate();
     return -1;
   }
   if (camera_->setProcessingParameters({ToF_calibration_params::USE_HOLE_FILLING}) != royale::CameraStatus::SUCCESS) {
     std::cout << "[ERROR] Could not set USE_HOLE_FILLING." << std::endl;
+    terminate();
     return -1;
   }
   if (camera_->setProcessingParameters({ToF_calibration_params::NOISE_THRESHOLD}) != royale::CameraStatus::SUCCESS) {
     std::cout << "[ERROR] Could not set NOISE_THRESHOLD." << std::endl;
+    terminate();
     return -1;
   }
   if (camera_->setProcessingParameters({ToF_calibration_params::AUTO_EXPOSURE_REF_VALUE}) != royale::CameraStatus::SUCCESS) {
     std::cout << "[ERROR] Could not set AUTO_EXPOSURE_REF_VALUE." << std::endl;
+    terminate();
     return -1;
   }
   if (camera_->setProcessingParameters({ToF_calibration_params::ADAPTIVE_NOISE_FILTER_TYPE}) != royale::CameraStatus::SUCCESS) {
     std::cout << "[ERROR] Could not set ADAPTIVE_NOISE_FILTER_TYPE." << std::endl;
+    terminate();
     return -1;
   }
   if (camera_->setProcessingParameters({ToF_calibration_params::GLOBAL_BINNING}) != royale::CameraStatus::SUCCESS) {
     std::cout << "[ERROR] Could not set GLOBAL_BINNING." << std::endl;
+    terminate();
     return -1;
   }
   return 0;
@@ -361,7 +427,7 @@ bool inRange(royale::Pair<std::uint32_t, std::uint32_t> range_vals, std::uint32_
 }
 
 // Removes duplicate points from a vector
-void RemoveDuplicates(std::vector<cv::Point2d> &xy_vals) {
+bool RemoveDuplicates(std::vector<cv::Point2d> &xy_vals) {
   unsigned nb_removed = 0;  // count number of removed from back
   double threshold_distance = 0.1;
   for (size_t i = 0; i < xy_vals.size() - nb_removed; ++i) {
@@ -375,17 +441,28 @@ void RemoveDuplicates(std::vector<cv::Point2d> &xy_vals) {
     }
   }
   xy_vals.erase(xy_vals.end() - nb_removed, xy_vals.end());
+  if (xy_vals.size() < 2) {
+    return false;
+  } else {
+    return true;
+  }
 }
 
 // Main Program Entry
 int main(int argc, char **argv) {
+
+  int calibration_timeout_seconds = ToF_calibration_params::kCalibrationTtimeoutSeconds;
+  if (argc == 2) {
+    calibration_timeout_seconds = atoi(argv[1]);
+  }
+
   // Default options
   std::string ACCESS_CODE = "d79dab562f13ef8373e906d919aec323a2857388";
   royale::CameraStatus status;
   std::unique_ptr<MyListener> listener_;
   newDataAvailable = false;
-  std::unique_ptr<royale::ICameraDevice> camera_;  // The camera device
   platform::CameraFactory factory;
+  Timer timer;
   // MODE_5 allows longer exposure times allowing more opportunity to see the LDS signal
   royale::String useCase_LDS = "MODE_5_5FPS";
   royale::String useCase_TOF = "MODE_9_5FPS";
@@ -400,10 +477,8 @@ int main(int argc, char **argv) {
   pt_z_running_stat.resize(NUM_IMAGE_ELEMENTS);
   confident_pixel.resize(NUM_IMAGE_ELEMENTS);
 
-  std::string start_lds_string = "roboctrl -d b";
-  const char *start_lds_command = start_lds_string.c_str();
-  std::string stop_lds_string = "roboctrl -d s";
-  const char *stop_lds_command = stop_lds_string.c_str();
+  const char *start_lds_command = ToF_calibration_params::kStartLdsString.c_str();
+  const char *stop_lds_command = ToF_calibration_params::kStopLdsString.c_str();
 
   // Starting LDS
   std::cout << "Starting LDS Closed Loop" << std::endl;
@@ -415,11 +490,13 @@ int main(int argc, char **argv) {
   // Test if CameraDevice was created
   if (camera_ == nullptr) {
     std::cout << "[ERROR] Camera device could not be created." << std::endl;
+    terminate();
     return -1;
   }
   // Initialize()
   if ((status = camera_->initialize()) != royale::CameraStatus::SUCCESS) {
     std::cout << royale::getStatusString(status).c_str() << std::endl;
+    terminate();
     return -1;
   }
 
@@ -435,12 +512,14 @@ int main(int argc, char **argv) {
   if (current_use_case != useCase_LDS) {
     if ((status = camera_->getUseCases(useCaseList)) != royale::CameraStatus::SUCCESS || useCaseList.empty()) {
       std::cout << "[ERROR] Could not get use cases. " << royale::getStatusString(status).c_str() << std::endl;
+      terminate();
       return -1;
     }
     for (auto i = 0u; i < useCaseList.size(); ++i) {
       if (useCaseList.at(i) == useCase_LDS) {
         if ((status = camera_->setUseCase(useCaseList.at(i))) != royale::CameraStatus::SUCCESS) {
           std::cout << "[ERROR] Could not set a new use case. " << useCaseList[i].c_str() << "   " << royale::getStatusString(status).c_str() << std::endl;
+          terminate();
           return -1;
         }
       }
@@ -452,11 +531,13 @@ int main(int argc, char **argv) {
   listener_.reset(new MyListener());
   if ((status = camera_->registerDataListenerExtended(listener_.get())) != royale::CameraStatus::SUCCESS) {
     std::cout << "[ERROR] Could not register the extended data listener" << royale::getStatusString(status).c_str() << std::endl;
+    terminate();
     return -1;
   }
 
   if ((status = camera_->setExposureMode(royale::ExposureMode::MANUAL)) != royale::CameraStatus::SUCCESS) {
     std::cout << "[ERROR] Could not set exposure to manual" << royale::getStatusString(status).c_str() << std::endl;
+    terminate();
     return -1;
   }
 
@@ -464,11 +545,13 @@ int main(int argc, char **argv) {
   royale::Pair<std::uint32_t, std::uint32_t> exposure_limits;
   if ((status = camera_->getExposureLimits(exposure_limits)) != royale::CameraStatus::SUCCESS) {
     std::cout << "[ERROR] Could not get exposure limits. " << royale::getStatusString(status).c_str() << std::endl;
+    terminate();
     return -1;
   }
 
   if ((status = camera_->setExposureTime(exposure_limits.second)) != royale::CameraStatus::SUCCESS) {
     std::cout << "[ERROR] setting exposure time to: " << exposure_limits.second << royale::getStatusString(status).c_str() << std::endl;
+    terminate();
     return -1;
   }
   current_exposure = exposure_limits.second;
@@ -479,13 +562,18 @@ int main(int argc, char **argv) {
   // Start Capture
   if ((status = camera_->startCapture()) != royale::CameraStatus::SUCCESS) {
     std::cout << "[ERROR] Could not start video capture." << std::endl;
+    terminate();
     return -1;
   }
+
   // capture for a few seconds
   std::this_thread::sleep_for(std::chrono::seconds(3));
 
   // Set camera properties
-  if (setCameraProperties(camera_) == -1) return -1;
+  if (setCameraProperties(camera_) == -1) {
+    terminate();
+    return -1;
+  }
 
   // warm up camera
   std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -509,7 +597,11 @@ int main(int argc, char **argv) {
   // Continue to look for LDS laser signal locations until the number of collected samples exceeds the kLdsSampleSize and
   // the points are not sufficiently spread across the width of the sensor.  A robust solution for an accurate plane increases
   // as both of these criteria are met.  The chances of catching the LDS signal increase by incrementally varying the exposure.
-  while (xy_vals.size() < static_cast<size_t>(kLdsSampleSize) || col_range < ToF_calibration_params::kLdsPtsPlaneFitMinRange) {
+  // In case a system cannot be calibrated the application will exit after a user specified timeout is reached.  If not specified
+  // the default timeout is 90 seconds.
+  timer.start();
+  while (timer.elapsedSeconds() < calibration_timeout_seconds &&
+        ((xy_vals.size() < static_cast<size_t>(kLdsSampleSize) || col_range < ToF_calibration_params::kLdsPtsPlaneFitMinRange))) {
     std::unique_lock<std::mutex> lock(cloudMutex);
     auto timeOut = (std::chrono::system_clock::now() + std::chrono::milliseconds(1000));
     if (cloudCV.wait_until(lock, timeOut, [&] { return newDataAvailable; })) {
@@ -525,8 +617,6 @@ int main(int argc, char **argv) {
     // Update the exposure if points were detected
     if (num_new_collected > 0) {
       listener_.get()->setDataCollectionMode(MyListener::DataCollectionMode::NONE);
-      std::this_thread::sleep_for(std::chrono::milliseconds(200));
-
       num_new_collected = 0;
       // Adjust the exposure
       if (exposure_going_down) {
@@ -544,8 +634,16 @@ int main(int argc, char **argv) {
       }
 
       if (inRange(exposure_limits, current_exposure)) {
-        if ((status = camera_->setExposureTime(current_exposure)) != royale::CameraStatus::SUCCESS) {
-          std::cout << "[ERROR] setting exposure time to: " << current_exposure << royale::getStatusString(status).c_str() << std::endl;
+        int exposure_retries = 0;
+        // Update exposure setting and retry several times if camera is busy
+        while ((status = camera_->setExposureTime(current_exposure)) != royale::CameraStatus::SUCCESS && exposure_retries <= ToF_calibration_params::kNumExposureRetries) {
+          std::this_thread::sleep_for(std::chrono::milliseconds(300));
+          exposure_retries++;
+        }
+
+        if (exposure_retries == ToF_calibration_params::kNumExposureRetries) {
+          std::cout << "[ERROR] can't set exposure time to: " << current_exposure << royale::getStatusString(status).c_str() << std::endl;
+          terminate();
           return -1;
         }
       }
@@ -553,11 +651,26 @@ int main(int argc, char **argv) {
     }
   }
 
+  if (timer.elapsedSeconds() > calibration_timeout_seconds) {
+    std::cout << "[WARNING] Timer Has Expired at " << timer.elapsedSeconds() << " seconds." << std::endl;
+  }
+
   // Set collect data mode to NONE
   listener_.get()->setDataCollectionMode(MyListener::DataCollectionMode::NONE);
 
+  // Check if a sufficient number of LDS points were detected
+  if (xy_vals.size() < 2) {
+    std::cout << "[ERROR] No finding enough LDS points, increase the timeout" << std::endl;
+    terminate();
+    return -1;
+  }
+
   // Remove duplicate points
-  RemoveDuplicates(xy_vals);
+  if (!RemoveDuplicates(xy_vals)) {
+    std::cout << "[ERROR] No finding enough LDS points, increase the timeout" << std::endl;
+    terminate();
+    return -1;
+  }
 
   // Stopping LDS
   std::cout << "Stopping LDS Closed Loop" << std::endl;
@@ -568,6 +681,7 @@ int main(int argc, char **argv) {
     if (useCaseList.at(i) == useCase_TOF) {
       if ((status = camera_->setUseCase(useCaseList.at(i))) != royale::CameraStatus::SUCCESS) {
         std::cout << "[ERROR] Could not set a new use case. " << useCaseList[i].c_str() << "   " << royale::getStatusString(status).c_str() << std::endl;
+        terminate();
         return -1;
       }
     }
@@ -577,18 +691,21 @@ int main(int argc, char **argv) {
 
   if ((status = camera_->setExposureMode(royale::ExposureMode::MANUAL)) != royale::CameraStatus::SUCCESS) {
     std::cout << "[ERROR] Could not set exposure to manual" << royale::getStatusString(status).c_str() << std::endl;
+    terminate();
     return -1;
   }
 
   // Get Exposure Limits
   if ((status = camera_->getExposureLimits(exposure_limits)) != royale::CameraStatus::SUCCESS) {
     std::cout << "[ERROR] Could not get exposure limits. " << royale::getStatusString(status).c_str() << std::endl;
+    terminate();
     return -1;
   }
 
   if (inRange(exposure_limits, tof_exposure_time)) {
     if ((status = camera_->setExposureTime(tof_exposure_time)) != royale::CameraStatus::SUCCESS) {
       std::cout << "[ERROR] setting exposure time to: " << tof_exposure_time << royale::getStatusString(status).c_str() << std::endl;
+      terminate();
       return -1;
     }
   } else {
@@ -598,7 +715,11 @@ int main(int argc, char **argv) {
   }
 
   // Set camera properties
-  if (setCameraProperties(camera_) == -1) return -1;
+  if (setCameraProperties(camera_) == -1) {
+    terminate();
+    return -1;
+  }
+
 
   // wait for camera
   std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -642,10 +763,8 @@ int main(int argc, char **argv) {
   lds_pt_1.y = static_cast<float>(beta * (static_cast<double>(cam_width) - 1.) + b_zero);
 
   // Laser offset from the LDS center
-  double lds_center_to_laser_angle = 57.;        // Degrees
-  double lds_center_to_laser_distance = 22.768;  // Millimeters
-  double z_trans_lds = lds_center_to_laser_distance * cos(lds_center_to_laser_angle * (M_PI / 180.));
-  double x_trans_lds = lds_center_to_laser_distance * sin(lds_center_to_laser_angle * (M_PI / 180.));
+  double z_trans_lds = ToF_calibration_params::kLdsCenterToLaserDistance * cos(ToF_calibration_params::kLdsCenterToLaserAngle * (M_PI / 180.));
+  double x_trans_lds = ToF_calibration_params::kLdsCenterToLaserDistance * sin(ToF_calibration_params::kLdsCenterToLaserAngle * (M_PI / 180.));
   cv::Mat lds_offset = cv::Mat::eye(4, 4, CV_32F);
   lds_offset.at<float>(0, 3) = static_cast<float>(x_trans_lds);
   lds_offset.at<float>(2, 3) = static_cast<float>(z_trans_lds);
@@ -655,12 +774,11 @@ int main(int argc, char **argv) {
 
   int confident_image_index = 0;
   // Use a hightly confident pixel threshold
-  float confident_pixel_threshold = 200.0f;
   std::vector<cv::Point3f> pt_3d_vector;
   for (int row = 0; row < line_image.rows; ++row) {
     uchar *line_image_ptr = line_image.ptr<uchar>(row);
     for (int col = 0; col < line_image.cols; ++col) {
-      if ((line_image_ptr[col] > 0) && (confident_pixel[confident_image_index].Mean() > confident_pixel_threshold)) {
+      if ((line_image_ptr[col] > 0) && (confident_pixel[confident_image_index].Mean() > ToF_calibration_params::kConfidentPixelThreshold)) {
         cv::Point3f pt_3d(pt_x_running_stat[confident_image_index].Mean() * 1000.0f, pt_y_running_stat[confident_image_index].Mean() * 1000.0f,
                           pt_z_running_stat[confident_image_index].Mean() * 1000.0f);
         pt_3d_vector.push_back(pt_3d);
@@ -670,7 +788,7 @@ int main(int argc, char **argv) {
   }
 
   // Add in LDS position
-  cv::Point3f P3(0.0f, -15.0f, -250.683f);
+  cv::Point3f P3(ToF_calibration_params::kLdsOffsetX, ToF_calibration_params::kLdsOffsetY, ToF_calibration_params::kLdsOffsetZ);
   P3.x = P3.x + static_cast<float>(x_trans_lds);
   P3.z = P3.z + static_cast<float>(z_trans_lds);
   pt_3d_vector.push_back(P3);
@@ -724,7 +842,7 @@ int main(int argc, char **argv) {
   // into the LDS coordinate system with Tform_TOF_to_LDS
   // and the distance of the result to [0,0,0] is the error.
   // This can be found by taking the norm of the result.
-  cv::Mat_<float> lds_pos_in_tof = (cv::Mat_<float>(4, 1) << 0.0f, -15.0f, -250.683f, 1.0f);
+  cv::Mat_<float> lds_pos_in_tof = (cv::Mat_<float>(4, 1) << ToF_calibration_params::kLdsOffsetX, ToF_calibration_params::kLdsOffsetY, ToF_calibration_params::kLdsOffsetZ, 1.0f);
   cv::Mat trans_check = Tform_TOF_to_LDS * lds_pos_in_tof;
   cv::Mat_<float> trans_check2 = (cv::Mat_<float>(3, 1) << trans_check.at<float>(0, 0), trans_check.at<float>(1, 0), trans_check.at<float>(2, 0));
   double distance_check = cv::norm(trans_check2);
@@ -750,9 +868,10 @@ int main(int argc, char **argv) {
   if (distance_check > 3.) {
     std::cout << "[FAIL]: Distance Check " << distance_check << " is over limit of 3 mm." << std::endl;
     std::cout << "Retry Calibration, Set Aside If Continues to Fail." << std::endl;
+    terminate();
     return -1;
   } else {
-    std::cout << "[PASS]: Distance Check " << distance_check << " < 3 mm." << std::endl;
+    std::cout << "[PASS]: Distance Check " << distance_check*1000. << " mm < 3mm" << std::endl;
   }
 
   std::string filename = "/user/transformation_matrix_tof_into_lds.conf";
@@ -808,8 +927,6 @@ int main(int argc, char **argv) {
       pointFile.close();
     }
   */
-  if (camera_->stopCapture() != royale::CameraStatus::SUCCESS) {
-    std::cout << "Error stopping camera" << std::endl;
-  }
+  terminate();
   return 0;
 }

@@ -76,11 +76,70 @@ static const std::pair<float, float> amplitude_min_min(0.0, 1000.0);
 }  // namespace ToF_testing_limits
 
 namespace ToF_calibration_params {
+
+/*
+
+ToF Coordinate Frame
+
+      ToF Camera
+       _________
+      //       /`\
+      K    +--|--------------> Z-axis
+      \\__/|___\./
+_________/_|______________________________
+        /  |                             /
+       /   |                            /
+      /    |                           /
+    \/     V Y-axis                   /
+ X-axis                              /
+                             FLOOR  /
+___________________________________/
+
+Robot LDS Coordinate Frame
+,----------------------*
+|                       **
+|     ^                  **
+|     | X-axis            *
+|     |                   **
+|    _|_                  **
+|   / | \                 /|
+|  |  +--|---------->     [+
+|   \___/     Y-axis      \|
+|                         **
+|                         **
+|                         *
+|                        **
+|                       **
+|______________________*
+
+*/
+// Default calibration timeout in seconds
+static const int kCalibrationTtimeoutSeconds(60);
+// Roboctrl command to Start LDS
+static const std::string kStartLdsString = "roboctrl -d b";
+// Roboctrl command to Stop LDS
+static const std::string kStopLdsString = "roboctrl -d s";
+// Laser offset from the LDS center
+static const double kLdsCenterToLaserAngle = 57.;  // Degrees
+static const double kLdsCenterToLaserDistance = 22.768;  // Millimeters
+// ToF to LDS position offset as taken from Mechanical drawings
+// R
+// ToF sensor origin is a focal point of lens
+// LDS origin is at center of rotation
+// X offset
+static const float kLdsOffsetX(0.0f);
+// Y offset
+static const float kLdsOffsetY(-15.0f);
+// Z offset
+static const float kLdsOffsetZ(-250.683f);
+// Exposure update retry threshold
+static const int kNumExposureRetries(5);
 // LDS Detection Threshold - Intensity values > threshold are considered signal from the LDS laser
 static const float kLdsDetectionThreshold(30.0f);
-
 // LDS Sample Size - Required sample size of detected LDS intensity points for line fitting.
 static const int kLdsSampleSize(1000);
+// TOF pixel high confidence threshold
+static const float kConfidentPixelThreshold(200.0f);
 // TOF Sample Size - Number of ToF depth frames to average over and reduce temporal noise
 static const int kTofSampleSize(100);
 // Row & Column Detection Bounds - Clip noisy areas and look between row:(top, bottom), col:(left,right) for LDS intensity signal.
