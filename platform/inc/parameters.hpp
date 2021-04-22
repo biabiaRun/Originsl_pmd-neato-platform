@@ -57,22 +57,22 @@ namespace ToF_testing_limits {
 // Depth metrics were specified by PMD and Amplitude metrics are specific to our custom diffuser and values were
 // determined by statistical sampling.
 // A pair defines the range (min,max) for the specific test to pass.
-static const int confident_pixel_count(34000);
-static const float ground_truth_distance_check(0.003f);
-static const std::pair<float, float> depth_precision_spatial(-0.013, 0.013);
-static const std::pair<float, float> depth_precision_temporal(-0.01, 0.01);
-static const std::pair<float, float> depth_precision_temporal_Q90(-0.01, 0.01);
-static const std::pair<float, float> single_shot_depth_error(-0.013, 0.013);
-static const std::pair<float, float> depth_accuracy(-0.013, 0.013);
-static const std::pair<float, float> depth_accuracy_percent(-10.0, 10.0);
-static const std::pair<float, float> depth_accuracy_percent_Q90(-10.0, 10.0);
-static const std::pair<float, float> amplitude_std_temporal(0.0, 150.0);
-static const std::pair<float, float> amplitude_std(0.0, 350.0);
-static const std::pair<float, float> amplitude_mean(0.0, 600.0);
-static const std::pair<float, float> amplitude_max(0.0, 2000.0);
-static const std::pair<float, float> amplitude_min(0.0, 1000.0);
-static const std::pair<float, float> amplitude_max_max(0.0, 2000.0);
-static const std::pair<float, float> amplitude_min_min(0.0, 1000.0);
+static const int kConfidentPixelCount(34000);
+static const float kGroundTruthDistanceCheck(0.003f);
+static const std::pair<float, float> kDepthPrecisionSpatial(-0.013, 0.013);
+static const std::pair<float, float> kDepthPrecisionTemporal(-0.01, 0.01);
+static const std::pair<float, float> kDepthPrecisionTemporalQ90(-0.01, 0.01);
+static const std::pair<float, float> kSingleShotDepthError(-0.013, 0.013);
+static const std::pair<float, float> kDepthAccuracy(-0.013, 0.013);
+static const std::pair<float, float> kDepthAccuracyPercent(-10.0, 10.0);
+static const std::pair<float, float> kDepthAccuracyPercentQ90(-10.0, 10.0);
+static const std::pair<float, float> kAmplitudeStdTemporal(0.0, 150.0);
+static const std::pair<float, float> kAmplitudeStd(0.0, 350.0);
+static const std::pair<float, float> kAmplitudeMean(0.0, 600.0);
+static const std::pair<float, float> kAmplitudeMax(0.0, 2000.0);
+static const std::pair<float, float> kAmplitudeMin(0.0, 1000.0);
+static const std::pair<float, float> kAmplitudeMaxMax(0.0, 2000.0);
+static const std::pair<float, float> kAmplitudeMinMin(0.0, 1000.0);
 }  // namespace ToF_testing_limits
 
 namespace ToF_calibration_params {
