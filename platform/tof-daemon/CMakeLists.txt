@@ -38,17 +38,20 @@ include_directories(
 set (CMAKE_CXX_STANDARD 11)
 
 find_package(Threads)
+find_package(ZLIB)
 
 set(LIBS
   pthread
+  systemd 
+  zmq
+  neatoipc
   )
 
 set(SOURCES
-  "${CMAKE_CURRENT_SOURCE_DIR}/tof-daemon.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/tof_daemon.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/pipeline_listener.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/PracticalSocket.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/otsu_threshold.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/localize.cpp"
   )
 
 add_executable(tof-daemon-prog
@@ -57,5 +60,5 @@ add_executable(tof-daemon-prog
 
 install(TARGETS tof-daemon-prog DESTINATION ${ROYALE_INSTALL_BIN_DIR})
 
-target_link_libraries(tof-daemon-prog platform ${CMAKE_THREAD_LIBS_INIT} ${LIBS} ${OpenCV_LIBS})
+target_link_libraries(tof-daemon-prog platform ${CMAKE_THREAD_LIBS_INIT} ${LIBS} ${OpenCV_LIBS} neatoipc zmq)
 #target_link_libraries(tof-daemon-prog platform "${TENSORFLOW_LIB}" ${OpenCV_LIBS})

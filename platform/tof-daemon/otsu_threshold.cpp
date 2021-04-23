@@ -1,37 +1,33 @@
-/*
- * otsu_threshold.cpp
- *
- * Class implementation of Otsu Thresholding.
- */
-
 #include "otsu_threshold.h"
 
 #include <float.h>
 #include <math.h>
 
-otsu_threshold::otsu_threshold() {
-  num_hist_bins = 256;
-  hist_buff = new uint8_t[256]();
+OtsuThresholding::OtsuThresholding() {
+  otsu_threshold_ = 0;
+  histogram_buffer_ = new uint8_t[kNumHistogramBins]();
 }
 
-otsu_threshold::~otsu_threshold() {
-  if (hist_buff) delete[] hist_buff;
+OtsuThresholding::~OtsuThresholding() {
+  if (histogram_buffer_)
+    delete[] histogram_buffer_;
 }
 
-void otsu_threshold::init_buffer() { memset(hist_buff, 0, num_hist_bins * sizeof(uint8_t)); }
+void OtsuThresholding::InitializeBuffer() {
+  memset(histogram_buffer_, 0, kNumHistogramBins * sizeof(uint8_t));
+}
 
-int otsu_threshold::get_threshold(const cv::Mat& img_roi) {
-  const int N = num_hist_bins;
+void OtsuThresholding::CalculateThreshold(const cv::Mat &img_roi) {
   int i, j;
   int num_pixels = img_roi.cols * img_roi.rows;
-  init_buffer();
+  InitializeBuffer();
 
   for (i = 0; i < img_roi.rows; i++) {
-    const uint8_t* src = img_roi.ptr<uint8_t>(i, 0);
+    const uint8_t *src = img_roi.ptr<uint8_t>(i, 0);
     j = 0;
     for (; j < img_roi.cols; j++) {
       if (src[j] < 255) {
-        hist_buff[src[j]]++;
+        histogram_buffer_[src[j]]++;
       } else {
         num_pixels--;
       }
@@ -40,8 +36,8 @@ int otsu_threshold::get_threshold(const cv::Mat& img_roi) {
 
   double mu = 0.;
   double scale = 1. / num_pixels;
-  for (i = 0; i < N; i++) {
-    mu += i * (double)hist_buff[i];
+  for (i = 0; i < kNumHistogramBins; i++) {
+    mu += i * (double)histogram_buffer_[i];
   }
   mu *= scale;
 
@@ -50,15 +46,16 @@ int otsu_threshold::get_threshold(const cv::Mat& img_roi) {
   double max_sigma = 0.;
   int max_val = 0.;
 
-  for (i = 0; i < N; i++) {
+  for (i = 0; i < kNumHistogramBins; i++) {
     double p_i, q2, mu2, sigma;
 
-    p_i = hist_buff[i] * scale;
+    p_i = histogram_buffer_[i] * scale;
     mu1 *= q1;
     q1 += p_i;
     q2 = 1. - q1;
 
-    if (std::min(q1, q2) < FLT_EPSILON || std::max(q1, q2) > 1. - FLT_EPSILON) continue;
+    if (std::min(q1, q2) < FLT_EPSILON || std::max(q1, q2) > 1. - FLT_EPSILON)
+      continue;
 
     mu1 = (mu1 + i * p_i) / q1;
     mu2 = (mu - q1 * mu1) / q2;
@@ -68,5 +65,7 @@ int otsu_threshold::get_threshold(const cv::Mat& img_roi) {
       max_val = i;
     }
   }
-  return max_val;
+
+  // Set the threshold member variable to the calculated value
+  otsu_threshold_ = max_val;
 }

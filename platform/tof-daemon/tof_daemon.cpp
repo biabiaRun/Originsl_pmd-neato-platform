@@ -1,0 +1,1109 @@
+
+#include "tof_daemon.h"
+#include "frame_queue.h"
+#include "pipeline_listener.h"
+
+/*****************************************
+ * Utility Functions
+ *****************************************/
+bool CreateDirectory(std::string path) {
+  bool path_created = false;
+  // Try and create the directory without any special read and write premissions
+  int mkdir_status = mkdir(path.c_str(), 0775);
+  if (mkdir_status == -1) {
+    switch (errno) {
+    case ENOENT:
+      // In this case, the path prefix specified does not exist so we will try
+      // to create it
+      if (CreateDirectory(path.substr(0, path.find_last_of('/'))))
+        // Now we try to create the full path again
+        path_created = 0 == mkdir(path.c_str(), 0775);
+      else
+        path_created = false;
+      break;
+    case EEXIST:
+      // In this case the path already exists so we can return true
+      path_created = true;
+      break;
+    default:
+      path_created = false;
+      break;
+    }
+  } else {
+    path_created = true;
+  }
+  return path_created;
+}
+
+static int RemoveFiles(const char *pathname, const struct stat *sbuf, int type,
+                       struct FTW *ftwb) {
+  // Since we are just removing all the files from the pathname, we can ignore
+  // the other parameters
+  (void)sbuf;
+  (void)type;
+  (void)ftwb;
+  // Try to remove the given file path
+  if (remove(pathname) < 0) {
+    syslog(LOG_ERR, "Error: Failed to remove files\n");
+    return -1;
+  }
+  return 0;
+}
+
+/*****************************************
+ * TOFDaemon Class Functions
+ *****************************************/
+void TOFDaemon::Shutdown() {
+  // Unlock the lock file
+  if (lock_fd_ >= 0) {
+    if (lockf(lock_fd_, F_ULOCK, 0) < 0) {
+      syslog(LOG_ERR, "Error %d: Failed to unlock lock file: %s\n", errno,
+             strerror(errno));
+    }
+
+    // Close the file descriptor and remove the lock file
+    close(lock_fd_);
+    lock_fd_ = -1;
+    unlink(LOCK_FILE);
+  }
+}
+
+void TOFDaemon::InitializeNeuralNet() {
+  // Initialize the classes that can be detected
+  InitializeClasses();
+
+  // Neural Network Setup - For Tensorflow
+  /*
+  class_names_.push_back("unlabeled");
+  class_names_.push_back("sock");
+  // Load Model
+  Model model("/home/root/sdk/upload/frozen_inference_graph.pb");
+  Tensor outNames1{model, "num_detections"};
+  Tensor outNames2{model, "detection_scores"};
+  Tensor outNames3{model, "detection_boxes"};
+  Tensor outNames4{model, "detection_classes_"};
+  Tensor inpName{model, "image_tensor"};
+  */
+
+  // Try to load the neural net for opencv
+  try {
+    net_ = dnn::readNetFromTensorflow(
+        "/home/root/sdk/install/frozen_inference_graph.pb",
+        "/home/root/sdk/install/MobileNetV2.pbtxt");
+  } catch (cv::Exception &e) {
+    const char *err_msg = e.what();
+    syslog(LOG_ERR, "Error: %s\n", err_msg);
+    Shutdown();
+    // Mark the initialization as a fail
+    init_successful_ = false;
+  }
+
+  // Check that the neural net is not empty
+  if (net_.empty()) {
+    syslog(LOG_ERR, "Error loading the network model.\n");
+    Shutdown();
+    // Mark the initialization as a fail
+    init_successful_ = false;
+  } else {
+    syslog(LOG_NOTICE, "Loaded the network model.\n");
+  }
+
+  // TODO(CodeCleanup): Can this be removed?
+  // OpencCV uses the center of pixel as index origin
+  // While tensorflow uses the top/left corner of the pixel
+  // So in order to match Tensorflow we need to shift by 1/2 pixel
+  // https://towardsdatascience.com/image-read-and-resize-with-opencv-tensorflow-and-pil-3e0f29b992be
+  // https://github.com/opencv/opencv/issues/9096
+  /*
+  cv::Mat H1 = cv::Mat::eye(3,3, CV_32F);
+  H1.at<float>(0,2) = -0.5f;
+  H1.at<float>(1,2) = -0.5f;
+  cv::Mat H2 = cv::Mat::eye(3,3, CV_32F);
+  H2.at<float>(0,0) = 224.0f / 300.0f;
+  H2.at<float>(1,1) = 172.0f / 300.0f;
+  cv::Mat H3 = cv::Mat::eye(3,3, CV_32F);
+  H3.at<float>(0,2) = 0.5f;
+  H3.at<float>(1,2) = 0.5f;
+
+  cv::Mat H123 = H1*H2*H3;
+  cv::Mat M = H123 / H123.at<float>(2,2);
+  cv::Mat Hfinal = M(cv::Range(0,2), cv::Range(0,3));
+  */
+}
+
+void TOFDaemon::InitializeClasses() {
+  // TODO(CodeCleanup): Maybe this should read from a config file to describe
+  // all the classes possible.
+  classes_.push_back(std::string("Fabric"));
+  classes_.push_back(std::string("Cord"));
+}
+
+void TOFDaemon::InitializeStreamingSockets() {
+  live_video_socket_params_ = {"192.168.86.43", "10000", 0};
+  // live_video_socket_params_ = {"10.100.32.124", "10000", 0};
+  if (live_stream_video_) {
+    live_video_socket_params_.socket_port =
+        Socket::resolveService(live_video_socket_params_.port_string, "udp");
+    live_video_socket_.reset(new UDPSocket());
+  }
+
+  live_localization_socket_params_ = {"192.168.86.43", "10010", 0};
+  // live_localization_socket_params_ = {"10.100.32.124", "10010", 0};
+  if (live_localization_) {
+    live_localization_socket_params_.socket_port = Socket::resolveService(
+        live_localization_socket_params_.port_string, "udp");
+    live_localization_socket_.reset(new UDPSocket());
+  }
+
+  live_plot_socket_params_ = {"192.168.86.43", "10020", 0};
+  // live_plot_socket_params_ = {"10.100.32.124", "10020", 0};
+  if (live_plot_) {
+    live_plot_socket_params_.socket_port =
+        Socket::resolveService(live_plot_socket_params_.port_string, "udp");
+    live_plot_socket_.reset(new UDPSocket());
+  }
+}
+
+int TOFDaemon::Daemonize(const char *daemon_name, const char *daemon_path,
+                         const char *outfile, const char *errfile,
+                         const char *infile) {
+  const char *DEFAULT_FILE = "/dev/null";
+
+  if (!infile)
+    infile = DEFAULT_FILE;
+  if (!outfile)
+    outfile = DEFAULT_FILE;
+  if (!errfile)
+    errfile = DEFAULT_FILE;
+
+  // Open syslog
+  openlog(daemon_name, LOG_PID, LOG_DAEMON);
+  syslog(LOG_INFO, "Entering ToF Daemon");
+
+  // Fork the parent to create a child process
+  pid_t child = fork();
+  if (child < 0) {
+    // ERROR: Failed to fork().
+    fprintf(stderr, "Error %d: failed to fork: %s", errno, strerror(errno));
+    syslog(LOG_ERR, "Error %d: failed to fork: %s", errno, strerror(errno));
+    return EXIT_FAILURE;
+  }
+  if (child > 0) {
+    // Parent process.  Parent exits.
+    exit(EXIT_SUCCESS);
+  }
+
+  // Create a new Signature Id for the child
+  if (setsid() < 0) {
+    // ERROR: Failed to become session leader
+    fprintf(stderr, "Error %d: failed to setsid: %s", errno, strerror(errno));
+    syslog(LOG_ERR, "Error %d: failed to setsid: %s", errno, strerror(errno));
+    return EXIT_FAILURE;
+  }
+
+  // Child initialize signal handlers
+  signal(SIGCHLD, SIG_IGN); // Ignore SigChild
+  signal(SIGINT, sigint_handler);
+  signal(SIGHUP, sighup_handler);
+
+  // Spawn a "grandchild" process; this guarantees that we removed the session
+  // leading process
+  child = fork();
+  if (child < 0) {
+    // ERROR: Creating grandchild process failed
+    fprintf(stderr, "Error %d: failed to fork: %s", errno, strerror(errno));
+    syslog(LOG_ERR, "Error %d: failed to fork: %s", errno, strerror(errno));
+    return EXIT_FAILURE;
+  }
+  if (child > 0) {
+    // Parent (child process) also exits, leaving only the grandchild process
+    // active
+    exit(EXIT_SUCCESS);
+  }
+
+  // New permissions
+  umask(0);
+
+  // Change to path directory
+  if (chdir(daemon_path) < 0) {
+    // ERROR: Failed to change grandchild's directory
+    fprintf(stderr, "Error %d: failed to chdir: %s", errno, strerror(errno));
+    return EXIT_FAILURE;
+  }
+
+  // Close all open file descriptors
+  int fd;
+  for (fd = static_cast<int>(sysconf(_SC_OPEN_MAX)); fd > 0; --fd) {
+    close(fd);
+  }
+
+  // Reopen stdin/stdout/stderr, pointing to the specified files
+  stdin = fopen(infile, "r");    // File descriptor 0
+  stdout = fopen(outfile, "w+"); // File descriptor 1
+  stderr = fopen(errfile, "w+"); // File descriptor 2
+
+  // Create a "lock file" whose appearance indicates that the TOFDaemon is
+  // already created
+  lock_fd_ = open(LOCK_FILE, O_RDWR | O_CREAT, 0640);
+  if (lock_fd_ < 0) {
+    // ERROR: failed to create lock file
+    syslog(LOG_ERR, "Error %d: failed to open lock file %s: %s", errno,
+           LOCK_FILE, strerror(errno));
+    return EXIT_FAILURE;
+  }
+
+  // Check if the lock file has been locked
+  if (lockf(lock_fd_, F_TLOCK, 0) < 0) {
+    // ERROR: Lock already applied
+    syslog(LOG_ERR, "Error: tried to run TOFDaemon twice");
+    exit(0);
+  }
+
+  // Daemon created; write the PID to the lock file
+  char str[16];
+  snprintf(str, sizeof(str), "%d\n", getpid());
+  if (write(lock_fd_, str, strlen(str)) < 0) {
+    // ERROR: Failed to write PID to lock file
+    syslog(LOG_ERR, "Error %d: Failed to write PID to lock file %s: %s", errno,
+           LOCK_FILE, strerror(errno));
+    return EXIT_FAILURE;
+  }
+
+  return 0;
+}
+
+void TOFDaemon::InitializeTOFDataStorage() {
+  // Create unique folder identifier from timestamp
+  char folder_id[100];
+  time_t cur_time = time(NULL);
+  const std::string FORMATSTRING("%Y-%m-%d_%H-%M-%S");
+  strftime(folder_id, sizeof(folder_id), FORMATSTRING.c_str(),
+           gmtime(&cur_time));
+
+  IR_FOLDER = LOCAL_DATA_PATH + std::string(folder_id) + IR_FOLDER;
+  PTCLOUD_FOLDER = LOCAL_DATA_PATH + std::string(folder_id) + PTCLOUD_FOLDER;
+  DEPTH_IMAGE_FOLDER =
+      LOCAL_DATA_PATH + std::string(folder_id) + DEPTH_IMAGE_FOLDER;
+  CALIBRATION_FOLDER =
+      LOCAL_DATA_PATH + std::string(folder_id) + CALIBRATION_FOLDER;
+
+  // Clean out the LOCAL_DATA_PATH folder by removing it
+  if (nftw(LOCAL_DATA_PATH.c_str(), RemoveFiles, 10,
+           FTW_DEPTH | FTW_MOUNT | FTW_PHYS) < 0) {
+    syslog(LOG_ERR, "Failed to clean up TOF %s output directory",
+           LOCAL_DATA_PATH.c_str());
+  } else {
+    syslog(LOG_ERR, "Cleaned up TOF %s output directory",
+           LOCAL_DATA_PATH.c_str());
+  }
+  // Create the output directories
+  if (!CreateDirectory(IR_FOLDER)) {
+    syslog(LOG_ERR, "Failed to make new TOF %s output directory",
+           IR_FOLDER.c_str());
+  } else {
+    syslog(LOG_NOTICE, "Created new TOF %s output directory",
+           IR_FOLDER.c_str());
+  }
+  if (!CreateDirectory(PTCLOUD_FOLDER)) {
+    syslog(LOG_ERR, "Failed to make new TOF %s output directory",
+           PTCLOUD_FOLDER.c_str());
+  } else {
+    syslog(LOG_NOTICE, "Created new TOF %s output directory",
+           PTCLOUD_FOLDER.c_str());
+  }
+  if (!CreateDirectory(DEPTH_IMAGE_FOLDER)) {
+    syslog(LOG_ERR, "Failed to make new TOF %s output directory",
+           DEPTH_IMAGE_FOLDER.c_str());
+  } else {
+    syslog(LOG_NOTICE, "Created new TOF %s output directory",
+           DEPTH_IMAGE_FOLDER.c_str());
+  }
+  if (!CreateDirectory(CALIBRATION_FOLDER)) {
+    syslog(LOG_ERR, "Failed to make new TOF %s output directory",
+           CALIBRATION_FOLDER.c_str());
+  } else {
+    syslog(LOG_NOTICE, "Created new TOF %s output directory",
+           CALIBRATION_FOLDER.c_str());
+  }
+}
+
+void TOFDaemon::SavePointCloud(const std::string &filename,
+                               const std::string &filename_gray,
+                               const std::vector<float> *vec_x,
+                               const std::vector<float> *vec_y,
+                               const std::vector<float> *vec_z,
+                               const std::vector<uint16_t> *vec_gray) {
+  std::ofstream outputFile;
+  std::stringstream stringStream;
+
+  std::ofstream outputFile_gray;
+  std::stringstream stringStream_gray;
+  uint16_t mask = 255;
+
+  outputFile_gray.open(filename_gray, std::ofstream::out);
+  if (outputFile_gray.fail()) {
+    std::cerr << "Outputfile " << filename_gray << " could not be opened!"
+              << std::endl;
+    return;
+  }
+
+  outputFile.open(filename, std::ofstream::out);
+  if (outputFile.fail()) {
+    std::cerr << "Outputfile " << filename << " could not be opened!"
+              << std::endl;
+    return;
+  } else {
+    // if the file was opened successfully write the PLY header
+    stringStream << "ply" << std::endl;
+    stringStream << "format ascii 1.0" << std::endl;
+    stringStream << "comment Generated by tof-daemon" << std::endl;
+    stringStream << "element vertex " << vec_x->size() << std::endl;
+    stringStream << "property float x" << std::endl;
+    stringStream << "property float y" << std::endl;
+    stringStream << "property float z" << std::endl;
+    stringStream << "element face 0" << std::endl;
+    stringStream << "property list uchar int vertex_index" << std::endl;
+    stringStream << "end_header" << std::endl;
+
+    // output XYZ coordinates into one line
+    for (size_t i = 0; i < vec_x->size(); ++i) {
+      stringStream << (*vec_x)[i] << " " << (*vec_y)[i] << " " << (*vec_z)[i]
+                   << std::endl;
+      stringStream_gray << ((*vec_gray)[i] & mask) << " "
+                        << (((*vec_gray)[i] >> 8) & mask) << std::endl;
+      // reconstruct like this: gray_val = byte_low | (byte_high << 8);
+    }
+    // output stringstream to file and close it
+    outputFile << stringStream.str();
+    outputFile.close();
+
+    outputFile_gray << stringStream_gray.str();
+    outputFile_gray.close();
+  }
+}
+
+void TOFDaemon::Postprocess(const std::vector<Mat> &nn_outputs,
+                            std::vector<int> &class_ids,
+                            std::vector<float> &confidences,
+                            std::vector<cv::Rect> &boxes,
+                            std::vector<int> &indices,
+                            cv::Size2f &sensor_size_float) {
+  // The number of parameters for every object found
+  size_t kParamsPerNNOutput = 7;
+
+  // The offsets to the current detected object to extract the desired
+  // information
+  int kConfidenceIdxOffset = 2;
+  int kTopLeftXIdxOffset = 3;
+  int kTopLeftYIdxOffset = 4;
+  int kBottomRightXIdxOffset = 5;
+  int kBottomRightYIdxOffset = 6;
+
+  float detect_confidence;
+  int top_left_x, top_left_y, bottom_right_x, bottom_right_y;
+  int bbox_width, bbox_height;
+  cv::Size2i sensor_size_int(static_cast<int>(sensor_size_float.width),
+                             static_cast<int>(sensor_size_float.height));
+
+  for (size_t k = 0; k < nn_outputs.size(); k++) {
+    float *data = (float *)nn_outputs[k].data;
+    for (size_t loop_index = 0; loop_index < nn_outputs[k].total();
+         loop_index += kParamsPerNNOutput) {
+      detect_confidence = data[loop_index + kConfidenceIdxOffset];
+
+      // Only process the object if its confidence exceeds the threshold
+      if (detect_confidence > CONFIDENCE_THRESHOLD) {
+        top_left_x = (int)(data[loop_index + kTopLeftXIdxOffset] *
+                           sensor_size_float.width);
+        top_left_y = (int)(data[loop_index + kTopLeftYIdxOffset] *
+                           sensor_size_float.height);
+        bottom_right_x = (int)(data[loop_index + kBottomRightXIdxOffset] *
+                               sensor_size_float.width);
+        bottom_right_y = (int)(data[loop_index + kBottomRightYIdxOffset] *
+                               sensor_size_float.height);
+
+        // Ensure that the top left coordinates are 0 or positive
+        if (top_left_x < 0)
+          top_left_x = 0;
+        if (top_left_y < 0)
+          top_left_y = 0;
+
+        // Calculate the bounding box width and height
+        bbox_width = bottom_right_x - top_left_x + 1;
+        bbox_height = bottom_right_y - top_left_y + 1;
+
+        // Skip this detected object if the bounding boxes are invalid
+        if (bbox_width < 1)
+          continue;
+        if (bbox_height < 1)
+          continue;
+
+        // Ensure that the bounding box width and height does not exceed the
+        // dimensions of the sensor image
+        if ((top_left_x + bbox_width) > sensor_size_int.width)
+          bbox_width = sensor_size_int.width - top_left_x;
+        if ((top_left_y + bbox_height) > sensor_size_int.height)
+          bbox_height = sensor_size_int.height - top_left_y;
+
+        // Save the confidence, the class, and the bounding box of the detected
+        // object
+        // TODO(CodeCleanup): Why do we substract one here??????
+        class_ids.push_back((int)(data[loop_index + 1]) - 1);
+        boxes.push_back(Rect(top_left_x, top_left_y, bbox_width, bbox_height));
+        confidences.push_back(detect_confidence);
+      }
+    }
+  }
+
+  // Perform non-maximum supression on the detected bounding boxes to filter the
+  // output of the NN
+  cv::dnn::NMSBoxes(boxes, confidences, CONFIDENCE_THRESHOLD, NMS_THRESHOLD,
+                    indices);
+}
+
+void TOFDaemon::DrawPredictions(int class_id, float confidence, int left,
+                                int top, int right, int bottom, Mat &frame) {
+  // Create the bounding box for the object
+  rectangle(frame, Point(left, top), Point(right, bottom),
+            Scalar(255, 255, 255));
+
+  // Ensure that the class is valid and format the class with the confidence
+  // score
+  std::string label = format("%.2f", confidence);
+  if (!classes_.empty()) {
+    CV_Assert(class_id < (int)classes_.size());
+    label = classes_[class_id] + ": " + label;
+  }
+
+  // Create the box for the class and confidence display
+  int base_line;
+  Size label_size =
+      getTextSize(label, FONT_HERSHEY_SIMPLEX, 0.5, 1, &base_line);
+  top = max(top, label_size.height);
+  rectangle(frame, Point(left, top - label_size.height),
+            Point(left + label_size.width, top + base_line), Scalar::all(255),
+            FILLED);
+  putText(frame, label, Point(left, top), FONT_HERSHEY_SIMPLEX, 0.5, Scalar());
+}
+
+int TOFDaemon::ConnectTOFCamera() {
+  // Connect to the TOF sensor
+  camera_device_ = camera_factory_.createCamera();
+
+  if (camera_device_ == nullptr) {
+    // ERROR: Failed to connect to TOF sensor
+    syslog(LOG_NOTICE, "TOFDaemon: Error: Failed to connect to TOF sensor\n");
+    Shutdown();
+    return -1;
+  } else {
+    if (verbose_)
+      syslog(LOG_NOTICE,
+             "%s:%d: TOFDaemon successfully connected to TOF sensor\n",
+             __FUNCTION__, __LINE__);
+  }
+
+  // Initialize the camera
+  if (camera_device_->initialize() != royale::CameraStatus::SUCCESS) {
+    // ERROR: Failed to initialize the camera
+    syslog(LOG_ERR, "Error: Could not initialize camera\n");
+    Shutdown();
+    return -1;
+  } else {
+    if (verbose_)
+      syslog(LOG_NOTICE, "%s:%d: TOFDaemon successfully initialzed camera\n",
+             __FUNCTION__, __LINE__);
+  }
+
+  // retrieve available use cases
+  royale::Vector<royale::String> use_cases;
+  auto status = camera_device_->getUseCases(use_cases);
+  if (status != royale::CameraStatus::SUCCESS || use_cases.empty()) {
+    syslog(LOG_ERR, "Error retrieving use cases for the slave\n");
+    Shutdown();
+    return -1;
+  }
+
+  // choose use case "MODE_9_5FPS"
+  size_t selected_use_case_idx = 0;
+  bool use_case_found = false;
+  royale::String use_mode("MODE_9_5FPS");
+  for (size_t i = 0; i < use_cases.size(); ++i) {
+    if (verbose_)
+      syslog(LOG_ERR, "USE CASE : %s\n", use_cases[i].c_str());
+    if (use_cases[i] == use_mode) {
+      // we found the use case
+      selected_use_case_idx = i;
+      use_case_found = true;
+      break;
+    }
+  }
+  // check if we found a suitable use case
+  if (!use_case_found) {
+    syslog(LOG_ERR, "Error : Did not find MODE_9_5FPS\n");
+    Shutdown();
+    return -1;
+  }
+  // set use case
+  if (camera_device_->setUseCase(use_cases.at(selected_use_case_idx)) !=
+      royale::CameraStatus::SUCCESS) {
+    syslog(LOG_ERR, "Error setting use case %s for the slave\n",
+           use_mode.c_str());
+    Shutdown();
+    return -1;
+  }
+
+  // Modify the camera parameters and settings
+  royale::Vector<royale::StreamId> stream_ids;
+  camera_device_->getStreams(stream_ids);
+  royale::StreamId stream_id = stream_ids.front();
+
+  // Set camera exposure time
+  const std::uint32_t EXPOSURE_TIME_MS = 1000; // 0 -> Auto;
+  if (camera_device_->setExposureMode(royale::ExposureMode::MANUAL) !=
+      royale::CameraStatus::SUCCESS) {
+    // Error: Failed to set camera in manual exposure mode
+    syslog(LOG_ERR, "Error: Failed to set manual exposure\n");
+    Shutdown();
+    return -1;
+  }
+
+  if (camera_device_->setExposureTime(EXPOSURE_TIME_MS) !=
+      royale::CameraStatus::SUCCESS) {
+    // Error: Failed to set camera exposure time
+    syslog(LOG_ERR, "Error: Failed to set manual exposure time\n");
+    Shutdown();
+    return -1;
+  }
+
+  // Modifying camera parameters
+  royale::ProcessingParameterVector ppvec;
+  if (camera_device_->getProcessingParameters(ppvec, stream_id) !=
+      royale::CameraStatus::SUCCESS) {
+    // Error: Failed to grab camera parameters
+    syslog(LOG_ERR, "Error: Failed to get processing parameters\n");
+    Shutdown();
+    return -1;
+  }
+
+  // Set the parameters
+  for (auto &flagPair : ppvec) {
+    royale::Variant var;
+    switch (flagPair.first) {
+    case royale::ProcessingFlag::UseRemoveFlyingPixel_Bool:
+      var.setBool(USE_FLYING_PIXEL);
+      flagPair.second = var;
+      break;
+    case royale::ProcessingFlag::UseRemoveStrayLight_Bool:
+      var.setBool(USE_STRAY_LIGHT);
+      flagPair.second = var;
+      break;
+    case royale::ProcessingFlag::AdaptiveNoiseFilterType_Int:
+      var.setInt(ADAPTIVE_NOISE_FILTER_TYPE);
+      flagPair.second = var;
+      break;
+    case royale::ProcessingFlag::NoiseThreshold_Float:
+      var.setFloat(NOISE_THRESHOLD);
+      flagPair.second = var;
+      break;
+    case royale::ProcessingFlag::GlobalBinning_Int:
+      var.setInt(GLOBAL_BINNING);
+      flagPair.second = var;
+      break;
+    case royale::ProcessingFlag::UseValidateImage_Bool:
+      var.setBool(USE_VALIDATE_IMAGE);
+      flagPair.second = var;
+      break;
+    case royale::ProcessingFlag::UseAdaptiveNoiseFilter_Bool:
+      var.setBool(USE_ADAPTIVE_NOISE_FILTER);
+      flagPair.second = var;
+      break;
+    case royale::ProcessingFlag::UseMPIFlagAverage_Bool:
+      var.setBool(USE_MPI_AVERAGE);
+      flagPair.second = var;
+      break;
+    case royale::ProcessingFlag::UseMPIFlag_Amp_Bool:
+      var.setBool(USE_MPI_AMP);
+      flagPair.second = var;
+      break;
+    case royale::ProcessingFlag::UseMPIFlag_Dist_Bool:
+      var.setBool(USE_MPI_DIST);
+      flagPair.second = var;
+      break;
+    case royale::ProcessingFlag::UseFilter2Freq_Bool:
+      var.setBool(USE_FILTER_2_FREQ);
+      flagPair.second = var;
+      break;
+    case royale::ProcessingFlag::UseSmoothingFilter_Bool:
+      var.setBool(USE_SMOOTHING_FILTER);
+      flagPair.second = var;
+      break;
+    case royale::ProcessingFlag::UseFlagSBI_Bool:
+      var.setBool(USE_SBI_FLAG);
+      flagPair.second = var;
+      break;
+    case royale::ProcessingFlag::UseHoleFilling_Bool:
+      var.setBool(USE_HOLE_FILLING);
+      flagPair.second = var;
+      break;
+    case royale::ProcessingFlag::AutoExposureRefValue_Float:
+      var.setFloat(AUTO_EXPOSURE_REF_VALUE);
+      flagPair.second = var;
+      break;
+    default:
+      break;
+    }
+  }
+
+  if (camera_device_->setProcessingParameters(ppvec, stream_id) !=
+      royale::CameraStatus::SUCCESS) {
+    syslog(LOG_ERR, "TOFDaemon Error: Failed to set processing parameters\n");
+    Shutdown();
+    return -1;
+  } else {
+    if (verbose_)
+      syslog(LOG_NOTICE, "TOFDaemon successfully set processing parameters\n");
+  }
+
+  tof_listener_.reset(new TOFDataListener(verbose_));
+  if (camera_device_->registerDataListener(tof_listener_.get()) !=
+      royale::CameraStatus::SUCCESS) {
+    // ERROR: Failed to register data listener
+    syslog(LOG_ERR, "Error: Failed to register data listener\n");
+    Shutdown();
+    return -1;
+  }
+  if (verbose_)
+    syslog(LOG_NOTICE, "TOFDaemon: Successfully registered data listener\n");
+
+  // Begin video capture
+  if (camera_device_->startCapture() != royale::CameraStatus::SUCCESS) {
+    // ERROR: Failed to start capture
+    syslog(LOG_ERR, "Error: Failed to start video capture\n");
+    Shutdown();
+    return -1;
+  }
+  if (verbose_)
+    syslog(LOG_NOTICE, "TOFDaemon: Successfully started video capture\n");
+
+  return 0;
+}
+
+std::vector<cv::Mat> TOFDaemon::PerformForwardPass(cv::Mat &image) {
+  std::vector<cv::Mat> nn_outputs;
+  cv::Mat blob;
+  cv::Mat nnet_input(NNET_INPUT_WIDTH, NNET_INPUT_HEIGHT, CV_8UC3);
+
+  // First resize the image to the expected input size for the neural net
+  cv::resize(image, nnet_input, cv::Size(NNET_INPUT_WIDTH, NNET_INPUT_HEIGHT));
+
+  // TODO(CodeCleanup): Does this blob action here actually do anything since
+  // there is no resizing and the mean for normalization is 0?
+  cv::dnn::blobFromImage(nnet_input, blob, 1.0f,
+                         cv::Size(NNET_INPUT_WIDTH, NNET_INPUT_HEIGHT), 0.0,
+                         false, false);
+
+  // Set the neural net input and perform the forward pass
+  net_.setInput(blob);
+  net_.forward(nn_outputs, NNET_OUTPUT_LAYER);
+  return nn_outputs;
+}
+
+size_t TOFDaemon::ProcessROI(cv::Mat &gray_image, const cv::Rect roi_rect,
+                             const cv::Mat ptcloud_depth,
+                             const cv::Mat ptcloud_x, const cv::Mat ptcloud_y,
+                             const cv::Mat ptcloud_z,
+                             vector<float> &roi_object_x_coords,
+                             vector<float> &roi_object_y_coords,
+                             vector<float> &roi_object_z_coords) {
+  OtsuThresholding otsu;
+
+  // Extract the region of interest from the data
+  cv::Mat img_roi(gray_image, roi_rect);
+  cv::Mat ptcloud_depth_roi(ptcloud_depth, roi_rect);
+  cv::Mat ptcloud_x_roi(ptcloud_x, roi_rect);
+  cv::Mat ptcloud_y_roi(ptcloud_y, roi_rect);
+  cv::Mat ptcloud_z_roi(ptcloud_z, roi_rect);
+
+  // Extract the x and z coordinates from the region of interest
+  int gray_threshold = otsu.GetThreshold(img_roi);
+  size_t num_points =
+      LocalizeROI(img_roi, ptcloud_depth_roi, ptcloud_x_roi, ptcloud_y_roi,
+                  ptcloud_z_roi, gray_threshold, roi_object_x_coords,
+                  roi_object_y_coords, roi_object_z_coords);
+  return num_points;
+}
+
+size_t TOFDaemon::LocalizeROI(const cv::Mat &img_roi,
+                              cv::Mat &ptcloud_depth_roi,
+                              cv::Mat &ptcloud_x_roi, cv::Mat &ptcloud_y_roi,
+                              cv::Mat &ptcloud_z_roi, const int &threshold,
+                              std::vector<float> &roi_object_x_coords,
+                              std::vector<float> &roi_object_y_coords,
+                              std::vector<float> &roi_object_z_coords) {
+  int i, j;
+  float min_dist;
+  int min_idx_i, min_idx_j;
+  size_t num_points = 0;
+
+  for (j = 0; j < img_roi.cols; j++) {
+    min_dist = 100.0f;
+    min_idx_i = -1;
+    min_idx_j = -1;
+    for (i = 0; i < img_roi.rows; i++) {
+      if ((img_roi.at<uint8_t>(i, j) > threshold) &&
+          (ptcloud_depth_roi.at<float>(i, j) < min_dist) &&
+          (ptcloud_depth_roi.at<float>(i, j) > 0.1f)) {
+        min_dist = ptcloud_depth_roi.at<float>(i, j);
+        min_idx_i = i;
+        min_idx_j = j;
+      }
+    }
+
+    if (min_idx_i >= 0) {
+      roi_object_x_coords[num_points] =
+          ptcloud_x_roi.at<float>(min_idx_i, min_idx_j);
+      roi_object_y_coords[num_points] =
+          ptcloud_y_roi.at<float>(min_idx_i, min_idx_j);
+      roi_object_z_coords[num_points] =
+          ptcloud_z_roi.at<float>(min_idx_i, min_idx_j);
+      num_points++;
+    }
+  }
+  return num_points;
+}
+
+void TOFDaemon::SendTextStringOutput(const size_t num_points,
+                                     vector<float> &roi_object_x_coords,
+                                     vector<float> &roi_object_z_coords,
+                                     std::string &stream_out,
+                                     std::string &stream_out_plot) {
+  // TODO(CodeCleanup): This code can be deprecated when we move to full
+  // NeatoIPC
+  stream_out += kObjectLocationString;
+  stream_out_plot += "NEWOBJ ";
+  for (size_t location_index = 0; location_index < num_points;
+       ++location_index) {
+    stream_out += " [" + std::to_string(roi_object_x_coords[location_index]) +
+                  "," + std::to_string(roi_object_z_coords[location_index]) +
+                  "]";
+    stream_out_plot +=
+        std::to_string(roi_object_x_coords[location_index]) + " " +
+        std::to_string(roi_object_z_coords[location_index]) + " ";
+  }
+}
+
+void TOFDaemon::SendLiveVideoStream(cv::Mat &image) {
+  std::vector<unsigned char> encoded;
+  int total_pack = 0;
+
+  // Encode the image and calculate the number of packets required to send the
+  // image
+  cv::imencode(".jpg", image, encoded, COMPRESSION_PARAMS);
+  total_pack = 1 + (static_cast<int>(encoded.size()) - 1) / PACK_SIZE;
+
+  // Send the first header packet with the number of data packets for this
+  // particular image
+  int ibuf[1];
+  ibuf[0] = total_pack;
+  live_video_socket_->sendTo(ibuf, sizeof(int),
+                             live_video_socket_params_.ip_address,
+                             live_video_socket_params_.socket_port);
+
+  // Send the image itself over the socket
+  for (int buf_idx = 0; buf_idx < total_pack; buf_idx++) {
+    live_video_socket_->sendTo(&encoded[buf_idx * PACK_SIZE], PACK_SIZE,
+                               live_video_socket_params_.ip_address,
+                               live_video_socket_params_.socket_port);
+  }
+}
+
+static void *TOFTransactionHandler(void *req_buf, size_t req_len,
+                                   void **resp_buf, size_t *resp_len) {
+  (void)req_buf;
+  (void)req_len;
+  (void)resp_buf;
+  (void)resp_len;
+  return nullptr;
+}
+
+int TOFDaemon::Run() {
+  // Check to make sure that initialization was successful, otherwise do not run
+  if (!init_successful_) {
+    fprintf(stderr, "Error: TOFDaemon initialization failed.\n");
+    syslog(LOG_ERR, "Error: TOFDaemon initialization failed.\n");
+    return -1;
+  }
+
+  // Set the new data flag to false by default
+  bool new_data_available = false;
+
+  // Store the start time of the daemon
+  struct timeval start_time;
+  gettimeofday(&start_time, NULL);
+
+  // Spawn this process as a daemon
+  int ret = Daemonize(DAEMON_NAME, "/tmp", NULL, NULL, NULL);
+  if (ret != 0) {
+    // ERROR: Failed to create a daemon
+    fprintf(stderr, "Error: Failed to create daemon\n");
+    syslog(LOG_ERR, "Error: Failed to create daemon\n");
+    exit(ret);
+  } else {
+    // Successfully spawned daemon
+    syslog(LOG_NOTICE, "%s v%s running as daemon", DAEMON_NAME, REVISION);
+
+    if (save_data_) {
+      InitializeTOFDataStorage();
+    }
+
+    // Initialize the NeatoIPC TOF server
+    tof_server_.reset(new TOFServerInterface(TOFTransactionHandler));
+
+    // Setup the relevant live streaming sockets for debugging
+    InitializeStreamingSockets();
+
+    // Initialize the neural network
+    InitializeNeuralNet();
+
+    // Try to connect the camera and set its parameters otherwise exit with a
+    // failure
+    if (ConnectTOFCamera() < 0) {
+      return -1;
+    }
+
+    // Get the dimensions of the TOF sensor
+    uint16_t tof_num_columns, tof_num_rows;
+    camera_device_->getMaxSensorWidth(tof_num_columns);
+    camera_device_->getMaxSensorHeight(tof_num_rows);
+
+    // Initialize the buffer size and the opencv matrix to the correct
+    // dimensions
+    size_t buffer_size = static_cast<size_t>(tof_num_columns) *
+                         static_cast<size_t>(tof_num_rows);
+    cv::Size2f sensor_size_float(static_cast<float>(tof_num_columns),
+                                 static_cast<float>(tof_num_rows));
+
+    size_t stream_out_length;
+    size_t stream_out_length_plot;
+
+    // Mark that the daemon should continue processing frames
+    gTOFDaemonRunning = true;
+
+    if (verbose_)
+      syslog(LOG_NOTICE, "TOFDaemon: Starting video capture\n");
+
+    struct timeval end_time;
+    gettimeofday(&end_time, NULL);
+
+    // DEBUG ONLY: Display the time in milliseconds needed to setup the daemon
+    double setup_time_ms =
+        static_cast<double>(end_time.tv_sec - start_time.tv_sec) * 1000. +
+        static_cast<double>(end_time.tv_usec - start_time.tv_usec) / 1000.;
+    if (verbose_)
+      syslog(LOG_NOTICE, "TOFDaemon: setup time took %g milliseconds\n",
+             setup_time_ms);
+
+    std::thread processingThread([&]() {
+      // We'll need the signal handler(s) to stop the video capture;
+      while (gTOFDaemonRunning) {
+        struct timespec start, stop;
+        if (clock_gettime(CLOCK_MONOTONIC, &start) == -1) {
+          syslog(LOG_ERR, "Error: Failed to get clock start time\n");
+        }
+
+        if (verbose_)
+        if (verbose_)
+          syslog(LOG_NOTICE, "Processing-Thread gFramesQueue Size : %d\n",
+                 static_cast<int>(gFramesQueue.size()));
+
+        new_data_available = false;
+        FrameDataStruct frame_data;
+        {
+          if (!gFramesQueue.empty()) {
+            if (verbose_)
+              syslog(LOG_NOTICE, "New Data Available\n");
+            frame_data = gFramesQueue.get_fresh_and_pop();
+            new_data_available = true;
+          }
+        }
+
+        if (new_data_available) {
+          struct timespec start_infer, stop_infer;
+          if (clock_gettime(CLOCK_MONOTONIC, &start_infer) == -1) {
+            syslog(LOG_ERR, "Error: Failed to get clock start time\n");
+          }
+
+          // Perform a forward pass on the image data from the TOF sensor
+          std::vector<cv::Mat> nn_outputs =
+              PerformForwardPass(frame_data.mat_nnet_input);
+
+          //  Initialize the opencv matrices for the point cloud data
+          cv::Mat ptcloud_depth(tof_num_rows, tof_num_columns, CV_32FC1,
+                                frame_data.vec_point_cloud_distance.data());
+          cv::Mat ptcloud_x(tof_num_rows, tof_num_columns, CV_32FC1,
+                            frame_data.vec_point_cloud_X.data());
+          cv::Mat ptcloud_y(tof_num_rows, tof_num_columns, CV_32FC1,
+                            frame_data.vec_point_cloud_Y.data());
+          cv::Mat ptcloud_z(tof_num_rows, tof_num_columns, CV_32FC1,
+                            frame_data.vec_point_cloud_Z.data());
+
+          // Postprocess the neural net output to extract the bounding boxes,
+          // classes, and confidence scores
+          std::vector<int> class_ids;
+          std::vector<float> confidences;
+          std::vector<Rect> boxes;
+          std::vector<int> indices;
+          Postprocess(nn_outputs, class_ids, confidences, boxes, indices,
+                      sensor_size_float);
+
+          std::string stream_out;
+          std::string stream_out_plot;
+
+          // Instantiate the value buffers that will store all of the object
+          // coordinates for the entire image
+          std::vector<float> image_object_x_coords;
+          std::vector<float> image_object_y_coords;
+          std::vector<float> image_object_z_coords;
+
+          // Keep track of the total number of object points there are in this
+          // image
+          size_t num_image_object_points = 0;
+
+          // Process each region of interest in the image
+          for (size_t i = 0; i < indices.size(); ++i) {
+            if (i == 0) {
+              stream_out = kObjectTimeStampString +
+                           std::to_string(frame_data.royale_data_timeStamp);
+            }
+            int idx = indices[i];
+            Rect roi_rect = boxes[idx];
+
+            stream_out += kObjectDelimeterString + kObjectIDString +
+                          std::to_string(i) + kObjectDelimeterString;
+
+            // Instantiate the value buffers since they will be modified by the
+            // ProcessROI function
+            std::vector<float> roi_object_x_coords(buffer_size, 0.0f);
+            std::vector<float> roi_object_y_coords(buffer_size, 0.0f);
+            std::vector<float> roi_object_z_coords(buffer_size, 0.0f);
+
+            // Extract the x,y,z coordinates from the region of interest
+            size_t num_object_points =
+                ProcessROI(frame_data.mat_gray_image, boxes[idx], ptcloud_depth,
+                           ptcloud_x, ptcloud_y, ptcloud_z, roi_object_x_coords,
+                           roi_object_y_coords, roi_object_z_coords);
+
+            // Copy the roi object points into the whole image object points
+            if (num_object_points > 0) {
+              image_object_x_coords.reserve(
+                  image_object_x_coords.size() +
+                  distance(roi_object_x_coords.begin(),
+                           roi_object_x_coords.end()));
+              image_object_x_coords.insert(
+                  image_object_x_coords.end(), roi_object_x_coords.begin(),
+                  roi_object_x_coords.begin() + num_object_points);
+              image_object_y_coords.reserve(
+                  image_object_y_coords.size() +
+                  distance(roi_object_y_coords.begin(),
+                           roi_object_y_coords.end()));
+              image_object_y_coords.insert(
+                  image_object_y_coords.end(), roi_object_y_coords.begin(),
+                  roi_object_y_coords.begin() + num_object_points);
+              image_object_z_coords.reserve(
+                  image_object_z_coords.size() +
+                  distance(roi_object_z_coords.begin(),
+                           roi_object_z_coords.end()));
+              image_object_z_coords.insert(
+                  image_object_z_coords.end(), roi_object_z_coords.begin(),
+                  roi_object_z_coords.begin() + num_object_points);
+              num_image_object_points += num_object_points;
+              if (verbose_)
+                syslog(LOG_NOTICE,
+                       "This ROI provides this many points %zu/%zu\n",
+                       num_object_points, image_object_x_coords.size());
+            }
+
+            // TODO(CodeCleanup): Remove this call when we fully use NeatoIPC
+            SendTextStringOutput(num_object_points, roi_object_x_coords,
+                                 roi_object_z_coords, stream_out,
+                                 stream_out_plot);
+
+            if (live_stream_video_) {
+              DrawPredictions(class_ids[idx], confidences[idx], roi_rect.x,
+                              roi_rect.y, roi_rect.x + roi_rect.width,
+                              roi_rect.y + roi_rect.height,
+                              frame_data.mat_nnet_input);
+            }
+          }
+
+          // Send the object points over to the robot
+          if (num_image_object_points > 0) {
+            syslog(LOG_NOTICE, "Publishing %zu points! \n",
+                   num_image_object_points);
+            tof_server_->Publish(frame_data.royale_data_timeStamp,
+                                 num_image_object_points, image_object_x_coords,
+                                 image_object_y_coords, image_object_z_coords);
+          }
+
+          if (!stream_out.empty()) {
+            syslog(LOG_NOTICE, "%s\n", stream_out.c_str());
+            if (live_localization_) {
+              stream_out_length = stream_out.size();
+              live_localization_socket_->sendTo(
+                  &stream_out_length, sizeof(size_t),
+                  live_localization_socket_params_.ip_address,
+                  live_localization_socket_params_.socket_port);
+              live_localization_socket_->sendTo(
+                  stream_out.c_str(), static_cast<int>(stream_out.size()),
+                  live_localization_socket_params_.ip_address,
+                  live_localization_socket_params_.socket_port);
+            }
+          }
+          if (!stream_out_plot.empty()) {
+            if (live_plot_) {
+              stream_out_length_plot = stream_out_plot.size();
+              live_plot_socket_->sendTo(&stream_out_length_plot, sizeof(size_t),
+                                        live_plot_socket_params_.ip_address,
+                                        live_plot_socket_params_.socket_port);
+              live_plot_socket_->sendTo(
+                  stream_out_plot.c_str(),
+                  static_cast<int>(stream_out_plot.size()),
+                  live_plot_socket_params_.ip_address,
+                  live_plot_socket_params_.socket_port);
+            }
+          }
+
+          if (clock_gettime(CLOCK_MONOTONIC, &stop_infer) == -1) {
+            syslog(LOG_ERR, "Error: Failed to get clock stop time\n");
+          }
+
+          if (live_stream_video_) {
+            SendLiveVideoStream(frame_data.mat_nnet_input);
+          }
+        }
+
+        if (clock_gettime(CLOCK_MONOTONIC, &stop) == -1) {
+          syslog(LOG_ERR, "Error: Failed to get clock stop time\n");
+        }
+      }
+    });
+
+    processingThread.join();
+
+    // We're done processing frames.  Shutdown the camera.
+    if (camera_device_->stopCapture() != royale::CameraStatus::SUCCESS) {
+      syslog(LOG_ERR, "Error: Failed to stop camera capture\n");
+      Shutdown();
+      return -1;
+    }
+  }
+
+  Shutdown();
+  return 0;
+}
+
+int main(int argc, char **argv) {
+  TOFDaemon tof_daemon;
+  tof_daemon.Run();
+  return 0;
+}
