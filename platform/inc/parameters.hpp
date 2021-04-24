@@ -116,9 +116,9 @@ Robot LDS Coordinate Frame
 // Default calibration timeout in seconds
 static const int kCalibrationTtimeoutSeconds(60);
 // Roboctrl command to Start LDS
-static const std::string kStartLdsString = "roboctrl -d b";
+static const std::string kStartLdsString = "/usr/local/bin/roboctrl -d b";
 // Roboctrl command to Stop LDS
-static const std::string kStopLdsString = "roboctrl -d s";
+static const std::string kStopLdsString = "/usr/local/bin/roboctrl -d s";
 // Laser offset from the LDS center
 static const double kLdsCenterToLaserAngle = 57.;  // Degrees
 static const double kLdsCenterToLaserDistance = 22.768;  // Millimeters
