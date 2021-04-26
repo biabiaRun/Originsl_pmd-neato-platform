@@ -50,6 +50,15 @@ static int RemoveFiles(const char *pathname, const struct stat *sbuf, int type,
   return 0;
 }
 
+static void *TOFTransactionHandler(void *req_buf, size_t req_len,
+                                   void **resp_buf, size_t *resp_len) {
+  (void)req_buf;
+  (void)req_len;
+  (void)resp_buf;
+  (void)resp_len;
+  return nullptr;
+}
+
 /*****************************************
  * TOFDaemon Class Functions
  *****************************************/
@@ -66,6 +75,26 @@ void TOFDaemon::Shutdown() {
     lock_fd_ = -1;
     unlink(LOCK_FILE);
   }
+}
+
+void TOFDaemon::Init() {
+  if (save_data_) {
+    InitializeTOFDataStorage();
+  }
+
+  // Initialize the NeatoIPC TOF server
+  tof_server_.reset(new TOFServerInterface(TOFTransactionHandler));
+
+  InitializeStreamingSockets();
+  InitializeNeuralNet();
+
+  // Try to connect the camera and set its parameters otherwise set
+  // the init_successful_ flag to false
+  if (ConnectTOFCamera() < 0) {
+    init_successful_ = false;
+  }
+
+  ReadTOFToLDSTransformationConfig();
 }
 
 void TOFDaemon::InitializeNeuralNet() {
@@ -145,14 +174,6 @@ void TOFDaemon::InitializeStreamingSockets() {
     live_video_socket_params_.socket_port =
         Socket::resolveService(live_video_socket_params_.port_string, "udp");
     live_video_socket_.reset(new UDPSocket());
-  }
-
-  live_localization_socket_params_ = {"192.168.86.43", "10010", 0};
-  // live_localization_socket_params_ = {"10.100.32.124", "10010", 0};
-  if (live_localization_) {
-    live_localization_socket_params_.socket_port = Socket::resolveService(
-        live_localization_socket_params_.port_string, "udp");
-    live_localization_socket_.reset(new UDPSocket());
   }
 
   live_plot_socket_params_ = {"192.168.86.43", "10020", 0};
@@ -379,6 +400,55 @@ void TOFDaemon::SavePointCloud(const std::string &filename,
 
     outputFile_gray << stringStream_gray.str();
     outputFile_gray.close();
+  }
+}
+
+void TOFDaemon::ReadTOFToLDSTransformationConfig() {
+  // Set the transform_loaded flag to false by default
+  bool transform_loaded = false;
+
+  // Indices for the matrix when loading from the file
+  int row = 0, col = 0;
+
+  std::ifstream transform_file;
+  transform_file.open(kTOFToLDSTransformFile);
+  if (transform_file.is_open()) {
+    // Keep track of the number of elements being read from the transform
+    // configuration file
+    int num_transform_elems = 0;
+    std::string transform_elem;
+    while (getline(transform_file, transform_elem)) {
+      // If we are reading more lines than required for the transformation
+      // matrix then the configuration file is not properly formatted and is
+      // therefore invalid
+      if (num_transform_elems >= kNumTransformElements) {
+        break;
+      }
+
+      // Add the element to the transform matrix
+      row = static_cast<int>(num_transform_elems / kTransformMatrixDimension);
+      col = num_transform_elems % kTransformMatrixDimension;
+      tof_to_lds_transform_(row, col) = std::stof(transform_elem);
+
+      // Increment the element counter to ensure we have the exact amount of
+      // elements for the transformation matrix
+      num_transform_elems++;
+    }
+
+    // We only set the transform loaded flag to true if the correct amount of
+    // elements is read from the configuration file
+    if (num_transform_elems == kNumTransformElements) {
+      transform_loaded = true;
+    }
+  }
+
+  if (transform_loaded) {
+    syslog(LOG_NOTICE,
+           "TOF to LDS transformation configuration loaded properly!\n");
+  } else {
+    syslog(LOG_ERR, "TOF to LDS transformation was not loaded properly! "
+                    "TOFDaemon will not run. \n");
+    init_successful_ = false;
   }
 }
 
@@ -772,24 +842,37 @@ size_t TOFDaemon::LocalizeROI(const cv::Mat &img_roi,
   return num_points;
 }
 
-void TOFDaemon::SendTextStringOutput(const size_t num_points,
-                                     vector<float> &roi_object_x_coords,
-                                     vector<float> &roi_object_z_coords,
-                                     std::string &stream_out,
-                                     std::string &stream_out_plot) {
-  // TODO(CodeCleanup): This code can be deprecated when we move to full
-  // NeatoIPC
-  stream_out += kObjectLocationString;
-  stream_out_plot += "NEWOBJ ";
-  for (size_t location_index = 0; location_index < num_points;
-       ++location_index) {
-    stream_out += " [" + std::to_string(roi_object_x_coords[location_index]) +
-                  "," + std::to_string(roi_object_z_coords[location_index]) +
-                  "]";
-    stream_out_plot +=
-        std::to_string(roi_object_x_coords[location_index]) + " " +
-        std::to_string(roi_object_z_coords[location_index]) + " ";
+std::vector<TOFMessage::Point2D> TOFDaemon::ConvertTOFPointsToLDSPoints(
+    const size_t num_points, const vector<float> &image_object_x_coords,
+    const vector<float> &image_object_y_coords,
+    const vector<float> &image_object_z_coords) {
+
+  // Conversion from meter to millimeters since the TOF point units are in
+  // meters and the transformation matrix + robot code are in millimeters
+  const float kMeterToMMConversion = 1000.0f;
+
+  std::vector<TOFMessage::Point2D> object_points;
+  for (size_t i = 0; i < num_points; i++) {
+    // Create the 4x1 vector with the object point coordinates in the TOF frame
+    // with a 1 appended for the homogeneous transformation
+    float x = image_object_x_coords[i] * kMeterToMMConversion;
+    float y = image_object_y_coords[i] * kMeterToMMConversion;
+    float z = image_object_z_coords[i] * kMeterToMMConversion;
+    Eigen::Vector4f object_point(x, y, z, 1.0f);
+
+    // Transform the point with the given transformation matrix
+    Eigen::Vector4f transformed_object_point =
+        tof_to_lds_transform_ * object_point;
+
+    // We only need the transformed x and y coordinates which are the first and
+    // second element of of the vector, respectively
+    TOFMessage::Point2D transformed_point;
+    transformed_point.x = static_cast<int32_t>(transformed_object_point(0));
+    transformed_point.y = static_cast<int32_t>(transformed_object_point(1));
+    object_points.push_back(transformed_point);
   }
+
+  return object_points;
 }
 
 void TOFDaemon::SendLiveVideoStream(cv::Mat &image) {
@@ -817,30 +900,7 @@ void TOFDaemon::SendLiveVideoStream(cv::Mat &image) {
   }
 }
 
-static void *TOFTransactionHandler(void *req_buf, size_t req_len,
-                                   void **resp_buf, size_t *resp_len) {
-  (void)req_buf;
-  (void)req_len;
-  (void)resp_buf;
-  (void)resp_len;
-  return nullptr;
-}
-
 int TOFDaemon::Run() {
-  // Check to make sure that initialization was successful, otherwise do not run
-  if (!init_successful_) {
-    fprintf(stderr, "Error: TOFDaemon initialization failed.\n");
-    syslog(LOG_ERR, "Error: TOFDaemon initialization failed.\n");
-    return -1;
-  }
-
-  // Set the new data flag to false by default
-  bool new_data_available = false;
-
-  // Store the start time of the daemon
-  struct timeval start_time;
-  gettimeofday(&start_time, NULL);
-
   // Spawn this process as a daemon
   int ret = Daemonize(DAEMON_NAME, "/tmp", NULL, NULL, NULL);
   if (ret != 0) {
@@ -852,22 +912,22 @@ int TOFDaemon::Run() {
     // Successfully spawned daemon
     syslog(LOG_NOTICE, "%s v%s running as daemon", DAEMON_NAME, REVISION);
 
-    if (save_data_) {
-      InitializeTOFDataStorage();
-    }
+    // Set the new data flag to false by default
+    bool new_data_available = false;
 
-    // Initialize the NeatoIPC TOF server
-    tof_server_.reset(new TOFServerInterface(TOFTransactionHandler));
+    // Store the start time of the daemon
+    struct timeval start_time;
+    gettimeofday(&start_time, NULL);
 
-    // Setup the relevant live streaming sockets for debugging
-    InitializeStreamingSockets();
+    // Initialize the member variables in the daemon process so that everything
+    // accessible in the grandchild process
+    Init();
 
-    // Initialize the neural network
-    InitializeNeuralNet();
-
-    // Try to connect the camera and set its parameters otherwise exit with a
-    // failure
-    if (ConnectTOFCamera() < 0) {
+    // Check to make sure that initialization was successful, otherwise do not
+    // run
+    if (!init_successful_) {
+      fprintf(stderr, "Error: TOFDaemon initialization failed.\n");
+      syslog(LOG_ERR, "Error: TOFDaemon initialization failed.\n");
       return -1;
     }
 
@@ -883,7 +943,6 @@ int TOFDaemon::Run() {
     cv::Size2f sensor_size_float(static_cast<float>(tof_num_columns),
                                  static_cast<float>(tof_num_rows));
 
-    size_t stream_out_length;
     size_t stream_out_length_plot;
 
     // Mark that the daemon should continue processing frames
@@ -912,9 +971,9 @@ int TOFDaemon::Run() {
         }
 
         if (verbose_)
-        if (verbose_)
-          syslog(LOG_NOTICE, "Processing-Thread gFramesQueue Size : %d\n",
-                 static_cast<int>(gFramesQueue.size()));
+          if (verbose_)
+            syslog(LOG_NOTICE, "Processing-Thread gFramesQueue Size : %d\n",
+                   static_cast<int>(gFramesQueue.size()));
 
         new_data_available = false;
         FrameDataStruct frame_data;
@@ -1023,11 +1082,6 @@ int TOFDaemon::Run() {
                        num_object_points, image_object_x_coords.size());
             }
 
-            // TODO(CodeCleanup): Remove this call when we fully use NeatoIPC
-            SendTextStringOutput(num_object_points, roi_object_x_coords,
-                                 roi_object_z_coords, stream_out,
-                                 stream_out_plot);
-
             if (live_stream_video_) {
               DrawPredictions(class_ids[idx], confidences[idx], roi_rect.x,
                               roi_rect.y, roi_rect.x + roi_rect.width,
@@ -1040,25 +1094,14 @@ int TOFDaemon::Run() {
           if (num_image_object_points > 0) {
             syslog(LOG_NOTICE, "Publishing %zu points! \n",
                    num_image_object_points);
+            std::vector<TOFMessage::Point2D> object_points =
+                ConvertTOFPointsToLDSPoints(
+                    num_image_object_points, image_object_x_coords,
+                    image_object_y_coords, image_object_z_coords);
             tof_server_->Publish(frame_data.royale_data_timeStamp,
-                                 num_image_object_points, image_object_x_coords,
-                                 image_object_y_coords, image_object_z_coords);
+                                 num_image_object_points, object_points);
           }
 
-          if (!stream_out.empty()) {
-            syslog(LOG_NOTICE, "%s\n", stream_out.c_str());
-            if (live_localization_) {
-              stream_out_length = stream_out.size();
-              live_localization_socket_->sendTo(
-                  &stream_out_length, sizeof(size_t),
-                  live_localization_socket_params_.ip_address,
-                  live_localization_socket_params_.socket_port);
-              live_localization_socket_->sendTo(
-                  stream_out.c_str(), static_cast<int>(stream_out.size()),
-                  live_localization_socket_params_.ip_address,
-                  live_localization_socket_params_.socket_port);
-            }
-          }
           if (!stream_out_plot.empty()) {
             if (live_plot_) {
               stream_out_length_plot = stream_out_plot.size();

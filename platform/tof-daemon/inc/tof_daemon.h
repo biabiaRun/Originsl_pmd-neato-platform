@@ -18,6 +18,8 @@
 #include <string>
 #include <thread>
 
+#include "eigen3/Eigen/Dense"
+
 #include "PracticalSocket.h"
 #include "frame_queue.h"
 #include "neural_network_params.h"
@@ -39,6 +41,15 @@ FrameQueue<FrameDataStruct> gFramesQueue;
 // Global flag to indicate if the TOF Daemon should continue running. By default
 // it is set to true but the signal handlers can shut the daemon off.
 bool gTOFDaemonRunning = true;
+
+// The file path of the TOF to LDS transformation matrix
+const char kTOFToLDSTransformFile[] =
+    "/user/transformation_matrix_tof_into_lds.conf";
+// The transformation matrix is a 4x4 matrix so there should 16 elements in the
+// transform config file when reading
+const int kTransformMatrixDimension = 4;
+constexpr int kNumTransformElements =
+    kTransformMatrixDimension * kTransformMatrixDimension;
 
 /**
  * @brief SIGHUP Handler. If the SIGHUP signal is received, the handler flips
@@ -120,8 +131,9 @@ struct TOFMessage {
     RESPONSE_BUFFER_LEN = 1024,
   };
 
-  struct TOFPoint3f {
-    float x, y, z;
+  // The points being sent should already be in the LDS frame
+  struct Point2D {
+    int32_t x, y;
   };
 
   union {
@@ -133,7 +145,7 @@ struct TOFMessage {
       size_t num_points;
       int64_t timestamp;
 
-      TOFPoint3f points[kTOFObjectPointsPerImage];
+      Point2D points[kTOFObjectPointsPerImage];
     } pubsub;
 
     // Command response transactions
@@ -174,16 +186,11 @@ public:
    * @brief publish LDS Stream data
    * @param status status of the command
    * @param num_points the number of points stored in the data arrays
-   * @param image_object_x_coords x coordinates of the object points
-   * @param image_object_y_coords y coordinates of the object points
-   * @param image_object_z_coords z coordinates of the object points
+   * @param object_points The object points already converted to the LDS frame
    * @return int -1 for bad arguement, -2 for ipc failure and 0 for success
    */
   int Publish(const int64_t timestamp, const size_t num_points,
-              const vector<float> &image_object_x_coords,
-              const vector<float> &image_object_y_coords,
-              const vector<float> &image_object_z_coords) {
-    const float kMeterToMMConversion = 1000.0f;
+              const vector<TOFMessage::Point2D> &object_points) {
     TOFMessage msg;
     // TODO(CodeCleanup): Remove this forced instantiation of the message status
     // and return the actual status of the TOF sensor.
@@ -191,14 +198,7 @@ public:
     msg.pubsub.status = TOFMessage::TOF_OK;
     msg.pubsub.timestamp = timestamp;
     msg.pubsub.num_points = num_points;
-
-    for (size_t i = 0; i < num_points; i++) {
-      // Convert the points from coordinates in meters to millimeters since that
-      // is what is expected on the robot side
-      msg.pubsub.points[i].x = image_object_x_coords[i] * kMeterToMMConversion;
-      msg.pubsub.points[i].y = image_object_y_coords[i] * kMeterToMMConversion;
-      msg.pubsub.points[i].z = image_object_z_coords[i] * kMeterToMMConversion;
-    }
+    std::copy(object_points.begin(), object_points.end(), msg.pubsub.points);
     return tof_streaming_broadcast_.Send(msg);
   }
 
@@ -226,7 +226,8 @@ public:
   TOFDaemon(){};
 
   /**
-   * Run a single iteration of the TOF daemon.
+   * Startup the TOFDaemon process and send data to the robot process through
+   * NeatoIPC when objects are found.
    */
   int Run();
 
@@ -237,6 +238,15 @@ public:
   void Shutdown();
 
 private:
+  /**
+   * @brief Wrapper function to call all of the initializations required for the
+   * TOFDaemon. Calls functions that initializes data storage, the live stream
+   * sockets, neural net member variable, the TOF to LDS frame transformation
+   * configuration, etc. This function sets the init_successful_ member variable
+   * to true if everything was set up correctly.
+   */
+  void Init();
+
   /**
    * @brief Initialize the classes vector that stores all of the difference
    * classes that the neural network can classify objects into.
@@ -286,6 +296,14 @@ private:
    * @return 0 if the camera was connected successfully, -1 otherwise
    */
   int ConnectTOFCamera();
+
+  /**
+   * @brief Reads in the transformation matrix that converts points from the TOF
+   * frame into the LDS frame. This configuration file is created during the
+   * manufacturing process and is stored in the filepath described by
+   * kTOFToLDSTransformFile
+   */
+  void ReadTOFToLDSTransformationConfig();
 
   /**
    * @brief Saves the TOF point cloud data in PLY format to a specified file.
@@ -374,23 +392,19 @@ private:
                      std::vector<float> &z_vals);
 
   /**
-   * @brief Take the object coordinates from the ROI and add them to the text
-   * stream output that will be sent over the socket.
-   * TODO(CodeCleanup): This whole function can be deprecated once the NeatoIPC
-   * implementation is finished.
-   * @param num_points The number of points that the ROI processing found
-   * @param roi_object_x_coords vector containing the x coordinates
-   * @param roi_object_z_coords vector containing the z coordinates
-   * @param stream_out The text string output to be concatenated with the object
-   * coordinates
-   * @param stream_out_plot The text string output to be concatenated with the
-   * object coordinates for plotting
+   * @brief Convert the object points from the TOF frame into the LDS frame
+   * by running the points through the pre-configured transformation matrix
+   * @param num_points The number of points to be converted
+   * @param image_object_x_coords x coordinates of the object points
+   * @param image_object_y_coords y coordinates of the object points
+   * @param image_object_z_coords z coordinates of the object points
+   * @return A vector of transformed points in the LDS frame
    */
-  void SendTextStringOutput(const size_t num_points,
-                            vector<float> &roi_object_x_coords,
-                            vector<float> &roi_object_z_coords,
-                            std::string &stream_out,
-                            std::string &stream_out_plot);
+  std::vector<TOFMessage::Point2D>
+  ConvertTOFPointsToLDSPoints(const size_t num_points,
+                              const vector<float> &image_object_x_coords,
+                              const vector<float> &image_object_y_coords,
+                              const vector<float> &image_object_z_coords);
 
   /**
    * @brief Draw the bounding box along with the detected class and the
@@ -440,9 +454,6 @@ private:
   // Turn on or off live video streaming
   bool live_stream_video_ = true;
 
-  // Toggle the streaming to the localization server
-  bool live_localization_ = true;
-
   // Toggle the streaming to the plotting server
   bool live_plot_ = false;
 
@@ -453,19 +464,18 @@ private:
   bool verbose_ = true;
 
   // Flag that indicates if the initialization of the member variables was
-  // successful or not
+  // successful or not. This is set to true by default and the initialization
+  // functions will set it to false on any failures
   bool init_successful_ = true;
 
   // Sockets and socket parameters. Used primarily for debugging.
   SocketParams live_video_socket_params_;
-  SocketParams live_localization_socket_params_;
   SocketParams live_plot_socket_params_;
   // NOTE: These sockets have to be instantiated in the grandchild daemon
   // process otherwise they will not send data correctly. Instantiating them as
   // pointers here so that they can be initialized by the daemon process
   // directly later.
   std::unique_ptr<UDPSocket> live_video_socket_;
-  std::unique_ptr<UDPSocket> live_localization_socket_;
   std::unique_ptr<UDPSocket> live_plot_socket_;
 
   // Connections to the TOF sensor
@@ -480,7 +490,12 @@ private:
   const std::string kObjectLocationString = "LOCATION : ";
   const std::string kObjectDelimeterString = "|";
 
+  // NeatoIPC TOF Server pointer
   std::unique_ptr<TOFServerInterface> tof_server_;
+
+  // The transformation matrix read from the configuration file will be stored
+  // here
+  Eigen::Matrix4f tof_to_lds_transform_;
 };
 
 #endif
