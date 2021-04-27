@@ -35,9 +35,6 @@
 using namespace std;
 using namespace cv;
 
-// Global Frame Queue
-FrameQueue<FrameDataStruct> gFramesQueue;
-
 // Global flag to indicate if the TOF Daemon should continue running. By default
 // it is set to true but the signal handlers can shut the daemon off.
 bool gTOFDaemonRunning = true;
@@ -126,7 +123,8 @@ struct TOFMessage {
 
   enum {
     TOF_STREAMING_DATA = 0x0001,
-    // TODO(CodeCleanup): This number was chosen arbitrarily.
+    // TODO(CodeCleanup): This number was chosen arbitrarily. Include an error
+    // when maximum is reached.
     kTOFObjectPointsPerImage = 500,
     RESPONSE_BUFFER_LEN = 1024,
   };
@@ -143,7 +141,7 @@ struct TOFMessage {
 
       uint32_t status;
       size_t num_points;
-      int64_t timestamp;
+      double timestamp;
 
       Point2D points[kTOFObjectPointsPerImage];
     } pubsub;
@@ -183,13 +181,14 @@ public:
         tof_command_server_(neato_ipc::Node::IPC, "tof_command", handler) {}
 
   /**
-   * @brief publish LDS Stream data
-   * @param status status of the command
+   * @brief publish TOF Stream data
+   * @param timestamp The timestamp of when the image was taken by the TOF
+   * camera based on CLOCK_MONOTONIC in ms
    * @param num_points the number of points stored in the data arrays
    * @param object_points The object points already converted to the LDS frame
    * @return int -1 for bad arguement, -2 for ipc failure and 0 for success
    */
-  int Publish(const int64_t timestamp, const size_t num_points,
+  int Publish(const double timestamp, const size_t num_points,
               const vector<TOFMessage::Point2D> &object_points) {
     TOFMessage msg;
     // TODO(CodeCleanup): Remove this forced instantiation of the message status
@@ -260,8 +259,8 @@ private:
   void InitializeNeuralNet();
 
   /**
-   * @brief Initialize the sockets used to live stream video, localization
-   * values, and plots. This is mainly used for debugging and can be toggled.
+   * @brief Initialize the socket used to live stream video. This is mainly used
+   * for debugging and can be toggled.
    */
   void InitializeStreamingSockets();
 
@@ -454,9 +453,6 @@ private:
   // Turn on or off live video streaming
   bool live_stream_video_ = true;
 
-  // Toggle the streaming to the plotting server
-  bool live_plot_ = false;
-
   // Used for debugging. Set this to true to save the TOF data locally
   bool save_data_ = false;
 
@@ -470,25 +466,19 @@ private:
 
   // Sockets and socket parameters. Used primarily for debugging.
   SocketParams live_video_socket_params_;
-  SocketParams live_plot_socket_params_;
   // NOTE: These sockets have to be instantiated in the grandchild daemon
   // process otherwise they will not send data correctly. Instantiating them as
   // pointers here so that they can be initialized by the daemon process
   // directly later.
   std::unique_ptr<UDPSocket> live_video_socket_;
-  std::unique_ptr<UDPSocket> live_plot_socket_;
+
+  // The IP address that the sockets will try to connect to for debugging
+  const std::string debug_ip_address_ = "123.123.123.123";
 
   // Connections to the TOF sensor
   std::unique_ptr<TOFDataListener> tof_listener_;
   platform::CameraFactory camera_factory_;
   std::unique_ptr<royale::ICameraDevice> camera_device_;
-
-  // TODO(CodeCleanup): Remove these string constants when we transition to
-  // using NeatoIPC
-  const std::string kObjectTimeStampString = "TIMESTAMP : ";
-  const std::string kObjectIDString = "OBJECT_ID : SOCK-";
-  const std::string kObjectLocationString = "LOCATION : ";
-  const std::string kObjectDelimeterString = "|";
 
   // NeatoIPC TOF Server pointer
   std::unique_ptr<TOFServerInterface> tof_server_;

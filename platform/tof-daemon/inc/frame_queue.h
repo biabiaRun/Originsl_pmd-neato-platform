@@ -22,7 +22,9 @@
  * Cloud point formulated neural net input values
  *  mat_nnet_input
  * Timestamp given by Royale API
- *  royale_data_timeStamp
+ *  royale_data_timestamp
+ * Timestamp given by the CLOCK_MONOTONIC clock in ms
+ *  system_timestamp
  */
 struct FrameDataStruct {
   static constexpr unsigned int sensor_num_columns{224};
@@ -33,17 +35,18 @@ struct FrameDataStruct {
   std::vector<float> vec_point_cloud_Y = std::vector<float>(buffer_size);
   std::vector<float> vec_point_cloud_Z = std::vector<float>(buffer_size);
   std::vector<float> vec_point_cloud_distance = std::vector<float>(buffer_size);
-  cv::Mat mat_nnet_input = cv::Mat(sensor_num_rows, sensor_num_columns, CV_8UC3);
+  cv::Mat mat_nnet_input =
+      cv::Mat(sensor_num_rows, sensor_num_columns, CV_8UC3);
   cv::Mat mat_gray_image = cv::Mat(sensor_num_rows, sensor_num_columns, CV_8U);
-  int64_t royale_data_timeStamp;
+  int64_t royale_data_timestamp;
+  double system_timestamp;
 };
 
-template <typename T>
-class FrameQueue : public std::deque<T> {
- public:
+template <typename T> class FrameQueue : public std::deque<T> {
+public:
   FrameQueue() : counter(0) {}
 
-  void push_front(const T& entry) {
+  void push_front(const T &entry) {
     std::lock_guard<std::mutex> lock(mutex);
 
     std::deque<T>::push_front(entry);
@@ -65,7 +68,8 @@ class FrameQueue : public std::deque<T> {
   T get_fresh_and_pop() {
     std::lock_guard<std::mutex> lock(mutex);
     T entry = this->front();
-    while (this->size() > 1) this->pop_back();
+    while (this->size() > 1)
+      this->pop_back();
     return entry;
   }
 
@@ -91,7 +95,7 @@ class FrameQueue : public std::deque<T> {
 
   unsigned int counter;
 
- private:
+private:
   cv::TickMeter tm;
   std::mutex mutex;
 };

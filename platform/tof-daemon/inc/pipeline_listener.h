@@ -10,6 +10,7 @@
 #include "frame_queue.h"
 #include <royale.hpp>
 
+// Expose the global Frame Queue to others
 extern FrameQueue<FrameDataStruct> gFramesQueue;
 
 class TOFDataListener : public royale::IDepthDataListener {
@@ -25,8 +26,7 @@ private:
   bool verbose_;
   const float atanf_norm_ = (255.0f / 90.0f) * static_cast<float>(180. / M_PI);
   int64_t last_frame_timestamp_;
-  int64_t m_royale_data_timeStamp;
-  int64_t m_depth_data_timeStamp;
+  int64_t m_royale_data_timestamp_;
   const uint8_t invalid_depth_ = 255;
 };
 

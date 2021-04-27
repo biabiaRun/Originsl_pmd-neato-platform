@@ -14,6 +14,9 @@
 
 #include "neural_network_params.h"
 
+// Instantiate the Global Frame Queue
+FrameQueue<FrameDataStruct> gFramesQueue;
+
 // False Coloring Colormap look-up table
 static constexpr uint8_t gRGBLookupTable[256][3] = {
     {0, 0, 131},     {0, 0, 135},     {0, 0, 139},     {0, 0, 143},
@@ -95,7 +98,7 @@ void TOFDataListener::DisplayTimeDeltaMS(const struct timespec &start_time,
       static_cast<double>(end_time.tv_nsec - start_time.tv_nsec) / 1000000.;
   if (verbose_) {
     syslog(LOG_NOTICE, "TOFDaemon %s: time delta took %g milliseconds\n",
-    comment, TIME_DELTA);
+           comment, TIME_DELTA);
   }
 }
 
@@ -117,8 +120,16 @@ void TOFDataListener::onNewData(const royale::DepthData *data) {
 
   FrameDataStruct frame_data;
 
-  m_royale_data_timeStamp = data->timeStamp.count();
-  frame_data.royale_data_timeStamp = m_royale_data_timeStamp / 1000L;
+  m_royale_data_timestamp_ = data->timeStamp.count();
+  frame_data.royale_data_timestamp = m_royale_data_timestamp_ / 1000L;
+
+  // Get the system clock timestamp (in ms) of when this frame arrived for
+  // processing
+  struct timespec system_timestamp;
+  clock_gettime(CLOCK_MONOTONIC, &system_timestamp);
+  frame_data.system_timestamp =
+      static_cast<double>(system_timestamp.tv_sec) * 1000.0 +
+      static_cast<double>(system_timestamp.tv_nsec) / 1000000.0;
 
   float x_val, y_val, z_val, depth_ratio, depth_norm, gray_norm;
   int row, column;
@@ -193,5 +204,5 @@ void TOFDataListener::onNewData(const royale::DepthData *data) {
   }
 
   // update timestamp for next iteration
-  last_frame_timestamp_ = m_royale_data_timeStamp;
+  last_frame_timestamp_ = m_royale_data_timestamp_;
 }

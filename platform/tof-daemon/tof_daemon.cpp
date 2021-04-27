@@ -168,20 +168,11 @@ void TOFDaemon::InitializeClasses() {
 }
 
 void TOFDaemon::InitializeStreamingSockets() {
-  live_video_socket_params_ = {"192.168.86.43", "10000", 0};
-  // live_video_socket_params_ = {"10.100.32.124", "10000", 0};
+  live_video_socket_params_ = {debug_ip_address_, "10000", 0};
   if (live_stream_video_) {
     live_video_socket_params_.socket_port =
         Socket::resolveService(live_video_socket_params_.port_string, "udp");
     live_video_socket_.reset(new UDPSocket());
-  }
-
-  live_plot_socket_params_ = {"192.168.86.43", "10020", 0};
-  // live_plot_socket_params_ = {"10.100.32.124", "10020", 0};
-  if (live_plot_) {
-    live_plot_socket_params_.socket_port =
-        Socket::resolveService(live_plot_socket_params_.port_string, "udp");
-    live_plot_socket_.reset(new UDPSocket());
   }
 }
 
@@ -627,22 +618,25 @@ int TOFDaemon::ConnectTOFCamera() {
   camera_device_->getStreams(stream_ids);
   royale::StreamId stream_id = stream_ids.front();
 
-  // Set camera exposure time
-  const std::uint32_t EXPOSURE_TIME_MS = 1000; // 0 -> Auto;
-  if (camera_device_->setExposureMode(royale::ExposureMode::MANUAL) !=
-      royale::CameraStatus::SUCCESS) {
-    // Error: Failed to set camera in manual exposure mode
-    syslog(LOG_ERR, "Error: Failed to set manual exposure\n");
-    Shutdown();
-    return -1;
-  }
-
-  if (camera_device_->setExposureTime(EXPOSURE_TIME_MS) !=
-      royale::CameraStatus::SUCCESS) {
-    // Error: Failed to set camera exposure time
-    syslog(LOG_ERR, "Error: Failed to set manual exposure time\n");
-    Shutdown();
-    return -1;
+  // Set camera exposure time. 0 indicates automatic exposure setting
+  if (EXPOSURE_TIME_MS == 0) {
+    // If the exposure time is 0, set the exposure automatically
+    if (camera_device_->setExposureMode(royale::ExposureMode::AUTOMATIC) !=
+        royale::CameraStatus::SUCCESS) {
+      // Error: Failed to set camera in automatic exposure mode
+      syslog(LOG_ERR, "Error: Failed to set automatic exposure\n");
+      Shutdown();
+      return -1;
+    }
+  } else {
+    // Otherwise set the exposure to the user specified time
+    if (camera_device_->setExposureTime(EXPOSURE_TIME_MS) !=
+        royale::CameraStatus::SUCCESS) {
+      // Error: Failed to set camera exposure time
+      syslog(LOG_ERR, "Error: Failed to set manual exposure time\n");
+      Shutdown();
+      return -1;
+    }
   }
 
   // Modifying camera parameters
@@ -943,8 +937,6 @@ int TOFDaemon::Run() {
     cv::Size2f sensor_size_float(static_cast<float>(tof_num_columns),
                                  static_cast<float>(tof_num_rows));
 
-    size_t stream_out_length_plot;
-
     // Mark that the daemon should continue processing frames
     gTOFDaemonRunning = true;
 
@@ -1015,9 +1007,6 @@ int TOFDaemon::Run() {
           Postprocess(nn_outputs, class_ids, confidences, boxes, indices,
                       sensor_size_float);
 
-          std::string stream_out;
-          std::string stream_out_plot;
-
           // Instantiate the value buffers that will store all of the object
           // coordinates for the entire image
           std::vector<float> image_object_x_coords;
@@ -1030,15 +1019,8 @@ int TOFDaemon::Run() {
 
           // Process each region of interest in the image
           for (size_t i = 0; i < indices.size(); ++i) {
-            if (i == 0) {
-              stream_out = kObjectTimeStampString +
-                           std::to_string(frame_data.royale_data_timeStamp);
-            }
             int idx = indices[i];
             Rect roi_rect = boxes[idx];
-
-            stream_out += kObjectDelimeterString + kObjectIDString +
-                          std::to_string(i) + kObjectDelimeterString;
 
             // Instantiate the value buffers since they will be modified by the
             // ProcessROI function
@@ -1091,30 +1073,20 @@ int TOFDaemon::Run() {
           }
 
           // Send the object points over to the robot
+          syslog(LOG_NOTICE, "Publishing %zu points! \n",
+                 num_image_object_points);
+          std::vector<TOFMessage::Point2D> object_points;
           if (num_image_object_points > 0) {
-            syslog(LOG_NOTICE, "Publishing %zu points! \n",
-                   num_image_object_points);
-            std::vector<TOFMessage::Point2D> object_points =
-                ConvertTOFPointsToLDSPoints(
-                    num_image_object_points, image_object_x_coords,
-                    image_object_y_coords, image_object_z_coords);
-            tof_server_->Publish(frame_data.royale_data_timeStamp,
-                                 num_image_object_points, object_points);
+            // If objects have been detected, transform the points from the TOF
+            // frame to the LDS frame
+            object_points = ConvertTOFPointsToLDSPoints(
+                num_image_object_points, image_object_x_coords,
+                image_object_y_coords, image_object_z_coords);
           }
-
-          if (!stream_out_plot.empty()) {
-            if (live_plot_) {
-              stream_out_length_plot = stream_out_plot.size();
-              live_plot_socket_->sendTo(&stream_out_length_plot, sizeof(size_t),
-                                        live_plot_socket_params_.ip_address,
-                                        live_plot_socket_params_.socket_port);
-              live_plot_socket_->sendTo(
-                  stream_out_plot.c_str(),
-                  static_cast<int>(stream_out_plot.size()),
-                  live_plot_socket_params_.ip_address,
-                  live_plot_socket_params_.socket_port);
-            }
-          }
+          // Send the points or an empty point vector over NeatoIPC to the robot
+          // app
+          tof_server_->Publish(frame_data.system_timestamp,
+                               num_image_object_points, object_points);
 
           if (clock_gettime(CLOCK_MONOTONIC, &stop_infer) == -1) {
             syslog(LOG_ERR, "Error: Failed to get clock stop time\n");

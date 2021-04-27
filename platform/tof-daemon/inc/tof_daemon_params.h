@@ -52,4 +52,8 @@ const int PACK_SIZE = 4096;
 // Parameters for image compression when streaming live video
 std::vector<int> COMPRESSION_PARAMS{cv::IMWRITE_JPEG_QUALITY, 80};
 
+// Exposure settings for the TOF camera. 0 indicates automatic exposure
+// otherwise the exposure is set to the user timing
+const std::uint32_t EXPOSURE_TIME_MS = 0;
+
 #endif
