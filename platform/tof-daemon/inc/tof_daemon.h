@@ -117,15 +117,14 @@ struct TOFMessage {
     TOF_OK = 0,
     CMD_ACK = 0,
     CMD_NAK = 1,
-    TOF_STREAM_ERROR = 2,
-    TOF_UNKNOWN = 3,
+    TOF_OBJECT_OVERFLOW = 2,
+    TOF_STREAM_ERROR = 3,
+    TOF_UNKNOWN = 4
   };
 
   enum {
     TOF_STREAMING_DATA = 0x0001,
-    // TODO(CodeCleanup): This number was chosen arbitrarily. Include an error
-    // when maximum is reached.
-    kTOFObjectPointsPerImage = 500,
+    kMaxTOFObjectPointsPerImage = 500,
     RESPONSE_BUFFER_LEN = 1024,
   };
 
@@ -143,7 +142,7 @@ struct TOFMessage {
       size_t num_points;
       double timestamp;
 
-      Point2D points[kTOFObjectPointsPerImage];
+      Point2D points[kMaxTOFObjectPointsPerImage];
     } pubsub;
 
     // Command response transactions
@@ -182,19 +181,19 @@ public:
 
   /**
    * @brief publish TOF Stream data
+   * @param status The status of the tof message
    * @param timestamp The timestamp of when the image was taken by the TOF
    * camera based on CLOCK_MONOTONIC in ms
    * @param num_points the number of points stored in the data arrays
    * @param object_points The object points already converted to the LDS frame
    * @return int -1 for bad arguement, -2 for ipc failure and 0 for success
    */
-  int Publish(const double timestamp, const size_t num_points,
-              const vector<TOFMessage::Point2D> &object_points) {
+  int Publish(const uint32_t status, const double timestamp,
+              const size_t num_points,
+              const std::vector<TOFMessage::Point2D> &object_points) {
     TOFMessage msg;
-    // TODO(CodeCleanup): Remove this forced instantiation of the message status
-    // and return the actual status of the TOF sensor.
     msg.pubsub.header = TOFMessage::TOF_STREAMING_DATA;
-    msg.pubsub.status = TOFMessage::TOF_OK;
+    msg.pubsub.status = status;
     msg.pubsub.timestamp = timestamp;
     msg.pubsub.num_points = num_points;
     std::copy(object_points.begin(), object_points.end(), msg.pubsub.points);
@@ -362,9 +361,9 @@ private:
   size_t ProcessROI(cv::Mat &gray_image, const cv::Rect roi_rect,
                     const cv::Mat ptcloud_depth, const cv::Mat ptcloud_x,
                     const cv::Mat ptcloud_y, const cv::Mat ptcloud_z,
-                    vector<float> &roi_object_x_coords,
-                    vector<float> &roi_object_y_coords,
-                    vector<float> &roi_object_z_coords);
+                    std::vector<float> &roi_object_x_coords,
+                    std::vector<float> &roi_object_y_coords,
+                    std::vector<float> &roi_object_z_coords);
 
   /**
    * @brief Exract the x,y,z coordinates in the TOF frame of the point closest
@@ -401,9 +400,9 @@ private:
    */
   std::vector<TOFMessage::Point2D>
   ConvertTOFPointsToLDSPoints(const size_t num_points,
-                              const vector<float> &image_object_x_coords,
-                              const vector<float> &image_object_y_coords,
-                              const vector<float> &image_object_z_coords);
+                              const std::vector<float> &image_object_x_coords,
+                              const std::vector<float> &image_object_y_coords,
+                              const std::vector<float> &image_object_z_coords);
 
   /**
    * @brief Draw the bounding box along with the detected class and the

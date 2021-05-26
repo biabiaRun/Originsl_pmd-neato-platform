@@ -776,9 +776,9 @@ size_t TOFDaemon::ProcessROI(cv::Mat &gray_image, const cv::Rect roi_rect,
                              const cv::Mat ptcloud_depth,
                              const cv::Mat ptcloud_x, const cv::Mat ptcloud_y,
                              const cv::Mat ptcloud_z,
-                             vector<float> &roi_object_x_coords,
-                             vector<float> &roi_object_y_coords,
-                             vector<float> &roi_object_z_coords) {
+                             std::vector<float> &roi_object_x_coords,
+                             std::vector<float> &roi_object_y_coords,
+                             std::vector<float> &roi_object_z_coords) {
   OtsuThresholding otsu;
 
   // Extract the region of interest from the data
@@ -837,9 +837,9 @@ size_t TOFDaemon::LocalizeROI(const cv::Mat &img_roi,
 }
 
 std::vector<TOFMessage::Point2D> TOFDaemon::ConvertTOFPointsToLDSPoints(
-    const size_t num_points, const vector<float> &image_object_x_coords,
-    const vector<float> &image_object_y_coords,
-    const vector<float> &image_object_z_coords) {
+    const size_t num_points, const std::vector<float> &image_object_x_coords,
+    const std::vector<float> &image_object_y_coords,
+    const std::vector<float> &image_object_z_coords) {
 
   // Conversion from meter to millimeters since the TOF point units are in
   // meters and the transformation matrix + robot code are in millimeters
@@ -1073,19 +1073,38 @@ int TOFDaemon::Run() {
           }
 
           // Send the object points over to the robot
-          syslog(LOG_NOTICE, "Publishing %zu points! \n",
-                 num_image_object_points);
           std::vector<TOFMessage::Point2D> object_points;
+          uint32_t status = TOFMessage::TOF_OK;
           if (num_image_object_points > 0) {
             // If objects have been detected, transform the points from the TOF
             // frame to the LDS frame
             object_points = ConvertTOFPointsToLDSPoints(
                 num_image_object_points, image_object_x_coords,
                 image_object_y_coords, image_object_z_coords);
+
+            // If there are more than the maximum number of points, only return
+            // the maximum number but change the TOFMessage status to indicate
+            // points were left out
+            if (num_image_object_points >
+                TOFMessage::kMaxTOFObjectPointsPerImage) {
+              syslog(
+                  LOG_NOTICE,
+                  "WARNING: There are more object points detected than can "
+                  "be published to the robot process. Only %d/%zu points are "
+                  "contained in the message! \n",
+                  TOFMessage::kMaxTOFObjectPointsPerImage,
+                  num_image_object_points);
+              num_image_object_points = TOFMessage::kMaxTOFObjectPointsPerImage;
+              object_points.resize(num_image_object_points);
+              status = TOFMessage::TOF_OBJECT_OVERFLOW;
+            } else {
+              syslog(LOG_NOTICE, "Publishing %zu points! \n",
+                     num_image_object_points);
+            }
           }
           // Send the points or an empty point vector over NeatoIPC to the robot
           // app
-          tof_server_->Publish(frame_data.system_timestamp,
+          tof_server_->Publish(status, frame_data.system_timestamp,
                                num_image_object_points, object_points);
 
           if (clock_gettime(CLOCK_MONOTONIC, &stop_infer) == -1) {
