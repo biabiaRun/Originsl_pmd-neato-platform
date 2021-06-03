@@ -39,6 +39,11 @@ using namespace cv;
 // it is set to true but the signal handlers can shut the daemon off.
 bool gTOFDaemonRunning = true;
 
+// Global flag to indicate if the TOF Daemon should continue streaming data
+// through NeatoIPC to the robot. This is toggled by the commands sent to the
+// deamon from the robot process and is set to false by default.
+bool gTOFDaemonStreaming = false;
+
 // The file path of the TOF to LDS transformation matrix
 const char kTOFToLDSTransformFile[] =
     "/user/transformation_matrix_tof_into_lds.conf";
@@ -105,11 +110,8 @@ struct SocketParams {
 struct TOFMessage {
   enum TOFCommand {
     // Driver Command/Response values
-    RAW_COMMAND = 0,
-    STREAM_STOP = 1,
-    STREAM_START = 2,
-    POWER_OFF = 3,
-    POWER_ON = 4,
+    STREAM_STOP = 0,
+    STREAM_START = 1
   };
 
   enum TOFStatus {

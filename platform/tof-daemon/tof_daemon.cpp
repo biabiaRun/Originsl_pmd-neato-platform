@@ -52,11 +52,40 @@ static int RemoveFiles(const char *pathname, const struct stat *sbuf, int type,
 
 static void *TOFTransactionHandler(void *req_buf, size_t req_len,
                                    void **resp_buf, size_t *resp_len) {
-  (void)req_buf;
-  (void)req_len;
-  (void)resp_buf;
-  (void)resp_len;
-  return nullptr;
+  static TOFMessage tof_message;
+  *resp_len = sizeof(tof_message);
+  *resp_buf = &tof_message;
+  TOFMessage *in_msg = (TOFMessage *)req_buf;
+  TOFMessage *out_msg = (TOFMessage *)*resp_buf;
+
+  if (req_len != sizeof(TOFMessage)) {
+    return NULL;
+  }
+
+  memset(out_msg, 0, sizeof(tof_message));
+
+  out_msg->transact.command = in_msg->transact.command;
+  out_msg->transact.status = TOFMessage::CMD_NAK;
+
+  switch (in_msg->transact.command) {
+  case TOFMessage::STREAM_STOP: {
+    syslog(LOG_NOTICE,
+           "Received the STREAM_STOP command. Stopping the camera.\n");
+    gTOFDaemonStreaming = false;
+    out_msg->transact.status = TOFMessage::CMD_ACK;
+    break;
+  }
+  case TOFMessage::STREAM_START: {
+    syslog(LOG_NOTICE,
+           "Received the STREAM_START command. Starting the camera.\n");
+    gTOFDaemonStreaming = true;
+    out_msg->transact.status = TOFMessage::CMD_ACK;
+    break;
+  }
+  default:
+    break;
+  }
+  return NULL;
 }
 
 /*****************************************
@@ -88,9 +117,8 @@ void TOFDaemon::Init() {
   InitializeStreamingSockets();
   InitializeNeuralNet();
 
-  // Try to connect the camera and set its parameters otherwise set
-  // the init_successful_ flag to false
   if (ConnectTOFCamera() < 0) {
+    syslog(LOG_ERR, "Error: Failed to start camera capture\n");
     init_successful_ = false;
   }
 
@@ -122,7 +150,6 @@ void TOFDaemon::InitializeNeuralNet() {
   } catch (cv::Exception &e) {
     const char *err_msg = e.what();
     syslog(LOG_ERR, "Error: %s\n", err_msg);
-    Shutdown();
     // Mark the initialization as a fail
     init_successful_ = false;
   }
@@ -130,7 +157,6 @@ void TOFDaemon::InitializeNeuralNet() {
   // Check that the neural net is not empty
   if (net_.empty()) {
     syslog(LOG_ERR, "Error loading the network model.\n");
-    Shutdown();
     // Mark the initialization as a fail
     init_successful_ = false;
   } else {
@@ -195,7 +221,7 @@ int TOFDaemon::Daemonize(const char *daemon_name, const char *daemon_path,
   // Fork the parent to create a child process
   pid_t child = fork();
   if (child < 0) {
-    // ERROR: Failed to fork().
+    // Error: Failed to fork().
     fprintf(stderr, "Error %d: failed to fork: %s", errno, strerror(errno));
     syslog(LOG_ERR, "Error %d: failed to fork: %s", errno, strerror(errno));
     return EXIT_FAILURE;
@@ -207,7 +233,7 @@ int TOFDaemon::Daemonize(const char *daemon_name, const char *daemon_path,
 
   // Create a new Signature Id for the child
   if (setsid() < 0) {
-    // ERROR: Failed to become session leader
+    // Error: Failed to become session leader
     fprintf(stderr, "Error %d: failed to setsid: %s", errno, strerror(errno));
     syslog(LOG_ERR, "Error %d: failed to setsid: %s", errno, strerror(errno));
     return EXIT_FAILURE;
@@ -222,7 +248,7 @@ int TOFDaemon::Daemonize(const char *daemon_name, const char *daemon_path,
   // leading process
   child = fork();
   if (child < 0) {
-    // ERROR: Creating grandchild process failed
+    // Error: Creating grandchild process failed
     fprintf(stderr, "Error %d: failed to fork: %s", errno, strerror(errno));
     syslog(LOG_ERR, "Error %d: failed to fork: %s", errno, strerror(errno));
     return EXIT_FAILURE;
@@ -238,7 +264,7 @@ int TOFDaemon::Daemonize(const char *daemon_name, const char *daemon_path,
 
   // Change to path directory
   if (chdir(daemon_path) < 0) {
-    // ERROR: Failed to change grandchild's directory
+    // Error: Failed to change grandchild's directory
     fprintf(stderr, "Error %d: failed to chdir: %s", errno, strerror(errno));
     return EXIT_FAILURE;
   }
@@ -258,7 +284,7 @@ int TOFDaemon::Daemonize(const char *daemon_name, const char *daemon_path,
   // already created
   lock_fd_ = open(LOCK_FILE, O_RDWR | O_CREAT, 0640);
   if (lock_fd_ < 0) {
-    // ERROR: failed to create lock file
+    // Error: failed to create lock file
     syslog(LOG_ERR, "Error %d: failed to open lock file %s: %s", errno,
            LOCK_FILE, strerror(errno));
     return EXIT_FAILURE;
@@ -266,7 +292,7 @@ int TOFDaemon::Daemonize(const char *daemon_name, const char *daemon_path,
 
   // Check if the lock file has been locked
   if (lockf(lock_fd_, F_TLOCK, 0) < 0) {
-    // ERROR: Lock already applied
+    // Error: Lock already applied
     syslog(LOG_ERR, "Error: tried to run TOFDaemon twice");
     exit(0);
   }
@@ -275,7 +301,7 @@ int TOFDaemon::Daemonize(const char *daemon_name, const char *daemon_path,
   char str[16];
   snprintf(str, sizeof(str), "%d\n", getpid());
   if (write(lock_fd_, str, strlen(str)) < 0) {
-    // ERROR: Failed to write PID to lock file
+    // Error: Failed to write PID to lock file
     syslog(LOG_ERR, "Error %d: Failed to write PID to lock file %s: %s", errno,
            LOCK_FILE, strerror(errno));
     return EXIT_FAILURE;
@@ -552,9 +578,8 @@ int TOFDaemon::ConnectTOFCamera() {
   camera_device_ = camera_factory_.createCamera();
 
   if (camera_device_ == nullptr) {
-    // ERROR: Failed to connect to TOF sensor
-    syslog(LOG_NOTICE, "TOFDaemon: Error: Failed to connect to TOF sensor\n");
-    Shutdown();
+    // Error: Failed to connect to TOF sensor
+    syslog(LOG_NOTICE, "Error: Failed to connect to TOF sensor\n");
     return -1;
   } else {
     if (verbose_)
@@ -565,13 +590,12 @@ int TOFDaemon::ConnectTOFCamera() {
 
   // Initialize the camera
   if (camera_device_->initialize() != royale::CameraStatus::SUCCESS) {
-    // ERROR: Failed to initialize the camera
+    // Error: Failed to initialize the camera
     syslog(LOG_ERR, "Error: Could not initialize camera\n");
-    Shutdown();
     return -1;
   } else {
     if (verbose_)
-      syslog(LOG_NOTICE, "%s:%d: TOFDaemon successfully initialzed camera\n",
+      syslog(LOG_NOTICE, "%s:%d: TOFDaemon successfully initialized camera\n",
              __FUNCTION__, __LINE__);
   }
 
@@ -580,7 +604,6 @@ int TOFDaemon::ConnectTOFCamera() {
   auto status = camera_device_->getUseCases(use_cases);
   if (status != royale::CameraStatus::SUCCESS || use_cases.empty()) {
     syslog(LOG_ERR, "Error retrieving use cases for the slave\n");
-    Shutdown();
     return -1;
   }
 
@@ -590,7 +613,7 @@ int TOFDaemon::ConnectTOFCamera() {
   royale::String use_mode("MODE_9_5FPS");
   for (size_t i = 0; i < use_cases.size(); ++i) {
     if (verbose_)
-      syslog(LOG_ERR, "USE CASE : %s\n", use_cases[i].c_str());
+      syslog(LOG_NOTICE, "USE CASE : %s\n", use_cases[i].c_str());
     if (use_cases[i] == use_mode) {
       // we found the use case
       selected_use_case_idx = i;
@@ -600,16 +623,14 @@ int TOFDaemon::ConnectTOFCamera() {
   }
   // check if we found a suitable use case
   if (!use_case_found) {
-    syslog(LOG_ERR, "Error : Did not find MODE_9_5FPS\n");
-    Shutdown();
+    syslog(LOG_ERR, "Error: Did not find MODE_9_5FPS\n");
     return -1;
   }
   // set use case
   if (camera_device_->setUseCase(use_cases.at(selected_use_case_idx)) !=
       royale::CameraStatus::SUCCESS) {
-    syslog(LOG_ERR, "Error setting use case %s for the slave\n",
+    syslog(LOG_ERR, "Error: Use case %s not set for the slave\n",
            use_mode.c_str());
-    Shutdown();
     return -1;
   }
 
@@ -625,7 +646,6 @@ int TOFDaemon::ConnectTOFCamera() {
         royale::CameraStatus::SUCCESS) {
       // Error: Failed to set camera in automatic exposure mode
       syslog(LOG_ERR, "Error: Failed to set automatic exposure\n");
-      Shutdown();
       return -1;
     }
   } else {
@@ -634,7 +654,6 @@ int TOFDaemon::ConnectTOFCamera() {
         royale::CameraStatus::SUCCESS) {
       // Error: Failed to set camera exposure time
       syslog(LOG_ERR, "Error: Failed to set manual exposure time\n");
-      Shutdown();
       return -1;
     }
   }
@@ -645,7 +664,6 @@ int TOFDaemon::ConnectTOFCamera() {
       royale::CameraStatus::SUCCESS) {
     // Error: Failed to grab camera parameters
     syslog(LOG_ERR, "Error: Failed to get processing parameters\n");
-    Shutdown();
     return -1;
   }
 
@@ -720,35 +738,22 @@ int TOFDaemon::ConnectTOFCamera() {
 
   if (camera_device_->setProcessingParameters(ppvec, stream_id) !=
       royale::CameraStatus::SUCCESS) {
-    syslog(LOG_ERR, "TOFDaemon Error: Failed to set processing parameters\n");
-    Shutdown();
+    syslog(LOG_ERR, "Error: Failed to set processing parameters\n");
     return -1;
   } else {
     if (verbose_)
-      syslog(LOG_NOTICE, "TOFDaemon successfully set processing parameters\n");
+      syslog(LOG_NOTICE, "Successfully set processing parameters\n");
   }
 
   tof_listener_.reset(new TOFDataListener(verbose_));
   if (camera_device_->registerDataListener(tof_listener_.get()) !=
       royale::CameraStatus::SUCCESS) {
-    // ERROR: Failed to register data listener
+    // Error: Failed to register data listener
     syslog(LOG_ERR, "Error: Failed to register data listener\n");
-    Shutdown();
-    return -1;
+  } else {
+    if (verbose_)
+      syslog(LOG_NOTICE, "Successfully registered data listener\n");
   }
-  if (verbose_)
-    syslog(LOG_NOTICE, "TOFDaemon: Successfully registered data listener\n");
-
-  // Begin video capture
-  if (camera_device_->startCapture() != royale::CameraStatus::SUCCESS) {
-    // ERROR: Failed to start capture
-    syslog(LOG_ERR, "Error: Failed to start video capture\n");
-    Shutdown();
-    return -1;
-  }
-  if (verbose_)
-    syslog(LOG_NOTICE, "TOFDaemon: Successfully started video capture\n");
-
   return 0;
 }
 
@@ -898,7 +903,7 @@ int TOFDaemon::Run() {
   // Spawn this process as a daemon
   int ret = Daemonize(DAEMON_NAME, "/tmp", NULL, NULL, NULL);
   if (ret != 0) {
-    // ERROR: Failed to create a daemon
+    // Error: Failed to create a daemon
     fprintf(stderr, "Error: Failed to create daemon\n");
     syslog(LOG_ERR, "Error: Failed to create daemon\n");
     exit(ret);
@@ -920,6 +925,7 @@ int TOFDaemon::Run() {
     // Check to make sure that initialization was successful, otherwise do not
     // run
     if (!init_successful_) {
+      Shutdown();
       fprintf(stderr, "Error: TOFDaemon initialization failed.\n");
       syslog(LOG_ERR, "Error: TOFDaemon initialization failed.\n");
       return -1;
@@ -937,12 +943,6 @@ int TOFDaemon::Run() {
     cv::Size2f sensor_size_float(static_cast<float>(tof_num_columns),
                                  static_cast<float>(tof_num_rows));
 
-    // Mark that the daemon should continue processing frames
-    gTOFDaemonRunning = true;
-
-    if (verbose_)
-      syslog(LOG_NOTICE, "TOFDaemon: Starting video capture\n");
-
     struct timeval end_time;
     gettimeofday(&end_time, NULL);
 
@@ -951,34 +951,68 @@ int TOFDaemon::Run() {
         static_cast<double>(end_time.tv_sec - start_time.tv_sec) * 1000. +
         static_cast<double>(end_time.tv_usec - start_time.tv_usec) / 1000.;
     if (verbose_)
-      syslog(LOG_NOTICE, "TOFDaemon: setup time took %g milliseconds\n",
-             setup_time_ms);
+      syslog(LOG_NOTICE, "setup time took %g milliseconds\n", setup_time_ms);
 
     std::thread processingThread([&]() {
       // We'll need the signal handler(s) to stop the video capture;
       while (gTOFDaemonRunning) {
+
+        bool is_camera_capturing;
+        camera_device_->isCapturing(is_camera_capturing);
+        if (!gTOFDaemonStreaming && is_camera_capturing) {
+          // If the command is given to stop streaming and the camera is still
+          // capturing, turn the camera off since it is not being used
+          if (camera_device_->stopCapture() != royale::CameraStatus::SUCCESS) {
+            syslog(LOG_ERR, "Error: Failed to stop camera capture\n");
+          } else {
+            syslog(LOG_NOTICE, "Stopping video capture\n");
+
+            // Need to reinitialize the camera when it is stopped so that when
+            // the command to restart the camera is given again, the camera can
+            // start immediately. Without reinitialization, the camera can take
+            // ~20 seconds to perform the full initialization + start capture
+            // process. By performing the initialization pre-emptively when the
+            // stop command is given, this saves time later on.
+            syslog(LOG_NOTICE, "Reinitializing camera for next usage\n");
+            if (ConnectTOFCamera() < 0) {
+              syslog(LOG_ERR, "Error: Failed to start camera capture\n");
+            }
+          }
+        } else if (gTOFDaemonStreaming && !is_camera_capturing) {
+          // If the daemon is supposed to be streaming and the camera is off,
+          // turn the camera on.
+          if (camera_device_->startCapture() != royale::CameraStatus::SUCCESS) {
+            // Error: Failed to start capture
+            // TODO(CodeCleanup): Should the TOFDaemon exit completely if the
+            // camera cannot reconnect?
+            syslog(LOG_ERR, "Error: Failed to start video capture\n");
+          } else {
+            syslog(LOG_NOTICE, "Starting video capture\n");
+          }
+        }
+
         struct timespec start, stop;
         if (clock_gettime(CLOCK_MONOTONIC, &start) == -1) {
           syslog(LOG_ERR, "Error: Failed to get clock start time\n");
         }
 
-        if (verbose_)
-          if (verbose_)
-            syslog(LOG_NOTICE, "Processing-Thread gFramesQueue Size : %d\n",
-                   static_cast<int>(gFramesQueue.size()));
-
         new_data_available = false;
         FrameDataStruct frame_data;
-        {
-          if (!gFramesQueue.empty()) {
-            if (verbose_)
-              syslog(LOG_NOTICE, "New Data Available\n");
-            frame_data = gFramesQueue.get_fresh_and_pop();
-            new_data_available = true;
+        if (!gFramesQueue.empty()) {
+          if (verbose_) {
+            syslog(LOG_NOTICE, "New Data Available\n");
+            syslog(LOG_NOTICE, "Processing-Thread gFramesQueue Size : %zu\n",
+                   gFramesQueue.size());
           }
+          frame_data = gFramesQueue.get_fresh_and_pop();
+          new_data_available = true;
         }
 
-        if (new_data_available) {
+        // Only process data when new data is available AND the daemon should
+        // stream to the robot process. When gTOFDaemonStreaming is false, we
+        // still want to pop data from gFramesQueue so that the queue does not
+        // fill up and stale data is not process when finally enabled
+        if (new_data_available && gTOFDaemonStreaming) {
           struct timespec start_infer, stop_infer;
           if (clock_gettime(CLOCK_MONOTONIC, &start_infer) == -1) {
             syslog(LOG_ERR, "Error: Failed to get clock start time\n");
@@ -1114,6 +1148,17 @@ int TOFDaemon::Run() {
           if (live_stream_video_) {
             SendLiveVideoStream(frame_data.mat_nnet_input);
           }
+        } else {
+          if (gTOFDaemonStreaming) {
+            // If the camera is turned on and the TOFDaemon should be streaming
+            // but there is no data available, then print an error message
+            syslog(LOG_ERR, "Error: TOFDaemon should be streaming but no "
+                            "frames are entering the queue!\n");
+          }
+
+          // Sleep is necessary when the TOFDaemon is not processing frames so
+          // that it doesn't take over all the processing power on the robot
+          usleep(100000);
         }
 
         if (clock_gettime(CLOCK_MONOTONIC, &stop) == -1) {
