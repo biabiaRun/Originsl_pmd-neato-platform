@@ -282,6 +282,16 @@ int TOFDaemon::Daemonize(const char *daemon_name, const char *daemon_path,
 
   // Create a "lock file" whose appearance indicates that the TOFDaemon is
   // already created
+
+  // But first check if the file already exists
+  lock_fd_ = open(LOCK_FILE, O_RDONLY);
+  if (lock_fd_ >= 0) {
+    // Error: The lock file already exists so another TOFDaemon must already been running
+    syslog(LOG_ERR, "Error %d: Lock file already exists %s: %s", errno,
+           LOCK_FILE, strerror(errno));
+    return EXIT_FAILURE;
+  }
+
   lock_fd_ = open(LOCK_FILE, O_RDWR | O_CREAT, 0640);
   if (lock_fd_ < 0) {
     // Error: failed to create lock file
