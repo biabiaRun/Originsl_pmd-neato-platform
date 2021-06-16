@@ -126,13 +126,19 @@ struct TOFMessage {
 
   enum {
     TOF_STREAMING_DATA = 0x0001,
+    kMaxTOFObjectsPerImage = 50,
     kMaxTOFObjectPointsPerImage = 500,
-    RESPONSE_BUFFER_LEN = 1024,
   };
 
   // The points being sent should already be in the LDS frame
   struct Point2D {
     int32_t x, y;
+  };
+
+  // The object class of the points up to the specified index
+  struct ObjectID {
+    uint8_t object_class;
+    size_t index;
   };
 
   union {
@@ -141,25 +147,43 @@ struct TOFMessage {
       uint32_t header;
 
       uint32_t status;
+      size_t num_objects;
       size_t num_points;
       double timestamp;
 
+      // The points and object_ids arrays interact as follows:
+      //
+      //        points = All object points detected by the TOF object detection
+      //        object_ids.class = The object class for each point in the points
+      //        object_ids.index = The end index of the points array where the
+      //        corresponding object class applies
+      //
+      //    For example:
+      //        num_objects = 2
+      //        num_points = 6
+      //        points = [(10,30), (11,30), (12,30), (50,70), (50,71), (50,71)]
+      //        object_ids = [{1, 2}, {2, 5}]
+      //    This means that there are 6 points total in the points array but
+      //    those 6 points represent two different objects. The first element in
+      //    each entry of the object_ids array show that they are two different
+      //    classes of objects. To separate the points by classes, the second
+      //    element of each object_ids array signify the end index of the
+      //    corresponding object class. In this case we look at the first item
+      //    in the object_ids arrays and we get 1 and 2. This means that
+      //    everything between and including indices 0-2 in the points array are
+      //    of object class 1. The next value in the object_ids array are 2
+      //    and 5. This means that (taking into account) the previous index in
+      //    the object_ids array) indices 3-5, inclusive, in the points array
+      //    are of object class 2. This can then be extended for any number of
+      //    objects and points.
       Point2D points[kMaxTOFObjectPointsPerImage];
+      ObjectID object_ids[kMaxTOFObjectsPerImage];
     } pubsub;
 
     // Command response transactions
     struct {
       uint32_t command;
       uint32_t status;
-
-      union {
-        float data_float;
-        int32_t data_integer;
-        struct {
-          uint8_t data_buffer[RESPONSE_BUFFER_LEN];
-          size_t data_len;
-        };
-      };
     } transact;
   };
 };
@@ -186,19 +210,22 @@ public:
    * @param status The status of the tof message
    * @param timestamp The timestamp of when the image was taken by the TOF
    * camera based on CLOCK_MONOTONIC in ms
-   * @param num_points the number of points stored in the data arrays
    * @param object_points The object points already converted to the LDS frame
+   * @param object_ids The classification of each object and the indices of the
+   * corresponding points in the object_points vector
    * @return int -1 for bad arguement, -2 for ipc failure and 0 for success
    */
   int Publish(const uint32_t status, const double timestamp,
-              const size_t num_points,
-              const std::vector<TOFMessage::Point2D> &object_points) {
+              const std::vector<TOFMessage::Point2D> &object_points,
+              const std::vector<TOFMessage::ObjectID> object_ids) {
     TOFMessage msg;
     msg.pubsub.header = TOFMessage::TOF_STREAMING_DATA;
     msg.pubsub.status = status;
     msg.pubsub.timestamp = timestamp;
-    msg.pubsub.num_points = num_points;
+    msg.pubsub.num_points = object_points.size();
+    msg.pubsub.num_objects = object_ids.size();
     std::copy(object_points.begin(), object_points.end(), msg.pubsub.points);
+    std::copy(object_ids.begin(), object_ids.end(), msg.pubsub.object_ids);
     return tof_streaming_broadcast_.Send(msg);
   }
 

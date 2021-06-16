@@ -286,7 +286,8 @@ int TOFDaemon::Daemonize(const char *daemon_name, const char *daemon_path,
   // But first check if the file already exists
   lock_fd_ = open(LOCK_FILE, O_RDONLY);
   if (lock_fd_ >= 0) {
-    // Error: The lock file already exists so another TOFDaemon must already been running
+    // Error: The lock file already exists so another TOFDaemon must already
+    // be running
     syslog(LOG_ERR, "Error %d: Lock file already exists %s: %s", errno,
            LOCK_FILE, strerror(errno));
     return EXIT_FAILURE;
@@ -1057,14 +1058,22 @@ int TOFDaemon::Run() {
           std::vector<float> image_object_y_coords;
           std::vector<float> image_object_z_coords;
 
-          // Keep track of the total number of object points there are in this
+          // Keep track of the total number of object points that are in this
           // image
           size_t num_image_object_points = 0;
+
+          // Keep track of the object classes and their indices
+          std::vector<TOFMessage::ObjectID> object_ids;
+
+          // Boolean indicating whether the number of points has exceeded the
+          // maximum that can be sent in the message
+          bool image_points_overflow = false;
 
           // Process each region of interest in the image
           for (size_t i = 0; i < indices.size(); ++i) {
             int idx = indices[i];
             Rect roi_rect = boxes[idx];
+            int object_class = class_ids[i];
 
             // Instantiate the value buffers since they will be modified by the
             // ProcessROI function
@@ -1102,10 +1111,38 @@ int TOFDaemon::Run() {
                   image_object_z_coords.end(), roi_object_z_coords.begin(),
                   roi_object_z_coords.begin() + num_object_points);
               num_image_object_points += num_object_points;
-              if (verbose_)
-                syslog(LOG_NOTICE,
-                       "This ROI provides this many points %zu/%zu\n",
-                       num_object_points, image_object_x_coords.size());
+
+              if (!image_points_overflow) {
+                // Save the object class and the index in the object point
+                // vector
+                TOFMessage::ObjectID object_id;
+                object_id.object_class = static_cast<uint8_t>(object_class);
+                // On the first instance that the number of points exceeds the
+                // max defined in the TOFMessage, we will enter this if
+                // statement so we want to get all the points until the maximum
+                // allowable number, which is why we have the min to get the
+                // index so that the last object added has a stop index of
+                // kMaxTOFObjectPointsPerImage - 1
+                object_id.index =
+                    std::min(num_image_object_points,
+                             static_cast<size_t>(
+                                 TOFMessage::kMaxTOFObjectPointsPerImage)) -
+                    1;
+                object_ids.push_back(object_id);
+                if (verbose_) {
+                  syslog(LOG_NOTICE,
+                         "This ROI provides this many points %zu/%zu\n",
+                         num_object_points, image_object_x_coords.size());
+                }
+              }
+
+              if (num_image_object_points >
+                  TOFMessage::kMaxTOFObjectPointsPerImage) {
+                image_points_overflow = true;
+                // No need to keep processing points if we already have the
+                // maximum number
+                break;
+              }
             }
 
             if (live_stream_video_) {
@@ -1149,7 +1186,7 @@ int TOFDaemon::Run() {
           // Send the points or an empty point vector over NeatoIPC to the robot
           // app
           tof_server_->Publish(status, frame_data.system_timestamp,
-                               num_image_object_points, object_points);
+                               object_points, object_ids);
 
           if (clock_gettime(CLOCK_MONOTONIC, &stop_infer) == -1) {
             syslog(LOG_ERR, "Error: Failed to get clock stop time\n");
