@@ -22,6 +22,7 @@
 namespace {
 std::vector<cv::Point3f> pt_cloud;
 std::vector<float> pt_amplitude;
+std::vector<RunningStat> confident_pixel;
 std::vector<RunningStat> v_pt_cloud_running_stats;
 std::vector<RunningStat> v_pt_amplitude_running_stats;
 std::mutex cloudMutex;
@@ -68,20 +69,20 @@ inline PlaneParams::PlaneParams(float v1, float v2, float v3, float v4, cv::Poin
 class TestMetrics {
  public:
   TestMetrics();
-  float depth_precision_spatial;
-  float depth_precision_temporal;
-  float depth_precision_temporal_Q90;
-  float single_shot_depth_error;
-  float depth_accuracy;
-  float depth_accuracy_percent;
-  float depth_accuracy_percent_Q90;
-  float amplitude_std_temporal;
-  float amplitude_std;
-  float amplitude_mean;
-  float amplitude_min;
-  float amplitude_max;
-  float amplitude_min_of_mins;
-  float amplitude_max_of_maxs;
+  float kDepthPrecisionSpatial;
+  float kDepthPrecisionTemporal;
+  float kDepthPrecisionTemporalQ90;
+  float kSingleShotDepthError;
+  float kDepthAccuracy;
+  float kDepthAccuracyPercent;
+  float kDepthAccuracyPercentQ90;
+  float kAmplitudeStdTemporal;
+  float kAmplitudeStd;
+  float kAmplitudeMean;
+  float kAmplitudeMin;
+  float kAmplitudeMax;
+  float kAmplitudeMinMin;
+  float kAmplitudeMaxMax;
   float plane_tilt_angle;
   float plane_pan_angle;
   float avg_plane_residual;
@@ -91,20 +92,20 @@ class TestMetrics {
 
 // Initialize the test metrics
 inline TestMetrics::TestMetrics()
-    : depth_precision_spatial(0.0f),
-      depth_precision_temporal(0.0f),
-      depth_precision_temporal_Q90(0.0f),
-      single_shot_depth_error(0.0f),
-      depth_accuracy(0.0f),
-      depth_accuracy_percent(0.0f),
-      depth_accuracy_percent_Q90(0.0f),
-      amplitude_std_temporal(0.0f),
-      amplitude_std(0.0f),
-      amplitude_mean(0.0f),
-      amplitude_min(10000.0f),
-      amplitude_max(-10000.0f),
-      amplitude_min_of_mins(10000.0f),
-      amplitude_max_of_maxs(-10000.0f),
+    : kDepthPrecisionSpatial(0.0f),
+      kDepthPrecisionTemporal(0.0f),
+      kDepthPrecisionTemporalQ90(0.0f),
+      kSingleShotDepthError(0.0f),
+      kDepthAccuracy(0.0f),
+      kDepthAccuracyPercent(0.0f),
+      kDepthAccuracyPercentQ90(0.0f),
+      kAmplitudeStdTemporal(0.0f),
+      kAmplitudeStd(0.0f),
+      kAmplitudeMean(0.0f),
+      kAmplitudeMin(10000.0f),
+      kAmplitudeMax(-10000.0f),
+      kAmplitudeMinMin(10000.0f),
+      kAmplitudeMaxMax(-10000.0f),
       plane_tilt_angle(0.0f),
       plane_pan_angle(0.0f),
       avg_plane_residual(0.0f) {}
@@ -122,9 +123,10 @@ class MyListener : public royale::IExtendedDataListener {
       auto depth = data->getDepthData();
       auto intermed = data->getIntermediateData();
       for (size_t i = 0u; i < NUM_IMAGE_ELEMENTS; ++i) {
+        confident_pixel[i].Push(depth->points[i].depthConfidence);
+        pt_cloud.push_back(cv::Point3f(depth->points[i].x, depth->points[i].y, depth->points[i].z));
+        pt_amplitude.push_back(intermed->points[i].amplitude);
         if (depth->points[i].depthConfidence > 0) {
-          pt_cloud.push_back(cv::Point3f(depth->points[i].x, depth->points[i].y, depth->points[i].z));
-          pt_amplitude.push_back(intermed->points[i].amplitude);
           v_pt_cloud_running_stats[i].Push(depth->points[i].z);
           v_pt_amplitude_running_stats[i].Push(intermed->points[i].amplitude);
         }
@@ -185,6 +187,7 @@ int main(int argc, char** argv) {
   std::vector<PlaneParams> plane_coeffs;
   v_pt_cloud_running_stats.resize(NUM_IMAGE_ELEMENTS);
   v_pt_amplitude_running_stats.resize(NUM_IMAGE_ELEMENTS);
+  confident_pixel.resize(NUM_IMAGE_ELEMENTS);
 
   useCase = options.test_mode;
 
@@ -239,16 +242,9 @@ int main(int argc, char** argv) {
     return LISTENER_MODE_ERROR;
   }
 
-  status = camera_->setExposureMode(royale::ExposureMode::MANUAL);
+  status = camera_->setExposureMode(royale::ExposureMode::AUTOMATIC);
   if (status != royale::CameraStatus::SUCCESS) {
-    std::cerr << "[ERROR] Could not set exposure to manual" << royale::getStatusString(status).c_str() << std::endl;
-    return EXPOSURE_MODE_ERROR;
-  }
-
-  std::pair<int, int> min_max_exposures = getExposureMinMax(useCase);
-  status = camera_->setExposureTime(min_max_exposures.second);
-  if (status != royale::CameraStatus::SUCCESS) {
-    std::cout << "[ERROR] Could not set Manual Exposure to: " << min_max_exposures.second << std::endl;
+    std::cerr << "[ERROR] Could not set exposure to automatic" << royale::getStatusString(status).c_str() << std::endl;
     return EXPOSURE_MODE_ERROR;
   }
 
@@ -346,6 +342,16 @@ int main(int argc, char** argv) {
   RunningStat single_shot_depth_error_j;
   RunningStat amplitude_uniformity_j;
 
+  cv::Mat confidence_mask = cv::Mat::zeros(1, NUM_IMAGE_ELEMENTS, CV_8UC1);
+  for (int index = 0; index < (int)confident_pixel.size(); ++index) {
+    if (confident_pixel[index].Mean() >= ToF_test_params::kMinConfidenceThreshold) {
+      confidence_mask.at<uchar>(index) = 1;
+    } else {
+      confidence_mask.at<uchar>(index) = 0;
+    }
+  }
+  int num_good_pixels = cv::countNonZero(confidence_mask);
+
   // Fit a plane to each frame saving the plane equation coefficients into a
   // vector, plane_coeffs Using Least Squares
   float fux, fuy, fuz;
@@ -357,12 +363,23 @@ int main(int argc, char** argv) {
   float b_avg = 0.0f;
   float c_avg = 0.0f;
   float d_avg = 0.0f;
+  int filter_index = 0;
   float ave_dist_to_plane;
   for (size_t frame_index = 0u; frame_index < vec_pt_cloud.size(); ++frame_index) {
     cv::Mat& frame_pt_cloud = vec_pt_cloud[frame_index];
-    cv::Scalar ux = cv::mean(frame_pt_cloud.row(0));
-    cv::Scalar uy = cv::mean(frame_pt_cloud.row(1));
-    cv::Scalar uz = cv::mean(frame_pt_cloud.row(2));
+    cv::Mat frame_pt_cloud_filtered = cv::Mat::zeros(frame_pt_cloud.rows, num_good_pixels, CV_32FC1);
+    filter_index = 0;
+    for (int pt_index = 0; pt_index < frame_pt_cloud.cols; ++pt_index) {
+      if (confidence_mask.at<uchar>(pt_index) > 0) {
+        frame_pt_cloud_filtered.at<float>(0, filter_index) = frame_pt_cloud.at<float>(0, pt_index);
+        frame_pt_cloud_filtered.at<float>(1, filter_index) = frame_pt_cloud.at<float>(1, pt_index);
+        frame_pt_cloud_filtered.at<float>(2, filter_index) = frame_pt_cloud.at<float>(2, pt_index);
+        filter_index++;
+      }
+    }
+    cv::Scalar ux = cv::mean(frame_pt_cloud_filtered.row(0));
+    cv::Scalar uy = cv::mean(frame_pt_cloud_filtered.row(1));
+    cv::Scalar uz = cv::mean(frame_pt_cloud_filtered.row(2));
 
     fux = static_cast<float>(ux.val[0]);
     fuy = static_cast<float>(uy.val[0]);
@@ -374,10 +391,10 @@ int main(int argc, char** argv) {
     uxyz.at<float>(2, 0) = fuz;
 
     cv::Mat uMat;
-    cv::repeat(uxyz, 1, frame_pt_cloud.cols, uMat);
-    cv::Mat frame_pt_cloud_bar = frame_pt_cloud - uMat;
-    cv::Mat CC = frame_pt_cloud_bar * frame_pt_cloud_bar.t();
-    CC = CC / (static_cast<float>(frame_pt_cloud.cols) - 1.0f);
+    cv::repeat(uxyz, 1, frame_pt_cloud_filtered.cols, uMat);
+    cv::Mat frame_pt_cloud_filtered_bar = frame_pt_cloud_filtered - uMat;
+    cv::Mat CC = frame_pt_cloud_filtered_bar * frame_pt_cloud_filtered_bar.t();
+    CC = CC / (static_cast<float>(frame_pt_cloud_filtered_bar.cols) - 1.0f);
     cv::Mat e_values, e_vectors;
     cv::eigen(CC, e_values, e_vectors);
     a = e_vectors.at<float>(2, 0);
@@ -409,55 +426,63 @@ int main(int argc, char** argv) {
   // clear out running stats objects
   single_shot_depth_error_j.Clear();
   amplitude_uniformity_j.Clear();
+  std::vector<float> z_diff;
+  std::vector<float> vec_plane_residuals;
   float shot_sum_val = 0.0f;
+  float shot_num_vals = 0.0f;
   float x_, y_, z_;
   for (size_t frame_index = 0u; frame_index < vec_pt_cloud.size(); ++frame_index) {
     cv::Mat& frame_amplitude = vec_pt_amplitude[frame_index];
     cv::Mat& frame_pt_cloud = vec_pt_cloud[frame_index];
     PlaneParams cur_plane = plane_coeffs[frame_index];
-    std::vector<float> z_diff(frame_pt_cloud.cols, 0.0f);
-    std::vector<float> vec_plane_residuals(frame_pt_cloud.cols, 0.0f);
+    z_diff.clear();
+    vec_plane_residuals.clear();
     shot_sum_val = 0.0f;
+    shot_num_vals = 0.0f;
     for (int pt_index = 0; pt_index < frame_pt_cloud.cols; ++pt_index) {
+      if (confidence_mask.at<uchar>(pt_index) < 1) {
+        continue;
+      }
       // calculate spatial depth precision
       x_ = frame_pt_cloud.at<float>(0, pt_index);
       y_ = frame_pt_cloud.at<float>(1, pt_index);
       z_ = frame_pt_cloud.at<float>(2, pt_index);
 
       // subtract plane fit from z_ coordinate
-      z_diff[pt_index] = z_ - (cur_plane.d - cur_plane.a * x_ - cur_plane.b * y_) / cur_plane.c;
+      z_diff.push_back(z_ - (cur_plane.d - cur_plane.a * x_ - cur_plane.b * y_) / cur_plane.c);
 
       // shot distance
       shot_sum_val += (z_ - ToF_test_params::kGroundTruthDistance);
+      shot_num_vals += 1.0f;
 
       // running stats for amplitude
       amplitude_uniformity_j.Push(frame_amplitude.at<float>(pt_index));
 
       // test for amplitude max of max's
-      if (frame_amplitude.at<float>(pt_index) > validation_test_metrics.amplitude_max_of_maxs) {
-        validation_test_metrics.amplitude_max_of_maxs = frame_amplitude.at<float>(pt_index);
+      if (frame_amplitude.at<float>(pt_index) > validation_test_metrics.kAmplitudeMaxMax) {
+        validation_test_metrics.kAmplitudeMaxMax = frame_amplitude.at<float>(pt_index);
       }
       // test for amplitude min of min's
-      if (frame_amplitude.at<float>(pt_index) < validation_test_metrics.amplitude_min_of_mins) {
-        validation_test_metrics.amplitude_min_of_mins = frame_amplitude.at<float>(pt_index);
+      if (frame_amplitude.at<float>(pt_index) < validation_test_metrics.kAmplitudeMinMin) {
+        validation_test_metrics.kAmplitudeMinMin = frame_amplitude.at<float>(pt_index);
       }
       // Calcualte plane residuals
       cv::Point3f diff = cv::Point3f(x_, y_, z_) - cur_plane.centroid;
       float sqrlen = diff.dot(diff);
       float dot_ = diff.dot(cv::Point3f(a, b, c));
-      vec_plane_residuals[pt_index] = std::fabs(sqrlen - dot_ * dot_);
+      vec_plane_residuals.push_back(std::fabs(sqrlen - dot_ * dot_));
     }
     cv::Scalar avg, std_dev;
     cv::meanStdDev(cv::Mat(z_diff), cv::noArray(), std_dev, cv::Mat());
     float f_std_dev = static_cast<float>(std_dev.val[0]);
     // spatial depth precision
-    validation_test_metrics.depth_precision_spatial += f_std_dev;
+    validation_test_metrics.kDepthPrecisionSpatial += f_std_dev;
 
     // running stats for single shot
-    single_shot_depth_error_j.Push(shot_sum_val / static_cast<float>(frame_pt_cloud.cols));
+    single_shot_depth_error_j.Push(shot_sum_val / shot_num_vals);
 
     // amplitude standard deviation
-    validation_test_metrics.amplitude_std += amplitude_uniformity_j.StandardDeviation();
+    validation_test_metrics.kAmplitudeStd += amplitude_uniformity_j.StandardDeviation();
 
     // average plane residuals
     cv::meanStdDev(cv::Mat(vec_plane_residuals), avg, cv::noArray(), cv::Mat());
@@ -465,9 +490,9 @@ int main(int argc, char** argv) {
   }
 
   // Finalize Averages
-  validation_test_metrics.depth_precision_spatial /= static_cast<float>(test_sample_size);
+  validation_test_metrics.kDepthPrecisionSpatial /= static_cast<float>(test_sample_size);
   validation_test_metrics.avg_plane_residual /= static_cast<float>(test_sample_size);
-  validation_test_metrics.amplitude_std /= static_cast<float>(test_sample_size);
+  validation_test_metrics.kAmplitudeStd /= static_cast<float>(test_sample_size);
 
   float std_dev = 0.0f;
   float mean_val = 0.0f;
@@ -485,44 +510,44 @@ int main(int argc, char** argv) {
       // running stat for temporal depth precision
       std_dev = v_pt_cloud_running_stats[pt_index].StandardDeviation();
       v_depth_precision_temporal_std.push_back(std_dev);
-      validation_test_metrics.depth_precision_temporal += std_dev;
+      validation_test_metrics.kDepthPrecisionTemporal += std_dev;
 
       // depth accuracy and percent
-      validation_test_metrics.depth_accuracy += (v_pt_cloud_running_stats[pt_index].Mean() - ToF_test_params::kGroundTruthDistance);
+      validation_test_metrics.kDepthAccuracy += (v_pt_cloud_running_stats[pt_index].Mean() - ToF_test_params::kGroundTruthDistance);
       v_depth_accuracy_percent.push_back((v_pt_cloud_running_stats[pt_index].Mean() - ToF_test_params::kGroundTruthDistance) / ToF_test_params::kGroundTruthDistance);
 
       // amplitude temporal standard deviation
-      validation_test_metrics.amplitude_std_temporal += v_pt_amplitude_running_stats[pt_index].StandardDeviation();
+      validation_test_metrics.kAmplitudeStdTemporal += v_pt_amplitude_running_stats[pt_index].StandardDeviation();
 
       // amplitude mean
       mean_val = v_pt_amplitude_running_stats[pt_index].Mean();
-      validation_test_metrics.amplitude_mean += mean_val;
+      validation_test_metrics.kAmplitudeMean += mean_val;
 
       // amplitude min
-      if (mean_val < validation_test_metrics.amplitude_min) {
-        validation_test_metrics.amplitude_min = mean_val;
+      if (mean_val < validation_test_metrics.kAmplitudeMin) {
+        validation_test_metrics.kAmplitudeMin = mean_val;
       }
       // amplitude max
-      if (mean_val > validation_test_metrics.amplitude_max) {
-        validation_test_metrics.amplitude_max = mean_val;
+      if (mean_val > validation_test_metrics.kAmplitudeMax) {
+        validation_test_metrics.kAmplitudeMax = mean_val;
       }
       pixel_count++;
     }
   }
 
   // finalize avarages and statistics
-  validation_test_metrics.depth_precision_temporal /= pixel_count;
-  validation_test_metrics.depth_accuracy /= pixel_count;
-  validation_test_metrics.amplitude_std_temporal /= pixel_count;
-  validation_test_metrics.amplitude_mean /= pixel_count;
-  validation_test_metrics.depth_accuracy_percent = 100.0f * (validation_test_metrics.depth_accuracy / ToF_test_params::kGroundTruthDistance);
-  validation_test_metrics.single_shot_depth_error = single_shot_depth_error_j.Mean();
+  validation_test_metrics.kDepthPrecisionTemporal /= pixel_count;
+  validation_test_metrics.kDepthAccuracy /= pixel_count;
+  validation_test_metrics.kAmplitudeStdTemporal /= pixel_count;
+  validation_test_metrics.kAmplitudeMean /= pixel_count;
+  validation_test_metrics.kDepthAccuracyPercent = 100.0f * (validation_test_metrics.kDepthAccuracy / ToF_test_params::kGroundTruthDistance);
+  validation_test_metrics.kSingleShotDepthError = single_shot_depth_error_j.Mean();
   // Q90
-  validation_test_metrics.depth_precision_temporal_Q90 = calculate_Q90(v_depth_precision_temporal_std);
-  validation_test_metrics.depth_accuracy_percent_Q90 = 100.0f * calculate_Q90(v_depth_accuracy_percent);
+  validation_test_metrics.kDepthPrecisionTemporalQ90 = calculate_Q90(v_depth_precision_temporal_std);
+  validation_test_metrics.kDepthAccuracyPercentQ90 = 100.0f * calculate_Q90(v_depth_accuracy_percent);
 
   // plane distance, rotation, equation, and residual parameters
-  if (std::fabs(ave_dist_to_plane - ToF_test_params::kGroundTruthDistance) > ToF_testing_limits::ground_truth_distance_check) {
+  if (std::fabs(ave_dist_to_plane - ToF_test_params::kGroundTruthDistance) > ToF_testing_limits::kGroundTruthDistanceCheck) {
     std::cout << "[WARNING]:";
   } else {
     std::cout << "[PASS]:";
@@ -534,47 +559,55 @@ int main(int argc, char** argv) {
   std::cout << "[INFO]:Plane_Rotation_X:" << validation_test_metrics.plane_rot_x_axis << ":Y:" << validation_test_metrics.plane_rot_y_axis << std::endl;
 
   // test if test metrics are within limits
-  inRange(ToF_testing_limits::depth_precision_spatial, validation_test_metrics.depth_precision_spatial) ? std::cout << "[PASS]:" : std::cout << "[FAIL]:";
-  std::cout << "Spatial_Depth_Precision:" << validation_test_metrics.depth_precision_spatial << std::endl;
+  if (num_good_pixels >= ToF_testing_limits::kConfidentPixelCount) {
+    std::cout << "[PASS]:";
+  }
+  else {
+    std::cout << "[FAIL]:";
+  }
+  std::cout << "Valid_Pixel_Count:" << num_good_pixels << std::endl;
 
-  inRange(ToF_testing_limits::depth_precision_temporal, validation_test_metrics.depth_precision_temporal) ? std::cout << "[PASS]:" : std::cout << "[FAIL]:";
-  std::cout << "Temporal_Depth_Precision:" << validation_test_metrics.depth_precision_temporal << std::endl;
+  inRange(ToF_testing_limits::kDepthPrecisionSpatial, validation_test_metrics.kDepthPrecisionSpatial) ? std::cout << "[PASS]:" : std::cout << "[FAIL]:";
+  std::cout << "Spatial_Depth_Precision:" << validation_test_metrics.kDepthPrecisionSpatial << std::endl;
 
-  inRange(ToF_testing_limits::depth_precision_temporal_Q90, validation_test_metrics.depth_precision_temporal_Q90) ? std::cout << "[PASS]:" : std::cout << "[FAIL]:";
-  std::cout << "Temporal_Depth_Precision_Q90:" << validation_test_metrics.depth_precision_temporal_Q90 << std::endl;
+  inRange(ToF_testing_limits::kDepthPrecisionTemporal, validation_test_metrics.kDepthPrecisionTemporal) ? std::cout << "[PASS]:" : std::cout << "[FAIL]:";
+  std::cout << "Temporal_Depth_Precision:" << validation_test_metrics.kDepthPrecisionTemporal << std::endl;
 
-  inRange(ToF_testing_limits::single_shot_depth_error, validation_test_metrics.single_shot_depth_error) ? std::cout << "[PASS]:" : std::cout << "[FAIL]:";
-  std::cout << "Single_Shot_Depth_Error:" << validation_test_metrics.single_shot_depth_error << std::endl;
+  inRange(ToF_testing_limits::kDepthPrecisionTemporalQ90, validation_test_metrics.kDepthPrecisionTemporalQ90) ? std::cout << "[PASS]:" : std::cout << "[FAIL]:";
+  std::cout << "Temporal_Depth_Precision_Q90:" << validation_test_metrics.kDepthPrecisionTemporalQ90 << std::endl;
 
-  inRange(ToF_testing_limits::depth_accuracy, validation_test_metrics.depth_accuracy) ? std::cout << "[PASS]:" : std::cout << "[FAIL]:";
-  std::cout << "Depth_Accuracy:" << validation_test_metrics.depth_accuracy << std::endl;
+  inRange(ToF_testing_limits::kSingleShotDepthError, validation_test_metrics.kSingleShotDepthError) ? std::cout << "[PASS]:" : std::cout << "[FAIL]:";
+  std::cout << "Single_Shot_Depth_Error:" << validation_test_metrics.kSingleShotDepthError << std::endl;
 
-  inRange(ToF_testing_limits::depth_accuracy_percent, validation_test_metrics.depth_accuracy_percent) ? std::cout << "[PASS]:" : std::cout << "[FAIL]:";
-  std::cout << "Depth_Accuracy_Percent:" << validation_test_metrics.depth_accuracy_percent << std::endl;
+  inRange(ToF_testing_limits::kDepthAccuracy, validation_test_metrics.kDepthAccuracy) ? std::cout << "[PASS]:" : std::cout << "[FAIL]:";
+  std::cout << "Depth_Accuracy:" << validation_test_metrics.kDepthAccuracy << std::endl;
 
-  inRange(ToF_testing_limits::depth_accuracy_percent_Q90, validation_test_metrics.depth_accuracy_percent_Q90) ? std::cout << "[PASS]:" : std::cout << "[FAIL]:";
-  std::cout << "Depth_Accuracy_Percent_Q90:" << validation_test_metrics.depth_accuracy_percent_Q90 << std::endl;
+  inRange(ToF_testing_limits::kDepthAccuracyPercent, validation_test_metrics.kDepthAccuracyPercent) ? std::cout << "[PASS]:" : std::cout << "[FAIL]:";
+  std::cout << "Depth_Accuracy_Percent:" << validation_test_metrics.kDepthAccuracyPercent << std::endl;
 
-  inRange(ToF_testing_limits::amplitude_std, validation_test_metrics.amplitude_std) ? std::cout << "[PASS]:" : std::cout << "[FAIL]:";
-  std::cout << "Amplitude_Std_Dev:" << validation_test_metrics.amplitude_std << std::endl;
+  inRange(ToF_testing_limits::kDepthAccuracyPercentQ90, validation_test_metrics.kDepthAccuracyPercentQ90) ? std::cout << "[PASS]:" : std::cout << "[FAIL]:";
+  std::cout << "Depth_Accuracy_Percent_Q90:" << validation_test_metrics.kDepthAccuracyPercentQ90 << std::endl;
 
-  inRange(ToF_testing_limits::amplitude_std_temporal, validation_test_metrics.amplitude_std_temporal) ? std::cout << "[PASS]:" : std::cout << "[FAIL]:";
-  std::cout << "Amplitude_Temporal_Std_Dev:" << validation_test_metrics.amplitude_std_temporal << std::endl;
+  inRange(ToF_testing_limits::kAmplitudeStd, validation_test_metrics.kAmplitudeStd) ? std::cout << "[PASS]:" : std::cout << "[FAIL]:";
+  std::cout << "Amplitude_Std_Dev:" << validation_test_metrics.kAmplitudeStd << std::endl;
 
-  inRange(ToF_testing_limits::amplitude_mean, validation_test_metrics.amplitude_mean) ? std::cout << "[PASS]:" : std::cout << "[FAIL]:";
-  std::cout << "Amplitude_Mean:" << validation_test_metrics.amplitude_mean << std::endl;
+  inRange(ToF_testing_limits::kAmplitudeStdTemporal, validation_test_metrics.kAmplitudeStdTemporal) ? std::cout << "[PASS]:" : std::cout << "[FAIL]:";
+  std::cout << "Amplitude_Temporal_Std_Dev:" << validation_test_metrics.kAmplitudeStdTemporal << std::endl;
 
-  inRange(ToF_testing_limits::amplitude_max, validation_test_metrics.amplitude_max) ? std::cout << "[PASS]:" : std::cout << "[FAIL]:";
-  std::cout << "Amplitude_Max:" << validation_test_metrics.amplitude_max << std::endl;
+  inRange(ToF_testing_limits::kAmplitudeMean, validation_test_metrics.kAmplitudeMean) ? std::cout << "[PASS]:" : std::cout << "[FAIL]:";
+  std::cout << "Amplitude_Mean:" << validation_test_metrics.kAmplitudeMean << std::endl;
 
-  inRange(ToF_testing_limits::amplitude_min, validation_test_metrics.amplitude_min) ? std::cout << "[PASS]:" : std::cout << "[FAIL]:";
-  std::cout << "Amplitude_Min:" << validation_test_metrics.amplitude_min << std::endl;
+  inRange(ToF_testing_limits::kAmplitudeMax, validation_test_metrics.kAmplitudeMax) ? std::cout << "[PASS]:" : std::cout << "[FAIL]:";
+  std::cout << "Amplitude_Max:" << validation_test_metrics.kAmplitudeMax << std::endl;
 
-  inRange(ToF_testing_limits::amplitude_max_max, validation_test_metrics.amplitude_max_of_maxs) ? std::cout << "[PASS]:" : std::cout << "[FAIL]:";
-  std::cout << "Amplitude_Max_Of_Maxs:" << validation_test_metrics.amplitude_max_of_maxs << std::endl;
+  inRange(ToF_testing_limits::kAmplitudeMin, validation_test_metrics.kAmplitudeMin) ? std::cout << "[PASS]:" : std::cout << "[FAIL]:";
+  std::cout << "Amplitude_Min:" << validation_test_metrics.kAmplitudeMin << std::endl;
 
-  inRange(ToF_testing_limits::amplitude_min_min, validation_test_metrics.amplitude_min_of_mins) ? std::cout << "[PASS]:" : std::cout << "[FAIL]:";
-  std::cout << "Amplitude_Min_Of_Mins:" << validation_test_metrics.amplitude_min_of_mins << std::endl;
+  inRange(ToF_testing_limits::kAmplitudeMaxMax, validation_test_metrics.kAmplitudeMaxMax) ? std::cout << "[PASS]:" : std::cout << "[FAIL]:";
+  std::cout << "Amplitude_Max_Of_Maxs:" << validation_test_metrics.kAmplitudeMaxMax << std::endl;
+
+  inRange(ToF_testing_limits::kAmplitudeMinMin, validation_test_metrics.kAmplitudeMinMin) ? std::cout << "[PASS]:" : std::cout << "[FAIL]:";
+  std::cout << "Amplitude_Min_Of_Mins:" << validation_test_metrics.kAmplitudeMinMin << std::endl;
 
   if (camera_->stopCapture() != royale::CameraStatus::SUCCESS) {
     std::cout << "Error stopping camera" << std::endl;
