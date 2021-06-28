@@ -771,19 +771,8 @@ int TOFDaemon::ConnectTOFCamera() {
 std::vector<cv::Mat> TOFDaemon::PerformForwardPass(cv::Mat &image) {
   std::vector<cv::Mat> nn_outputs;
   cv::Mat blob;
-  cv::Mat nnet_input(NNET_INPUT_WIDTH, NNET_INPUT_HEIGHT, CV_8UC3);
-
   // First resize the image to the expected input size for the neural net
-  cv::resize(image, nnet_input, cv::Size(NNET_INPUT_WIDTH, NNET_INPUT_HEIGHT));
-
-  // TODO(CodeCleanup): Does this blob action here actually do anything since
-  // there is no resizing and the mean for normalization is 0?
-  cv::dnn::blobFromImage(nnet_input, blob, 1.0f,
-                         cv::Size(NNET_INPUT_WIDTH, NNET_INPUT_HEIGHT), 0.0,
-                         false, false);
-
-  // Set the neural net input and perform the forward pass
-  net_.setInput(blob);
+  net_.setInput(cv::dnn::blobFromImage(image, 1., cv::Size(NNET_INPUT_WIDTH, NNET_INPUT_HEIGHT), 0.0, false, false));
   net_.forward(nn_outputs, NNET_OUTPUT_LAYER);
   return nn_outputs;
 }
