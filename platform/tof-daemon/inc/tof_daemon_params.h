@@ -27,7 +27,7 @@ const bool USE_MPI_AMP = true;
 const bool USE_MPI_DIST = true;
 const bool USE_FILTER_2_FREQ = true;
 
-const int ADAPTIVE_NOISE_FILTER_TYPE = 2;
+const int ADAPTIVE_NOISE_FILTER_TYPE = 1;
 const float NOISE_THRESHOLD = 0.07f;
 const int GLOBAL_BINNING = 1;
 
