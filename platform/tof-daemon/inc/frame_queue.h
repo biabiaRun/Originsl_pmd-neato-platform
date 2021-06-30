@@ -69,7 +69,7 @@ public:
   T get_fresh_and_pop() {
     std::lock_guard<std::mutex> lock(mutex);
     T entry = this->front();
-    while (this->size() >= 1)
+    while (std::deque<T>::size() >= 1)
       this->pop_back();
     return entry;
   }
