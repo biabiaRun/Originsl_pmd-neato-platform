@@ -94,12 +94,12 @@ public:
     // while (!this->empty()) this->pop_back();
   }
 
-  bool empty() const noexcept {
+  bool empty() noexcept {
     std::lock_guard<std::mutex> lock(mutex);
     return std::deque<T>::empty();
   }
 
-  std::deque<T>::size_type size() const noexcept {
+  typename std::deque<T>::size_type size() noexcept {
     std::lock_guard<std::mutex> lock(mutex);
     return std::deque<T>::size();
   }
