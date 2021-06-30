@@ -9,6 +9,7 @@
 #define _frame_queue_h_
 
 #include <deque>
+#include <array>
 #include <mutex>
 #include <opencv2/core/utility.hpp>
 
@@ -31,10 +32,10 @@ struct FrameDataStruct {
   static constexpr unsigned int sensor_num_rows{172};
   static constexpr unsigned long buffer_size{38528};
   // Sensor Size is 224 x 172, requiring 38528 storage elements
-  std::vector<float> vec_point_cloud_X = std::vector<float>(buffer_size);
-  std::vector<float> vec_point_cloud_Y = std::vector<float>(buffer_size);
-  std::vector<float> vec_point_cloud_Z = std::vector<float>(buffer_size);
-  std::vector<float> vec_point_cloud_distance = std::vector<float>(buffer_size);
+  std::array<float, buffer_size> vec_point_cloud_X;
+  std::array<float, buffer_size> vec_point_cloud_Y;
+  std::array<float, buffer_size> vec_point_cloud_Z;
+  std::array<float, buffer_size> vec_point_cloud_distance;
   cv::Mat mat_nnet_input =
       cv::Mat(sensor_num_rows, sensor_num_columns, CV_8UC3);
   cv::Mat mat_gray_image = cv::Mat(sensor_num_rows, sensor_num_columns, CV_8U);
@@ -91,6 +92,16 @@ public:
     this->clear();
     // Have seen odd behavior with clear, fallback is below
     // while (!this->empty()) this->pop_back();
+  }
+
+  bool empty() const noexcept {
+    std::lock_guard<std::mutex> lock(mutex);
+    return std::deque<T>::empty();
+  }
+
+  std::deque<T>::size_type size() const noexcept {
+    std::lock_guard<std::mutex> lock(mutex);
+    return std::deque<T>::size();
   }
 
   unsigned int counter;
