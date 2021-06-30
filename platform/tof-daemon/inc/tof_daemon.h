@@ -514,6 +514,10 @@ private:
   // The transformation matrix read from the configuration file will be stored
   // here
   Eigen::Matrix4f tof_to_lds_transform_;
+
+  // The minimum number of points that must be extracted in order for an object
+  // to be added to the TOFMessage. This helps to reduce false positive readings
+  size_t kMinimumValidObjectPoints = 10;
 };
 
 #endif

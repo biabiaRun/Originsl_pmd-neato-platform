@@ -772,7 +772,9 @@ std::vector<cv::Mat> TOFDaemon::PerformForwardPass(cv::Mat &image) {
   std::vector<cv::Mat> nn_outputs;
   cv::Mat blob;
   // First resize the image to the expected input size for the neural net
-  net_.setInput(cv::dnn::blobFromImage(image, 1., cv::Size(NNET_INPUT_WIDTH, NNET_INPUT_HEIGHT), 0.0, false, false));
+  net_.setInput(cv::dnn::blobFromImage(
+      image, 1., cv::Size(NNET_INPUT_WIDTH, NNET_INPUT_HEIGHT), 0.0, false,
+      false));
   net_.forward(nn_outputs, NNET_OUTPUT_LAYER);
   return nn_outputs;
 }
@@ -1076,8 +1078,9 @@ int TOFDaemon::Run() {
                            ptcloud_x, ptcloud_y, ptcloud_z, roi_object_x_coords,
                            roi_object_y_coords, roi_object_z_coords);
 
-            // Copy the roi object points into the whole image object points
-            if (num_object_points > 0) {
+            // Copy the ROI object points into the whole image object points if
+            // there are enough points extracted from the ROI
+            if (num_object_points > kMinimumValidObjectPoints) {
               image_object_x_coords.reserve(
                   image_object_x_coords.size() +
                   distance(roi_object_x_coords.begin(),
