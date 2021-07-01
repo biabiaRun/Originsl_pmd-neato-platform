@@ -9,7 +9,6 @@
 #define _frame_queue_h_
 
 #include <deque>
-#include <array>
 #include <mutex>
 #include <opencv2/core/utility.hpp>
 
@@ -32,10 +31,10 @@ struct FrameDataStruct {
   static constexpr unsigned int sensor_num_rows{172};
   static constexpr unsigned long buffer_size{38528};
   // Sensor Size is 224 x 172, requiring 38528 storage elements
-  std::array<float, buffer_size> vec_point_cloud_X;
-  std::array<float, buffer_size> vec_point_cloud_Y;
-  std::array<float, buffer_size> vec_point_cloud_Z;
-  std::array<float, buffer_size> vec_point_cloud_distance;
+  std::vector<float> vec_point_cloud_X = std::vector<float>(buffer_size);
+  std::vector<float> vec_point_cloud_Y = std::vector<float>(buffer_size);
+  std::vector<float> vec_point_cloud_Z = std::vector<float>(buffer_size);
+  std::vector<float> vec_point_cloud_distance = std::vector<float>(buffer_size);
   cv::Mat mat_nnet_input =
       cv::Mat(sensor_num_rows, sensor_num_columns, CV_8UC3);
   cv::Mat mat_gray_image = cv::Mat(sensor_num_rows, sensor_num_columns, CV_8U);
@@ -43,14 +42,15 @@ struct FrameDataStruct {
   double system_timestamp;
 };
 
-template <typename T> class FrameQueue : public std::deque<T> {
+template <typename T> class FrameQueue {
 public:
   FrameQueue() : counter(0) {}
 
-  void push_front(const T &entry) {
+  template<class U>
+  void push_front(U&& entry) {
     std::lock_guard<std::mutex> lock(mutex);
 
-    std::deque<T>::push_front(entry);
+    deque.emplace_front(std::forward<U>(entry));
     counter += 1;
     if (counter == 1) {
       // Start counting from second frame to warmup.
@@ -61,22 +61,21 @@ public:
 
   T get_fresh() {
     std::lock_guard<std::mutex> lock(mutex);
-    T entry = this->front();
-    this->pop_back();
+    T entry = deque.front();
+    deque.pop_back();
     return entry;
   }
 
   T get_fresh_and_pop() {
     std::lock_guard<std::mutex> lock(mutex);
-    T entry = this->front();
-    while (std::deque<T>::size() >= 1)
-      this->pop_back();
+    T entry = std::move(deque.front());
+    deque.clear();
     return entry;
   }
 
   T get_back() {
     std::lock_guard<std::mutex> lock(mutex);
-    T entry = this->back();
+    T entry = deque.back();
     return entry;
   }
 
@@ -89,26 +88,27 @@ public:
 
   void clear() {
     std::lock_guard<std::mutex> lock(mutex);
-    this->clear();
+    deque.clear();
     // Have seen odd behavior with clear, fallback is below
     // while (!this->empty()) this->pop_back();
   }
 
-  bool empty() noexcept {
+  bool empty() const noexcept {
     std::lock_guard<std::mutex> lock(mutex);
-    return std::deque<T>::empty();
+    return deque.empty();
   }
 
-  typename std::deque<T>::size_type size() noexcept {
+  typename std::deque<T>::size_type size() const noexcept {
     std::lock_guard<std::mutex> lock(mutex);
-    return std::deque<T>::size();
+    return deque.size();
   }
 
   unsigned int counter;
 
 private:
   cv::TickMeter tm;
-  std::mutex mutex;
+  mutable std::mutex mutex;
+  std::deque<T> deque;
 };
 
 #endif
