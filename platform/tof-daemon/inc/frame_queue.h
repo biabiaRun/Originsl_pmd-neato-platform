@@ -35,22 +35,21 @@ struct FrameDataStruct {
   std::vector<float> vec_point_cloud_Y = std::vector<float>(buffer_size);
   std::vector<float> vec_point_cloud_Z = std::vector<float>(buffer_size);
   std::vector<float> vec_point_cloud_distance = std::vector<float>(buffer_size);
-  cv::Mat mat_nnet_input =
-      cv::Mat(sensor_num_rows, sensor_num_columns, CV_8UC3);
+  cv::Mat mat_nnet_input = cv::Mat(sensor_num_rows, sensor_num_columns, CV_8UC3);
   cv::Mat mat_gray_image = cv::Mat(sensor_num_rows, sensor_num_columns, CV_8U);
   int64_t royale_data_timestamp;
   double system_timestamp;
 };
 
-template <typename T> class FrameQueue {
-public:
+template <typename T>
+class FrameQueue : public std::deque<T> {
+ public:
   FrameQueue() : counter(0) {}
 
-  template<class U>
-  void push_front(U&& entry) {
+  void push_front(const T &entry) {
     std::lock_guard<std::mutex> lock(mutex);
 
-    deque.emplace_front(std::forward<U>(entry));
+    std::deque<T>::push_front(entry);
     counter += 1;
     if (counter == 1) {
       // Start counting from second frame to warmup.
@@ -61,21 +60,21 @@ public:
 
   T get_fresh() {
     std::lock_guard<std::mutex> lock(mutex);
-    T entry = deque.front();
-    deque.pop_back();
+    T entry = this->front();
+    this->pop_back();
     return entry;
   }
 
   T get_fresh_and_pop() {
     std::lock_guard<std::mutex> lock(mutex);
-    T entry = std::move(deque.front());
-    deque.clear();
+    T entry = this->front();
+    while (this->size() >= 1) this->pop_back();
     return entry;
   }
 
   T get_back() {
     std::lock_guard<std::mutex> lock(mutex);
-    T entry = deque.back();
+    T entry = this->back();
     return entry;
   }
 
@@ -88,27 +87,16 @@ public:
 
   void clear() {
     std::lock_guard<std::mutex> lock(mutex);
-    deque.clear();
+    this->clear();
     // Have seen odd behavior with clear, fallback is below
     // while (!this->empty()) this->pop_back();
   }
 
-  bool empty() const noexcept {
-    std::lock_guard<std::mutex> lock(mutex);
-    return deque.empty();
-  }
-
-  typename std::deque<T>::size_type size() const noexcept {
-    std::lock_guard<std::mutex> lock(mutex);
-    return deque.size();
-  }
-
   unsigned int counter;
 
-private:
+ private:
   cv::TickMeter tm;
-  mutable std::mutex mutex;
-  std::deque<T> deque;
+  std::mutex mutex;
 };
 
 #endif

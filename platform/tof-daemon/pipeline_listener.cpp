@@ -193,7 +193,7 @@ void TOFDataListener::onNewData(const royale::DepthData *data) {
   }
 
   // Push the frame data structure to the front of the shared Queue
-  gFramesQueue.push_front(std::move(frame_data));
+  gFramesQueue.push_front(frame_data);
 
   if (verbose_)
     std::cout << "Listener gFramesQueue Size : " << gFramesQueue.size()

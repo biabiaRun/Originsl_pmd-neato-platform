@@ -1006,7 +1006,7 @@ int TOFDaemon::Run() {
             syslog(LOG_NOTICE, "Processing-Thread gFramesQueue Size : %zu\n",
                    gFramesQueue.size());
           }
-          frame_data = std::move(gFramesQueue.get_fresh_and_pop());
+          frame_data = gFramesQueue.get_fresh_and_pop();
           new_data_available = true;
         }
 
