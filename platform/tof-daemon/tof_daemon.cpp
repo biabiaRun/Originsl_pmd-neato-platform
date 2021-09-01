@@ -145,8 +145,8 @@ void TOFDaemon::InitializeNeuralNet() {
   // Try to load the neural net for opencv
   try {
     net_ = dnn::readNetFromTensorflow(
-        "/home/root/sdk/install/frozen_inference_graph.pb",
-        "/home/root/sdk/install/MobileNetV2.pbtxt");
+        "/usr/lib/frozen_inference_graph.pb",
+        "/usr/lib/MobileNetV2.pbtxt");
   } catch (cv::Exception &e) {
     const char *err_msg = e.what();
     syslog(LOG_ERR, "Error: %s\n", err_msg);

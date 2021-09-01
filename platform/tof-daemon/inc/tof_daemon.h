@@ -479,7 +479,7 @@ private:
   dnn::Net net_;
 
   // Turn on or off live video streaming
-  bool live_stream_video_ = true;
+  bool live_stream_video_ = false;
 
   // Used for debugging. Set this to true to save the TOF data locally
   bool save_data_ = false;
