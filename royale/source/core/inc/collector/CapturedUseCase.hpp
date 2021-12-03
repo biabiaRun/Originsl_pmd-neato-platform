@@ -37,7 +37,8 @@ namespace royale
             /**
              * Which of C++'s three standard clocks is used for getTimestamp().
              */
-            typedef std::chrono::system_clock CLOCK_TYPE;
+            // typedef std::chrono::system_clock CLOCK_TYPE;
+            typedef std::chrono::steady_clock CLOCK_TYPE;
 
             ROYALE_API CapturedUseCase (const common::IPseudoDataInterpreter *pdi, float temperature, std::chrono::microseconds timestamp, const royale::Vector<uint32_t> &exposures);
             ROYALE_API ~CapturedUseCase();

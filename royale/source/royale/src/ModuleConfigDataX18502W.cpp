@@ -51,7 +51,7 @@ namespace
         static const SensorMap sensorMap = SensorMap
         {
             { SensorRole::MAIN_IMAGER, std::make_shared<SensorRoutingConfigI2c> (0x3D) },
-            { SensorRole::TEMP_ILLUMINATION, std::make_shared<SensorRoutingConfigI2c> (0x48) },
+            { SensorRole::TEMP_ILLUMINATION, std::make_shared<SensorRoutingConfigI2c> (0x71) },
             { SensorRole::STORAGE_CALIBRATION, std::make_shared<SensorRoutingConfigI2c> (0x56) }
         };
 
