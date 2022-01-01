@@ -3,6 +3,15 @@
 #include "frame_queue.h"
 #include "pipeline_listener.h"
 
+#include <opencv2/videoio.hpp>
+#include <iostream>
+#include <fstream>
+#include <chrono>
+#include <sys/mount.h>
+
+static const std::string gRecordingDevice = "/dev/sda1";
+static const std::string gRecordingDirectory = "/mnt/usb";
+
 /*****************************************
  * Utility Functions
  *****************************************/
@@ -50,6 +59,200 @@ static int RemoveFiles(const char *pathname, const struct stat *sbuf, int type,
   return 0;
 }
 
+//  CheckMountPoint - check if the specified directory is an active mount point
+
+static int CheckMountPoint(bool& is_mountpoint, const std::string &dir)
+{
+    struct stat mountpoint;
+    struct stat parent;
+    if (stat(dir.c_str(), &mountpoint) == -1) {
+        return -errno;
+    }
+    std::string dirstr = dir;
+    dirstr += "/..";
+    if (stat(dirstr.c_str(), &parent) == -1) {
+        return -errno;
+    }
+    is_mountpoint = mountpoint.st_dev != parent.st_dev;
+    return 0;
+}
+
+//  MakeUsbDdriveMounted - make sure that the USB flash drive is mounted in
+//  /mnt/usb.
+//  Returns 0 on success, non-zero on a failure (negative=-errno, positive=error from mount)
+
+static int MakeUsbDriveMounted()
+{
+    std::string path = gRecordingDirectory;
+    bool is_mounted = false;
+    int err = CheckMountPoint(is_mounted, path);
+    if (err) {
+        // Target directory likely does not exist, create it
+        bool ok = CreateDirectory(path);
+        if (!ok) {
+            //  Something is terribly wrong
+            syslog(LOG_ERR,
+                "Cannot create the directory %s!\n", gRecordingDirectory.c_str());
+            return -errno;
+        }
+        CheckMountPoint(is_mounted, path);
+    }
+    if (!is_mounted) {
+        //  Mount the device
+
+        int rc = mount(gRecordingDevice.c_str(), gRecordingDirectory.c_str(), "ext4", 0, NULL);
+        if (rc) {
+            //  Cannot mount, complain in the log
+            int err = errno;
+            syslog(LOG_ERR,
+                "Cannot mount the USB drive on %s, rc=%d, err=%d (%d,%d)!\n", gRecordingDirectory.c_str(), rc, err, getuid(), geteuid());
+            syslog(LOG_ERR,
+                "access(/dev/sda1)=%d\n", access(gRecordingDevice.c_str(), F_OK));
+            syslog(LOG_ERR,
+                "access(/mnt/usb)=%d\n", access(gRecordingDirectory.c_str(), F_OK));
+            return rc;
+        }
+    }
+    return 0;
+}
+
+
+//  Configure USB in host mode. Returns 0 on success, != 0 on a failure
+
+static int ConfigureUsbHostMode()
+{
+    if (access(gRecordingDevice.c_str(), F_OK) != 0) {
+        syslog(LOG_NOTICE,
+            "Configuring the USB OTG controller in Host mode\n");
+        //  Set the GPIO2_IO20 
+        const int GPIO_NUM = (2 - 1) * 32 + 20;
+        std::string gpio_num_str = std::to_string(GPIO_NUM);
+        std::string gpio_dir = "/sys/class/gpio/gpio" + gpio_num_str;
+        std::ofstream ofs;
+        if (access(gpio_dir.c_str(), F_OK) != 0) {
+            syslog(LOG_NOTICE,
+                "Setting the GPIO2_IO20 to turn on USB power\n");
+            ofs.open("/sys/class/gpio/export");
+            ofs << gpio_num_str;
+            ofs.close();
+            if (ofs.fail()) {
+                syslog(LOG_ERR,
+                    "Failed to write to /sys/class/gpio/export!\n");
+                return -1;
+            }
+        }
+        std::string filename = gpio_dir + "/direction";
+        ofs.open(filename);
+        ofs << "out";
+        ofs.close();
+        if (ofs.fail()) {
+            syslog(LOG_ERR,
+                "Failed to write \"out\" to %s!\n", filename.c_str());
+            return -1;
+        }
+        filename = gpio_dir + "/value";
+        ofs.open(filename);
+        ofs << "1";
+        ofs.close();
+        if (ofs.fail()) {
+            syslog(LOG_ERR,
+                "Failed to write \"1\" to %s!\n", filename.c_str());
+            return -1;
+        }
+
+        //  Now configure the USB OTG controller as a host
+        filename = "/sys/devices/platform/soc@0/32c00000.bus/32e40000.usb/ci_hdrc.0/role";
+        ofs.open(filename);
+        ofs << "host";
+        ofs.close();
+        if (ofs.fail()) {
+            syslog(LOG_ERR,
+                "Failed to write \"host\" to %s!\n", filename.c_str());
+            return -1;
+        }
+        const unsigned int MAX_DISK_WAIT_TIME = 5000;   // milliseconds
+        const unsigned int LOOP_WAIT_TIME = 100;    // milliseconds
+        unsigned int wait_loop_count;
+        for (wait_loop_count = 0; access(gRecordingDevice.c_str(), F_OK) != 0 && 
+                        wait_loop_count < MAX_DISK_WAIT_TIME / LOOP_WAIT_TIME; wait_loop_count++) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(LOOP_WAIT_TIME));
+        }
+        if (access(gRecordingDevice.c_str(), F_OK) == 0) {
+            syslog(LOG_NOTICE, "USB disk discovered after %u milliseconds\n", wait_loop_count*LOOP_WAIT_TIME);
+        } else {
+            syslog(LOG_ERR, "Failed to find a USB disk!\n");
+            return -2;
+        }
+    }
+    return 0;
+}
+
+//  Unconfigure host mode USB - set controller back to gadget, turn off USB 5V
+
+static int UnconfigureUsbHostMode()
+{
+    int err = 0;
+    syslog(LOG_NOTICE,
+        "Unconfiguring the USB host and turning off USB power.\n");
+    //  Configure the USB OTG controller as a gadget
+    std::ofstream ofs;
+    std::string filename = "/sys/devices/platform/soc@0/32c00000.bus/32e40000.usb/ci_hdrc.0/role";
+    ofs.open(filename);
+    ofs << "gadget";
+    ofs.close();
+    if (ofs.fail()) {
+        syslog(LOG_ERR,
+            "Failed to write \"gadget\" to %s!\n", filename.c_str());
+        err = -1;
+    }
+
+    //  Unset the GPIO2_IO20 
+    const int GPIO_NUM = (2 - 1) * 32 + 20;
+    std::string gpio_num_str = std::to_string(GPIO_NUM);
+    std::string gpio_dir = "/sys/class/gpio/gpio" + gpio_num_str;
+    if (access(gpio_dir.c_str(), F_OK) != 0) {
+        ofs.open("/sys/class/gpio/export");
+        ofs << gpio_num_str;
+        ofs.close();
+        if (ofs.fail()) {
+            syslog(LOG_ERR,
+                "Failed to write to /sys/class/gpio/export!\n");
+            return -1;
+        }
+    }
+
+    filename = gpio_dir + "/value";
+    ofs.open(filename);
+    ofs << "0";
+    ofs.close();
+    if (ofs.fail()) {
+        syslog(LOG_ERR,
+            "Failed to write \"1\" to %s!\n", filename.c_str());
+        err = -1;
+    }
+
+    filename = gpio_dir + "/direction";
+    ofs.open(filename);
+    ofs << "in";
+    ofs.close();
+    if (ofs.fail()) {
+        syslog(LOG_ERR,
+            "Failed to write \"out\" to %s!\n", filename.c_str());
+        err = -1;
+    }
+
+    //  Now unexport GPIO2_IO20
+    ofs.open("/sys/class/gpio/unexport");
+    ofs << gpio_num_str;
+    ofs.close();
+    if (ofs.fail()) {
+        syslog(LOG_ERR,
+            "Failed to write to /sys/class/gpio/unexport!\n");
+        err = -1;
+    }
+    return err;
+}
+
 static void *TOFTransactionHandler(void *req_buf, size_t req_len,
                                    void **resp_buf, size_t *resp_len) {
   static TOFMessage tof_message;
@@ -81,6 +284,41 @@ static void *TOFTransactionHandler(void *req_buf, size_t req_len,
     gTOFDaemonStreaming = true;
     out_msg->transact.status = TOFMessage::CMD_ACK;
     break;
+  }
+  case TOFMessage::RECORD_STOP: {
+      syslog(LOG_NOTICE,
+          "Received the RECORD_STOP command. Stopping recording.\n");
+      gTOFDaemonRecording = false;
+      out_msg->transact.status = TOFMessage::CMD_ACK;
+      break;
+  }
+  case TOFMessage::RECORD_START: {
+      syslog(LOG_NOTICE,
+          "Received the RECORD_START command.\n");
+      if (!gTOFDaemonRecording) {
+          if (access("/dev/sda", F_OK) != 0) {
+              if (ConfigureUsbHostMode() != 0) {
+                  UnconfigureUsbHostMode();
+                  out_msg->transact.status = TOFMessage::CMD_NAK;
+                  break;
+              }
+          }
+          if (MakeUsbDriveMounted() != 0) {
+              syslog(LOG_ERR,
+                  "Failed to mount the USB drive - drive not present or not formatted correcly.\n");
+              UnconfigureUsbHostMode();
+              out_msg->transact.status = TOFMessage::CMD_NAK;
+              break;
+          }
+          syslog(LOG_NOTICE,
+              "Starting recording.\n");
+          gTOFDaemonRecording = true;
+      } else {
+          syslog(LOG_NOTICE,
+              "Recording was already started.\n");
+      }
+      out_msg->transact.status = TOFMessage::CMD_ACK;
+      break;
   }
   default:
     break;
@@ -961,8 +1199,29 @@ int TOFDaemon::Run() {
 
         bool is_camera_capturing;
         camera_device_->isCapturing(is_camera_capturing);
-        if (!gTOFDaemonStreaming && is_camera_capturing) {
-          // If the command is given to stop streaming and the camera is still
+        //  Stop recording if a request is issued to stop recording or streaming
+        bool requestedRecording = gTOFDaemonRecording;
+        bool requestedStreaming = gTOFDaemonStreaming;
+        if ((!requestedRecording || !requestedStreaming) && isRecording_) {
+            isRecording_ = false;
+            if (camera_device_->stopRecording() != royale::CameraStatus::SUCCESS) {
+                syslog(LOG_ERR, "Error: Failed to stop camera recording\n");
+            } else {
+                syslog(LOG_NOTICE, "Stopped video recording\n");
+            }
+        }
+        if (!requestedRecording && inRecordingMode_) {
+            int rc = umount(gRecordingDirectory.c_str());
+            if (rc == 0) {
+                syslog(LOG_NOTICE, "Unmounting USB SSD - succeeded\n");
+            } else {
+                syslog(LOG_NOTICE, "Unmounting USB SSD - failed, errno=%d\n", errno);
+            }
+        }
+        inRecordingMode_ = requestedRecording;
+        if (!requestedStreaming && is_camera_capturing) {
+ 
+            // If the command is given to stop streaming and the camera is still
           // capturing, turn the camera off since it is not being used
           if (camera_device_->stopCapture() != royale::CameraStatus::SUCCESS) {
             syslog(LOG_ERR, "Error: Failed to stop camera capture\n");
@@ -980,7 +1239,7 @@ int TOFDaemon::Run() {
               syslog(LOG_ERR, "Error: Failed to start camera capture\n");
             }
           }
-        } else if (gTOFDaemonStreaming && !is_camera_capturing) {
+        } else if (requestedStreaming && !is_camera_capturing) {
           // If the daemon is supposed to be streaming and the camera is off,
           // turn the camera on.
           if (camera_device_->startCapture() != royale::CameraStatus::SUCCESS) {
@@ -991,6 +1250,28 @@ int TOFDaemon::Run() {
           } else {
             syslog(LOG_NOTICE, "Starting video capture\n");
           }
+        }
+
+        if (!isRecording_ && requestedStreaming && requestedRecording) {
+            std::string filename = gRecordingDirectory + "/camera-capture-";
+            std::time_t t = std::time(0);
+            std::tm* now = std::localtime(&t);
+            char buf[70];
+            snprintf(buf, sizeof(buf), "%04d%02d%02d-%02d%02d%02d", now->tm_year + 1900, now->tm_mon + 1, now->tm_mday, now->tm_hour, now->tm_min, now->tm_sec);
+            filename += buf;
+            filename += ".rrf";
+            bool is_mount_point;
+            int err = CheckMountPoint(is_mount_point, gRecordingDirectory.c_str());
+            if (err != 0 || !is_mount_point) {
+                // Error: Failed to start recording
+                syslog(LOG_ERR, "Error: %s is not a mount point, cannot start recording\n", gRecordingDirectory.c_str());
+            } else if (camera_device_->startRecording(filename) != royale::CameraStatus::SUCCESS) {
+                // Error: Failed to start recording
+                syslog(LOG_ERR, "Error: Failed to start recording\n");
+            } else {
+                syslog(LOG_NOTICE, "Starting video recording\n");
+                isRecording_ = true;
+            }
         }
 
         struct timespec start, stop;
@@ -1006,6 +1287,7 @@ int TOFDaemon::Run() {
             syslog(LOG_NOTICE, "Processing-Thread gFramesQueue Size : %zu\n",
                    gFramesQueue.size());
           }
+
           frame_data = gFramesQueue.get_fresh_and_pop();
           new_data_available = true;
         }
@@ -1014,7 +1296,7 @@ int TOFDaemon::Run() {
         // stream to the robot process. When gTOFDaemonStreaming is false, we
         // still want to pop data from gFramesQueue so that the queue does not
         // fill up and stale data is not process when finally enabled
-        if (new_data_available && gTOFDaemonStreaming) {
+        if (new_data_available && requestedStreaming) {
           struct timespec start_infer, stop_infer;
           if (clock_gettime(CLOCK_MONOTONIC, &start_infer) == -1) {
             syslog(LOG_ERR, "Error: Failed to get clock start time\n");
@@ -1184,11 +1466,12 @@ int TOFDaemon::Run() {
             syslog(LOG_ERR, "Error: Failed to get clock stop time\n");
           }
 
+          syslog(LOG_NOTICE, "processing_thread: End of processing\n");
           if (live_stream_video_) {
             SendLiveVideoStream(frame_data.mat_nnet_input);
           }
         } else {
-          if (gTOFDaemonStreaming) {
+          if (requestedStreaming) {
             // If the camera is turned on and the TOFDaemon should be streaming
             // but there is no data available, then print an error message
             syslog(LOG_ERR, "Error: TOFDaemon should be streaming but no "
@@ -1204,11 +1487,17 @@ int TOFDaemon::Run() {
           syslog(LOG_ERR, "Error: Failed to get clock stop time\n");
         }
       }
+      syslog(LOG_NOTICE, "Exiting the processing thread!\n");
     });
 
     processingThread.join();
 
     // We're done processing frames.  Shutdown the camera.
+    if (isRecording_) {
+        camera_device_->stopRecording();
+        umount(gRecordingDirectory.c_str());
+        isRecording_ = false;
+    }
     if (camera_device_->stopCapture() != royale::CameraStatus::SUCCESS) {
       syslog(LOG_ERR, "Error: Failed to stop camera capture\n");
       Shutdown();
