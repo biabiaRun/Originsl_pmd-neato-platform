@@ -280,6 +280,25 @@ int TOFDaemon::Daemonize(const char *daemon_name, const char *daemon_path,
   stdout = fopen(outfile, "w+"); // File descriptor 1
   stderr = fopen(errfile, "w+"); // File descriptor 2
 
+  // Write our PID to /run/tof-daemon.pid for the benefit of systemd, but 
+  // only when the parent process exits and systemd becomes the parent
+  int ppid_wait_count = 0;
+  while (getppid() != 1) {
+    struct timespec req, rem;
+    req.tv_sec = 0;
+    req.tv_nsec = 100000000;
+    nanosleep(&req, &rem);
+    ppid_wait_count++;
+  }
+  syslog(LOG_INFO, "Parent PID becomes 1, after %d msec", ppid_wait_count*100);
+  FILE* pid_file = fopen("/run/tof-daemon.pid", "w");
+  if (pid_file) {
+    fprintf(pid_file, "%d\n", getpid());
+    fclose(pid_file);
+  }
+
+
+
   // Create a "lock file" whose appearance indicates that the TOFDaemon is
   // already created
 
