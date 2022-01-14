@@ -17,7 +17,6 @@
 #include <opencv2/imgproc.hpp>
 #include <string>
 #include <thread>
-
 #include "eigen3/Eigen/Dense"
 
 #include "PracticalSocket.h"
@@ -44,6 +43,11 @@ bool gTOFDaemonRunning = true;
 // deamon from the robot process and is set to false by default.
 bool gTOFDaemonStreaming = false;
 
+// Global flag to indicate if the TOF Daemon should record data in the file.
+// This is toggled by the commands sent to the deamon from the robotctl command
+// and is set to false by default.
+bool gTOFDaemonRecording = false;
+
 // The file path of the TOF to LDS transformation matrix
 const char kTOFToLDSTransformFile[] =
     "/user/transformation_matrix_tof_into_lds.conf";
@@ -60,7 +64,7 @@ constexpr int kNumTransformElements =
  * @param signo the signal received.
  */
 void sighup_handler(int signo) {
-  syslog(LOG_INFO, "Received SIGHUP.  Shutting down TOFDaemon\n");
+  syslog(LOG_INFO, "Received SIGHUP (%d).  Shutting down TOFDaemon\n", signo);
   gTOFDaemonRunning = false;
 }
 
@@ -71,7 +75,7 @@ void sighup_handler(int signo) {
  * @param signo the signal received.
  */
 void sigint_handler(int signo) {
-  syslog(LOG_INFO, "Received SIGINT.  Shutting down TOFDaemon\n");
+  syslog(LOG_INFO, "Received SIGINT (%d).  Shutting down TOFDaemon\n", signo);
   gTOFDaemonRunning = false;
 }
 
@@ -111,7 +115,9 @@ struct TOFMessage {
   enum TOFCommand {
     // Driver Command/Response values
     STREAM_STOP = 0,
-    STREAM_START = 1
+    STREAM_START = 1,
+    RECORD_STOP = 2,
+    RECORD_START = 3
   };
 
   enum TOFStatus {
@@ -518,6 +524,15 @@ private:
   // The minimum number of points that must be extracted in order for an object
   // to be added to the TOFMessage. This helps to reduce false positive readings
   size_t kMinimumValidObjectPoints = 10;
+
+  // The following variable is true when camera is recording frames to the SSD
+  bool isRecording_ = false;
+
+  // The following variable is the value of gTOFDaemonRecording during the previous pass 
+  // of the thread
+  bool inRecordingMode_ = false;
+
 };
+
 
 #endif
