@@ -44,7 +44,8 @@ std::string CALIBRATION_FOLDER("/tof-to-lds-calibration/");
 
 // File path to the "lock file", which when created indicates that the TOF
 // daemon already exists.
-const char *LOCK_FILE = "/tmp/tofdaemon.lock";
+const char *LOCK_FILE = "/run/tofdaemon.lock";
+const char* PID_FILE = "/run/tof-daemon.pid";
 
 // Packet size for streaming the live video through the socket
 const int PACK_SIZE = 4096;
