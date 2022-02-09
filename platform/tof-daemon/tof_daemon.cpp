@@ -342,6 +342,7 @@ void TOFDaemon::Shutdown() {
     lock_fd_ = -1;
     unlink(LOCK_FILE);
   }
+  unlink(PID_FILE);
 }
 
 void TOFDaemon::Init() {
@@ -529,7 +530,7 @@ int TOFDaemon::Daemonize(const char *daemon_name, const char *daemon_path,
     ppid_wait_count++;
   }
   syslog(LOG_INFO, "Parent PID becomes 1, after %d msec", ppid_wait_count*100);
-  FILE* pid_file = fopen("/run/tof-daemon.pid", "w");
+  FILE* pid_file = fopen(PID_FILE, "w");
   if (pid_file) {
     fprintf(pid_file, "%d\n", getpid());
     fclose(pid_file);
