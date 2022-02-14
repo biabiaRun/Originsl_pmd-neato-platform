@@ -1215,6 +1215,9 @@ int TOFDaemon::Run() {
 
     std::thread processingThread([&]() {
       // We'll need the signal handler(s) to stop the video capture;
+      FILE* csv_datafile = NULL;
+      long unsigned int frame_process_count = 0;
+
       while (gTOFDaemonRunning) {
 
         bool is_camera_capturing;
@@ -1228,6 +1231,10 @@ int TOFDaemon::Run() {
                 syslog(LOG_ERR, "Error: Failed to stop camera recording\n");
             } else {
                 syslog(LOG_NOTICE, "Stopped video recording\n");
+            }
+            if (csv_datafile != NULL) {
+                fclose(csv_datafile);
+                csv_datafile = NULL;
             }
         }
         if (!requestedRecording && inRecordingMode_) {
@@ -1292,6 +1299,14 @@ int TOFDaemon::Run() {
                 syslog(LOG_NOTICE, "Starting video recording\n");
                 isRecording_ = true;
             }
+            std::string csv_filename = gRecordingDirectory + "/object-information-";
+            csv_filename += buf;
+            csv_filename += ".csv";
+            csv_datafile = fopen(csv_filename.c_str(), "w");
+            if (csv_datafile) {
+                fprintf(csv_datafile, "Datetime,Frame,Region ID,Class ID,Class Name,Confidence,Left,Top,Width,Height\n");
+            }
+            frame_process_count = 0;
         }
 
         struct timespec start, stop;
@@ -1307,7 +1322,7 @@ int TOFDaemon::Run() {
             syslog(LOG_NOTICE, "Processing-Thread gFramesQueue Size : %zu\n",
                    gFramesQueue.size());
           }
-
+          frame_process_count += gFramesQueue.size();
           frame_data = gFramesQueue.get_fresh_and_pop();
           new_data_available = true;
         }
@@ -1444,6 +1459,26 @@ int TOFDaemon::Run() {
                               roi_rect.y, roi_rect.x + roi_rect.width,
                               roi_rect.y + roi_rect.height,
                               frame_data.mat_nnet_input);
+            }
+            {
+                std::time_t t = std::time(0);
+                std::tm* now = std::localtime(&t);
+                char buf[70];
+                snprintf(buf, sizeof(buf), "%04d-%02d-%02d %02d:%02d:%02d", now->tm_year + 1900, now->tm_mon + 1, now->tm_mday, now->tm_hour, now->tm_min, now->tm_sec);
+
+                std::string label;
+                if (class_ids[idx] >= 0 && class_ids[idx] < int(classes_.size())) {
+                    label = classes_[class_ids[idx]];
+                }
+                syslog(LOG_NOTICE, "Time: %s, Frame: %lu, Object: %d, class: %d (%s), confidence: %.2f, rect:(%d,%d,%d,%d)\n", 
+                    buf, frame_process_count, idx, class_ids[idx], label.c_str(), confidences[idx], roi_rect.x,
+                    roi_rect.y, roi_rect.width, roi_rect.height);
+                if (csv_datafile) {
+                    //  Store the prediction into the csv file
+                    fprintf(csv_datafile, "%s,%lu,%d,%d,%s,%.2f,%d,%d,%d,%d\n", 
+                        buf, frame_process_count, idx, class_ids[idx], label.c_str(), confidences[idx], roi_rect.x,
+                        roi_rect.y, roi_rect.width, roi_rect.height);
+                }
             }
           }
 
