@@ -1217,6 +1217,7 @@ int TOFDaemon::Run() {
       // We'll need the signal handler(s) to stop the video capture;
       FILE* csv_datafile = NULL;
       long unsigned int frame_process_count = 0;
+      cv::VideoWriter cv_writer_orig, cv_writer_marked, cv_writer_bw;
 
       while (gTOFDaemonRunning) {
 
@@ -1235,6 +1236,15 @@ int TOFDaemon::Run() {
             if (csv_datafile != NULL) {
                 fclose(csv_datafile);
                 csv_datafile = NULL;
+            }
+            if (cv_writer_orig.isOpened()) {
+                cv_writer_orig.release();
+            }
+            if (cv_writer_marked.isOpened()) {
+                cv_writer_marked.release();
+            }
+            if (cv_writer_bw.isOpened()) {
+                cv_writer_bw.release();
             }
         }
         if (!requestedRecording && inRecordingMode_) {
@@ -1307,6 +1317,27 @@ int TOFDaemon::Run() {
                 fprintf(csv_datafile, "Datetime,Frame,Region ID,Class ID,Class Name,Confidence,Left,Top,Width,Height\n");
             }
             frame_process_count = 0;
+            std::string opencv_orig_filename = gRecordingDirectory + "/opencv-orig-";
+            opencv_orig_filename += buf;
+            opencv_orig_filename += ".avi";
+            if (!cv_writer_orig.open(opencv_orig_filename, 0 /*VideoWriter::fourcc('m','p','4','v')*/, 5.0, Size2d(FrameDataStruct::sensor_num_columns,
+                FrameDataStruct::sensor_num_rows), true)) {
+                syslog(LOG_ERR, "Error: Failed to open opencv stream: %s\n", opencv_orig_filename.c_str());
+            }
+            std::string opencv_marked_filename = gRecordingDirectory + "/opencv-marked-";
+            opencv_marked_filename += buf;
+            opencv_marked_filename += ".avi";
+            if (!cv_writer_marked.open(opencv_marked_filename, 0 /*VideoWriter::fourcc('m','p','4','v')*/, 5.0, Size2d(FrameDataStruct::sensor_num_columns,
+                FrameDataStruct::sensor_num_rows), true)) {
+                syslog(LOG_ERR, "Error: Failed to open opencv stream: %s\n", opencv_marked_filename.c_str());
+            }
+            std::string opencv_bw_filename = gRecordingDirectory + "/opencv-bw-";
+            opencv_bw_filename += buf;
+            opencv_bw_filename += ".avi";
+            if (!cv_writer_bw.open(opencv_bw_filename, 0 /*VideoWriter::fourcc('m','p','4','v')*/, 5.0, Size2d(FrameDataStruct::sensor_num_columns,
+                FrameDataStruct::sensor_num_rows), false)) {
+                syslog(LOG_ERR, "Error: Failed to open opencv stream: %s\n", opencv_bw_filename.c_str());
+            }
         }
 
         struct timespec start, stop;
@@ -1337,6 +1368,12 @@ int TOFDaemon::Run() {
             syslog(LOG_ERR, "Error: Failed to get clock start time\n");
           }
 
+          if (cv_writer_orig.isOpened()) {
+              cv_writer_orig << frame_data.mat_nnet_input;
+          }
+          if (cv_writer_bw.isOpened()) {
+              cv_writer_bw << frame_data.mat_gray_image;
+          }
           // Perform a forward pass on the image data from the TOF sensor
           std::vector<cv::Mat> nn_outputs =
               PerformForwardPass(frame_data.mat_nnet_input);
@@ -1454,12 +1491,13 @@ int TOFDaemon::Run() {
               }
             }
 
-            if (live_stream_video_) {
+            if (live_stream_video_ || cv_writer_marked.isOpened()) {
               DrawPredictions(class_ids[idx], confidences[idx], roi_rect.x,
                               roi_rect.y, roi_rect.x + roi_rect.width,
                               roi_rect.y + roi_rect.height,
                               frame_data.mat_nnet_input);
             }
+
             {
                 std::time_t t = std::time(0);
                 std::tm* now = std::localtime(&t);
@@ -1467,7 +1505,7 @@ int TOFDaemon::Run() {
                 snprintf(buf, sizeof(buf), "%04d-%02d-%02d %02d:%02d:%02d", now->tm_year + 1900, now->tm_mon + 1, now->tm_mday, now->tm_hour, now->tm_min, now->tm_sec);
 
                 std::string label;
-                if (class_ids[idx] >= 0 && class_ids[idx] < int(classes_.size())) {
+                if (class_ids[idx] >= 0 && class_ids[idx] < (int)classes_.size()) {
                     label = classes_[class_ids[idx]];
                 }
                 syslog(LOG_NOTICE, "Time: %s, Frame: %lu, Object: %d, class: %d (%s), confidence: %.2f, rect:(%d,%d,%d,%d)\n", 
@@ -1480,6 +1518,10 @@ int TOFDaemon::Run() {
                         roi_rect.y, roi_rect.width, roi_rect.height);
                 }
             }
+          }
+
+          if (cv_writer_marked.isOpened()) {
+              cv_writer_marked << frame_data.mat_nnet_input;
           }
 
           // Send the object points over to the robot
