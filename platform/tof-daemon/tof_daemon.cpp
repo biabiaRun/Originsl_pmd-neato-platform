@@ -1314,7 +1314,7 @@ int TOFDaemon::Run() {
             csv_filename += ".csv";
             csv_datafile = fopen(csv_filename.c_str(), "w");
             if (csv_datafile) {
-                fprintf(csv_datafile, "Datetime,Frame,Region ID,Class ID,Class Name,Confidence,Left,Top,Width,Height\n");
+                fprintf(csv_datafile, "Datetime,Capture Timestamp,Frame,Region ID,Class ID,Class Name,Confidence,Left,Top,Width,Height\n");
             }
             frame_process_count = 0;
             std::string opencv_orig_filename = gRecordingDirectory + "/opencv-orig-";
@@ -1513,8 +1513,8 @@ int TOFDaemon::Run() {
                     roi_rect.y, roi_rect.width, roi_rect.height);
                 if (csv_datafile) {
                     //  Store the prediction into the csv file
-                    fprintf(csv_datafile, "%s,%lu,%d,%d,%s,%.2f,%d,%d,%d,%d\n", 
-                        buf, frame_process_count, idx, class_ids[idx], label.c_str(), confidences[idx], roi_rect.x,
+                    fprintf(csv_datafile, "%s,%lf,%lu,%d,%d,%s,%.2f,%d,%d,%d,%d\n", 
+                        buf, frame_data.system_timestamp, frame_process_count, idx, class_ids[idx], label.c_str(), confidences[idx], roi_rect.x,
                         roi_rect.y, roi_rect.width, roi_rect.height);
                 }
             }
