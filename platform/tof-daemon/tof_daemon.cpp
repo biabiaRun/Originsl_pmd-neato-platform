@@ -1217,6 +1217,7 @@ int TOFDaemon::Run() {
       // We'll need the signal handler(s) to stop the video capture;
       FILE* csv_datafile = NULL;
       long unsigned int frame_process_count = 0;
+      long unsigned int opencv_frame_process_count = 0;
       cv::VideoWriter cv_writer_orig, cv_writer_marked, cv_writer_bw;
 
       while (gTOFDaemonRunning) {
@@ -1314,9 +1315,10 @@ int TOFDaemon::Run() {
             csv_filename += ".csv";
             csv_datafile = fopen(csv_filename.c_str(), "w");
             if (csv_datafile) {
-                fprintf(csv_datafile, "Datetime,Capture Timestamp,Frame,Region ID,Class ID,Class Name,Confidence,Left,Top,Width,Height\n");
+                fprintf(csv_datafile, "Datetime,Capture Timestamp,Frame,OpenCV Frame,Region ID,Class ID,Class Name,Confidence,Left,Top,Width,Height\n");
             }
             frame_process_count = 0;
+            opencv_frame_process_count = 0;
             std::string opencv_orig_filename = gRecordingDirectory + "/opencv-orig-";
             opencv_orig_filename += buf;
             opencv_orig_filename += ".avi";
@@ -1354,6 +1356,7 @@ int TOFDaemon::Run() {
                    gFramesQueue.size());
           }
           frame_process_count += gFramesQueue.size();
+          opencv_frame_process_count++;
           frame_data = gFramesQueue.get_fresh_and_pop();
           new_data_available = true;
         }
@@ -1513,8 +1516,8 @@ int TOFDaemon::Run() {
                     roi_rect.y, roi_rect.width, roi_rect.height);
                 if (csv_datafile) {
                     //  Store the prediction into the csv file
-                    fprintf(csv_datafile, "%s,%lf,%lu,%d,%d,%s,%.2f,%d,%d,%d,%d\n", 
-                        buf, frame_data.system_timestamp, frame_process_count, idx, class_ids[idx], label.c_str(), confidences[idx], roi_rect.x,
+                    fprintf(csv_datafile, "%s,%lf,%lu,%lu,%d,%d,%s,%.2f,%d,%d,%d,%d\n", 
+                        buf, frame_data.system_timestamp, frame_process_count, opencv_frame_process_count, idx, class_ids[idx], label.c_str(), confidences[idx], roi_rect.x,
                         roi_rect.y, roi_rect.width, roi_rect.height);
                 }
             }
