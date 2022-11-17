@@ -15,7 +15,8 @@ int main(int argc, char **argv)
     std::string ACCESS_CODE;
     if (argc >= 2)
     {
-        ACCESS_CODE = argv[1];
+        // ACCESS_CODE = argv[1]; //Running.G Edit 
+        ACCESS_CODE = argv[3]; 
     }
 
     CameraFactory factory;
@@ -30,7 +31,8 @@ int main(int argc, char **argv)
     if (EXIT_ON_ERROR && error != Camera::CameraError::NONE) { return error; }
 
     // [Optional] Access Level Test
-    if (!ACCESS_CODE.empty()) { error = cam.RunAccessLevelTests(2); }
+    // if (!ACCESS_CODE.empty()) { error = cam.RunAccessLevelTests(2); }   //Running.G Edit
+    if (!ACCESS_CODE.empty()) { error = cam.RunAccessLevelTests(3); }
     else { error = cam.RunAccessLevelTests(1); }
     if (EXIT_ON_ERROR && error != Camera::CameraError::NONE) { return error; }
 

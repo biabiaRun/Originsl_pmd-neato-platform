@@ -147,7 +147,8 @@ void ZwetschgeFlashTool::openCamera()
     QCoreApplication::processEvents();
 
     // the camera manager will query for connected cameras
-    CameraManager manager (ROYALE_ACCESS_CODE_LEVEL4);
+    //CameraManager manager (ROYALE_ACCESS_CODE_LEVEL4);
+    CameraManager manager (ROYALE_ACCESS_CODE_LEVEL3);  // Running.G Edit
 
     auto camlist = manager.getConnectedCameraList();
 

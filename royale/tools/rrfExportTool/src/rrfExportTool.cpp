@@ -307,12 +307,24 @@ int main (int argc, char *argv[])
 
     // Use the camera manager to open the recorded file, this block scope is because we can allow
     // the CameraManager to go out of scope once the file has been opened.
+    /*
     {
         royale::CameraManager manager (ROYALE_ACCESS_CODE_LEVEL2);
 
         // create a device from the file
         cameraDevice = manager.createCamera (argv[1]);
     }
+    */
+
+    {
+        royale::CameraManager manager (ROYALE_ACCESS_CODE_LEVEL3);  //Running.G edit
+
+        // create a device from the file
+        cameraDevice = manager.createCamera (argv[1]);
+    }
+
+
+
 
     // if the file was loaded correctly the cameraDevice is now available
     if (cameraDevice == nullptr)

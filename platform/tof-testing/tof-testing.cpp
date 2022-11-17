@@ -182,7 +182,10 @@ int main(int argc, char** argv) {
   TestMetrics validation_test_metrics;
   // Default options
   options_t options = {VERSION, "MODE_9_5FPS"};
-  std::string ACCESS_CODE = "d79dab562f13ef8373e906d919aec323a2857388";
+  //std::string ACCESS_CODE = "d79dab562f13ef8373e906d919aec323a2857388";
+  std::string ACCESS_CODE = "c715e2ca31e816b1ef17ba487e2a5e9efc6bbd7b";  //Running.G Edit
+
+  
   royale::String useCase;
   std::vector<PlaneParams> plane_coeffs;
   v_pt_cloud_running_stats.resize(NUM_IMAGE_ELEMENTS);

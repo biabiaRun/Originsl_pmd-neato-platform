@@ -10,6 +10,9 @@ using namespace std;
 using namespace royale;
 using namespace platform;
 #include "camera.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 
 std::string VERSION{"1.3"};
 const bool EXIT_ON_ERROR = true;
@@ -34,7 +37,8 @@ int main(int argc, char **argv) {
   int opt;
   // Default options
   options_t options = {VERSION, 15, "MODE_9_5FPS"};
-  std::string ACCESS_CODE = "d79dab562f13ef8373e906d919aec323a2857388";
+  // std::string ACCESS_CODE = "d79dab562f13ef8373e906d919aec323a2857388"; //Original code for level 2
+  std::string ACCESS_CODE = "c715e2ca31e816b1ef17ba487e2a5e9efc6bbd7b";  //Running.G added new code for level 3
 
   // CameraFactory factory;
   Camera cam;
@@ -73,6 +77,14 @@ int main(int argc, char **argv) {
     std::cout << "Setting ToF Mode: " << options.test_mode << std::endl;
   }
 
+
+ // declaring argument of time()  //Running.G Edit-tracking verision by the time
+    time_t my_time = time(NULL);
+// ctime() used to give the present time
+    printf("%s", ctime(&my_time));
+
+
+
   // [Setup] Camera Initialization Test
   Camera::CameraError error = cam.RunInitializeTests(options.test_mode);
   if (EXIT_ON_ERROR && error != Camera::CameraError::NONE) { return error; }
@@ -82,7 +94,8 @@ int main(int argc, char **argv) {
   if (EXIT_ON_ERROR && error != Camera::CameraError::NONE) { return error; }
 
   // [Setup] Access Level Test
-  if (!ACCESS_CODE.empty()) { error = cam.RunAccessLevelTests(2); }
+  // if (!ACCESS_CODE.empty()) { error = cam.RunAccessLevelTests(2); }  // Original code
+  if (!ACCESS_CODE.empty()) { error = cam.RunAccessLevelTests(3); }  // Running.G edit for pattern test 
   else { error = cam.RunAccessLevelTests(1); }
   if (EXIT_ON_ERROR && error != Camera::CameraError::NONE) { return error; }
 
@@ -105,6 +118,8 @@ int main(int argc, char **argv) {
   // [Streaming] Test Receive Data
   error = cam.RunTestReceiveData(options.numSecondsToStream);
   if (EXIT_ON_ERROR && error != Camera::CameraError::NONE) { return error; }
-
   return 0;
+
+
+
 }

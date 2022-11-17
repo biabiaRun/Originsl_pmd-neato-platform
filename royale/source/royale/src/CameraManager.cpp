@@ -35,7 +35,8 @@ using namespace royale;
 struct CameraManager::CameraManagerData
 {
     CameraManagerData() :
-        accessLevel (CameraAccessLevel::L1),
+        //accessLevel (CameraAccessLevel::L1)
+        accessLevel (CameraAccessLevel::L3)
         eventQueue (std::make_shared<royale::EventQueue> ())
     {
     }

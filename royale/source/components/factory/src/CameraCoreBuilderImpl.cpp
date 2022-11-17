@@ -22,7 +22,9 @@ CameraCoreBuilderImpl::CameraCoreBuilderImpl()
     : m_illuminationConfig(),
       m_temperatureSensorConfig(),
       m_flashMemoryConfig(),
-      m_accessLevel (CameraAccessLevel::L1)
+      // m_accessLevel (CameraAccessLevel::L1)//Running.G Edit
+      m_accessLevel (CameraAccessLevel::L3)
+
 {
 }
 

@@ -54,7 +54,8 @@ SCENARIO ("Measure the raw data framerate for all usecases", "[framerate]")
     ContextCameraDevice context;
     GIVEN ("I got a connected camera with activation code for level 2")
     {
-        CHECK_ROYALE_SUCCESS (context.connect (ROYALE_ACCESS_CODE_LEVEL2));
+        //CHECK_ROYALE_SUCCESS (context.connect (ROYALE_ACCESS_CODE_LEVEL2));   //Running.G Edit
+        CHECK_ROYALE_SUCCESS (context.connect (ROYALE_ACCESS_CODE_LEVEL3));  
         AND_THEN ("I have registered a raw data listener")
         {
             CHECK_ROYALE_SUCCESS (context.registerDataListenerExtended());

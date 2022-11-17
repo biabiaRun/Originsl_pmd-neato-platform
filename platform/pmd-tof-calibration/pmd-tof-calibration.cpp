@@ -457,7 +457,9 @@ int main(int argc, char **argv) {
   }
 
   // Default options
-  std::string ACCESS_CODE = "d79dab562f13ef8373e906d919aec323a2857388";
+  //std::string ACCESS_CODE = "d79dab562f13ef8373e906d919aec323a2857388";  //Running.G Edit
+  std::string ACCESS_CODE = "c715e2ca31e816b1ef17ba487e2a5e9efc6bbd7b";
+
   royale::CameraStatus status;
   std::unique_ptr<MyListener> listener_;
   newDataAvailable = false;

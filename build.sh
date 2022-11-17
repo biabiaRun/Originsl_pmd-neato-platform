@@ -5,7 +5,7 @@ build=build/
 if [ ! -d "$build/" ]; then
 	mkdir -p $build
 	cd $build
-	source /opt/fsl-imx-xwayland/5.4-zeus/environment-setup-aarch64-poky-linux
+	source /home/local/NEATO/running.gao/Documents/EE/TOF/environment-setup-aarch64-poky-linux
 	cmake -G "Ninja" -DCMAKE_TOOLCHAIN_FILE=$OECORE_NATIVE_SYSROOT/usr/share/cmake/OEToolchainConfig.cmake $orig
 else
 	cd $build

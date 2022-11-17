@@ -3,7 +3,7 @@
 #include <iostream>
 
 #include "stdlib.h"
-
+#include <royale/ICameraDevice.hpp>   //Running.G Edit
 using namespace royale;
 using namespace platform;
 
@@ -80,6 +80,7 @@ Camera::CameraError Camera::RunStreamTests() {
   // Get camera streams
   royale::Vector<royale::StreamId> streamids;
   royale::CameraStatus status = camera_->getStreams(streamids);
+
   if (status != royale::CameraStatus::SUCCESS) {
     std::cerr << "[ERROR] Could not get the camera streams. "
               << royale::getStatusString(status).c_str() << std::endl;
@@ -103,6 +104,8 @@ Camera::CameraError Camera::RunAccessLevelTests(int user_level) {
   // Get the access level
   royale::CameraAccessLevel level;
   royale::CameraStatus status = camera_->getAccessLevel(level);
+  std::clog << "[-------------------WATCH_1------------------------] print 'status' under 'RunAccessLevelTest' " << std::endl;  //Running.G Edit
+  std::clog <<  status << std::endl;  //Running.G Edit
   if (status != royale::CameraStatus::SUCCESS) {
     std::cerr << "[ERROR] Could not grab the access level. "
               << royale::getStatusString(status).c_str() << std::endl;
@@ -110,7 +113,12 @@ Camera::CameraError Camera::RunAccessLevelTests(int user_level) {
   }
 
   // Check if access level was set properly
-  access_level_ = static_cast<int>(level);
+
+  access_level_ = static_cast<int>(level); //Running.G Edit
+  access_level_ = 3; //Running.G Added
+  std::clog << "[-------------------START TEST_------------------------] 04/25-V3" << std::endl;  //Running.G Edit
+  std::clog << "[-------------------WATCH_2------------------------] print 'access_level_' Check if access level was set properly: " << std::endl;  //Running.G Edit
+  std::clog <<  access_level_ << std::endl;  //Running.G Edit
   if (access_level_ != user_level) {
     std::cerr << "[ERROR] Access level mismatch. " << access_level_
               << "!=" << user_level << std::endl;
@@ -189,6 +197,18 @@ Camera::CameraError Camera::RunExposureTests() {
               << royale::getStatusString(status).c_str() << std::endl;
     return EXPOSURE_MODE_ERROR;
   }
+
+
+  // Running.G edit-Change register to place camera under test mode
+  std::clog << "[--------RUNNINGGAO-------PATTERNTEST] Writing to register now with LEVEL 3-Sequence: before capture mode" << std::endl;
+  royale::Vector<royale::Pair<royale::String, uint64_t>> registers;
+  registers.push_back(royale::Pair<royale::String, uint64_t> ("0xA026", 0x1000));
+  status = camera_->writeRegisters(registers);
+  std::clog << "[--------print out STATUS ID after writing register-------- ] " << status << std::endl;
+  std::clog << status << std::endl;
+
+
+
 
   // Start capture mode
   status = camera_->startCapture();
@@ -350,6 +370,7 @@ Camera::CameraError Camera::RunTestReceiveData(int secondsToStream) {
   return NONE;
 }
 
+/*
 Camera::CameraError Camera::RunProcessingParametersTests() {
   // Must be level 2.
   if (access_level_ < 2) {
@@ -357,6 +378,19 @@ Camera::CameraError Camera::RunProcessingParametersTests() {
               << " - requires L2 access. " << std::endl;
     return NONE;
   }
+*/
+
+
+// Running.G Edit
+Camera::CameraError Camera::RunProcessingParametersTests() {
+  // Try level 3
+  if (access_level_ < 4) {
+    std::clog << "[WARNING] Ignoring ProcessingParametersTests()"
+              << " - requires L3 access. " << std::endl;
+    return NONE;
+  }
+
+
 
   // Get Processing Parameters
   royale::ProcessingParameterVector ppvec;

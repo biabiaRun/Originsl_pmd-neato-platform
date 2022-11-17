@@ -15,8 +15,13 @@
 
 #include <sample_utils/PlatformResources.hpp>
 
-#ifndef ROYALE_ACCESS_CODE_LEVEL2
-#define ROYALE_ACCESS_CODE_LEVEL2 "" // Insert activation code here
+// #ifndef ROYALE_ACCESS_CODE_LEVEL2  //Running.G comment it out
+// #define ROYALE_ACCESS_CODE_LEVEL2 "" // Insert activation code here   //Running.G comment it out
+
+
+#ifndef ROYALE_ACCESS_CODE_LEVEL3
+#define ROYALE_ACCESS_CODE_LEVEL3 "" 
+
 #endif
 
 using namespace sample_utils;
@@ -41,6 +46,7 @@ int main()
     // until the cameraDevice's destructor implicitly deregisters the listener.
     MyListener listener;
 
+/* Running.G comment it out
     // Check if we have the appropriate access level
     // (the following operations need Level 2 access)
     if (royale::CameraManager::getAccessLevel (ROYALE_ACCESS_CODE_LEVEL2) < royale::CameraAccessLevel::L2)
@@ -48,14 +54,26 @@ int main()
         cerr << "Please insert the activation code for Level 2 into the define at the beginning of this program!" << endl;
         return 1;
     }
+*/
+
+    // Check if we have the appropriate access level
+    // (the following operations need Level 3 access)
+    if (royale::CameraManager::getAccessLevel (ROYALE_ACCESS_CODE_LEVEL3) < royale::CameraAccessLevel::L3)
+    {
+        cerr << "Please insert the activation code for Level 3 into the define at the beginning of this program!" << endl;
+        return 1;
+    }
+
+
 
     // this represents the main camera device object
     unique_ptr<royale::ICameraDevice> cameraDevice;
 
     // the camera manager will query for a connected camera
     {
-        royale::CameraManager manager (ROYALE_ACCESS_CODE_LEVEL2);
+        // royale::CameraManager manager (ROYALE_ACCESS_CODE_LEVEL2);   //Running.G Edit
 
+        royale::CameraManager manager (ROYALE_ACCESS_CODE_LEVEL3);  
         auto camlist = manager.getConnectedCameraList();
         cout << "Detected " << camlist.size() << " camera(s)." << endl;
         if (!camlist.empty())

@@ -345,11 +345,14 @@ std::unique_ptr<ICameraDevice> CameraFactory::createCamera()
     // get an implementation of the IBridgeImager interface in order to talk to the imager
     std::shared_ptr<royale::hal::IBridgeImager> bridgeImager = std::make_shared<BridgeImagerImpl> (imagerAdapter);
 
+std::clog << "[-------------TEST1-------------] " << std::endl;
     return createDevice (config, bridgeImager, bridgeReceiver, i2cAccess);
 #else
     std::unique_ptr<ICameraDevice> cameraDevice = nullptr;
 
-    CameraManager manager (ROYALE_ACCESS_CODE_LEVEL2);
+    //CameraManager manager (ROYALE_ACCESS_CODE_LEVEL2);
+    CameraManager manager (ROYALE_ACCESS_CODE_LEVEL3); //Running.G Edit
+
     auto cams = manager.getConnectedCameraList();
     if (cams.empty())
     {
@@ -357,6 +360,10 @@ std::unique_ptr<ICameraDevice> CameraFactory::createCamera()
     }
 
     cameraDevice = manager.createCamera (cams[0]);
+    royale::CameraAccessLevel level;
+    royale::CameraStatus status = camera_->getAccessLevel(level);
+    std::clog << "[-------------TEST2-------------] " << std::endl;
+    std::clog << (int)level;
 
     return cameraDevice;
 #endif

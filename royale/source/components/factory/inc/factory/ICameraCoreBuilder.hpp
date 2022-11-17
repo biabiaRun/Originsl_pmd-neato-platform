@@ -49,7 +49,7 @@ namespace royale
             virtual void setEssentialSensors (const royale::common::SensorMap &essentialSensors) = 0;
             virtual void setTemperatureSensorConfig (const royale::config::TemperatureSensorConfig &temperatureSensorConfig) = 0;
             virtual void setFlashMemoryConfig (const royale::config::FlashMemoryConfig &flashMemoryConfig) = 0;
-            virtual void setAccessLevel (CameraAccessLevel accessLevel) = 0;
+            virtual void setAccessLevel (CameraAccessLevel accessLevel) = 0; 
             virtual std::shared_ptr<const royale::config::ICoreConfig> getICoreConfig() const = 0;
             virtual royale::config::ImagerType getImagerType() const = 0;
             virtual royale::factory::IBridgeFactory &getBridgeFactory() = 0;
